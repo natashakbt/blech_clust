@@ -87,7 +87,7 @@ else:
 # Read in clustering parameters
 clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for clustering (using a GMM)', fields = ['Maximum number of clusters', 'Maximum number of iterations (1000 is more than enough)', 'Convergence criterion (usually 0.0001)', 'Number of random restarts for GMM (10 is more than enough)'])
 # Read in data cleaning parameters (to account for cases when the headstage fell off mid-experiment)
-data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)'])
+data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)', 'Intra-cluster waveform amplitude SD cutoff - larger waveforms will be thrown out (3 would be a good number)'])
 # And print them to a blech_params file
 f = open(hdf5_name[-1]+'.params', 'w')
 for i in clustering_params:

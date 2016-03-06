@@ -69,6 +69,7 @@ voltage_cutoff = float(params[4])
 max_breach_rate = float(params[5])
 max_secs_above_cutoff = int(params[6])
 max_mean_breach_rate_persec = float(params[7])
+wf_amplitude_sd_cutoff = int(params[8])
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.openFile(hdf5_name, 'r')
@@ -153,7 +154,7 @@ data = np.zeros((len(pca_slices), n_pc + 2))
 data[:,2:] = pca_slices[:,:n_pc]
 data[:,0] = energy[:]/np.max(energy)
 data[:,1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
-del pca_slices; del scaled_slices; del energy; del amplitudes
+del pca_slices; del scaled_slices; del energy
 
 # Run GMM, from 2 to max_clusters
 for i in range(max_clusters-1):
@@ -162,6 +163,18 @@ for i in range(max_clusters-1):
 	except:
 		#print "Clustering didn't work - solution with %i clusters most likely didn't converge" % (i+2)
 		continue
+
+	# Sometimes large amplitude noise waveforms cluster with the spike waveforms because the amplitude has been factored out of the scaled slices.   
+	# Run through the clusters and find the waveforms that are more than wf_amplitude_sd_cutoff larger than the cluster mean. Set predictions = -1 at these points so that they aren't picked up by blech_post_process
+	for cluster in range(i+2):
+		cluster_points = np.where(predictions[:] == cluster)[0]
+		this_cluster = predictions[cluster_points]
+		cluster_amplitudes = amplitudes[cluster_points]
+		cluster_amplitude_mean = np.mean(cluster_amplitudes)
+		cluster_amplitude_sd = np.std(cluster_amplitudes)
+		reject_wf = np.where(cluster_amplitudes <= cluster_amplitude_mean - wf_amplitude_sd_cutoff*cluster_amplitude_sd)[0]
+		this_cluster[reject_wf] = -1
+		predictions[cluster_points] = this_cluster	  
 
 	# Make folder for results of i+2 clusters, and store results there
 	os.mkdir('./clustering_results/electrode%i/clusters%i' % (electrode_num, i+2))
