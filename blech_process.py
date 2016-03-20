@@ -134,9 +134,11 @@ scaled_slices, energy = scale_waveforms(slices_dejittered)
 # Run PCA on the scaled waveforms
 pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
 
-# Save the pca_slices, explained variance ratios, and amplitudes to the spike_waveforms folder for this electrode
+# Save the pca_slices, energy and amplitudes to the spike_waveforms folder for this electrode
 np.save('./spike_waveforms/electrode%i/pca_waveforms.npy' % electrode_num, pca_slices)
+np.save('./spike_waveforms/electrode%i/energy.npy' % electrode_num, energy)
 np.save('./spike_waveforms/electrode%i/spike_amplitudes.npy' % electrode_num, amplitudes)
+
 
 # Create file for saving plots, and plot explained variance ratios of the PCA
 fig = plt.figure()

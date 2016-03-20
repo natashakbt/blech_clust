@@ -3,6 +3,8 @@ import tables
 import numpy as np
 import easygui
 import ast
+import pylab as plt
+from sklearn.mixture import GMM
 
 # Get directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -77,14 +79,71 @@ while True:
 	num_clusters = easygui.multenterbox(msg = 'Which solution do you want to choose for electrode %i?' % electrode_num, fields = ['Number of clusters in the solution'])
 	num_clusters = int(num_clusters[0])
 
+	# Load data from the chosen electrode and solution
+	spike_waveforms = np.load('./spike_waveforms/electrode%i/spike_waveforms.npy' % electrode_num)
+	spike_times = np.load('./spike_times/electrode%i/spike_times.npy' % electrode_num)
+	pca_slices = np.load('./spike_waveforms/electrode%i/pca_waveforms.npy' % electrode_num)
+	energy = np.load('./spike_waveforms/electrode%i/energy.npy' % electrode_num)
+	amplitudes = np.load('./spike_waveforms/electrode%i/spike_amplitudes.npy' % electrode_num)
+	predictions = np.load('./clustering_results/electrode%i/clusters%i/predictions.npy' % (electrode_num, num_clusters))
+
 	# Get cluster choices from the chosen solution
-	clusters = easygui.multchoicebox(msg = 'Which clusters do you want to choose?', choices = tuple([str(i) for i in range(num_clusters)]))
+	clusters = easygui.multchoicebox(msg = 'Which clusters do you want to choose?', choices = tuple([str(i) for i in range(int(np.max(predictions) + 1))]))
 	
-	# Check if the user wants to merge clusters if more than 1 cluster was chosen
+	# Check if the user wants to merge clusters if more than 1 cluster was chosen. Else ask if the user wants to split/re-cluster the chosen cluster
 	merge = False
+	re_cluster = False
 	if len(clusters) > 1:
 		merge = easygui.multchoicebox(msg = 'I want to merge these clusters into one unit (True = Yes, False = No)', choices = ('True', 'False'))
 		merge = ast.literal_eval(merge[0])
+	else:
+		re_cluster = easygui.multchoicebox(msg = 'I want to split this cluster (True = Yes, False = No)', choices = ('True', 'False'))
+		re_cluster = ast.literal_eval(re_cluster[0])
+
+	# If the user asked to split/re-cluster, ask them for the clustering parameters and perform clustering
+	split_predictions = []
+	chosen_split = 0
+	if re_cluster: 
+		# Get clustering parameters from user
+		clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for re-clustering (using a GMM)', fields = ['Number of clusters', 'Maximum number of iterations (1000 is more than enough)', 'Convergence criterion (usually 0.0001)', 'Number of random restarts for GMM (10 is more than enough)'])
+		n_clusters = int(clustering_params[0])
+		n_iter = int(clustering_params[1])
+		thresh = float(clustering_params[2])
+		n_restarts = int(clustering_params[3]) 
+
+		# Make data array to be put through the GMM - 5 components: 3 PCs, scaled energy, amplitude
+		this_cluster = np.where(predictions == int(clusters[0]))[0]
+		n_pc = 3
+		data = np.zeros((len(this_cluster), n_pc + 2))	
+		data[:,2:] = pca_slices[this_cluster,:n_pc]
+		data[:,0] = energy[this_cluster]/np.max(energy[this_cluster])
+		data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
+
+		# Cluster the data
+		g = GMM(n_components = n_clusters, covariance_type = 'full', thresh = thresh, n_iter = n_iter, n_init = n_restarts)
+		g.fit(data)
+	
+		# Show the cluster plots if the solution converged
+		if g.converged_:
+			split_predictions = g.predict(data)
+			x = np.arange(len(spike_waveforms[0])/10)
+			for cluster in range(n_clusters):
+				split_points = np.where(split_predictions == cluster)[0]				
+				plt.figure(cluster)
+				slices_dejittered = spike_waveforms[this_cluster, ::10]
+				plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.1, color = 'red')
+				plt.xlabel('Time')
+				plt.ylabel('Voltage (microvolts)')
+				plt.title('Split Cluster%i' % cluster)
+		else:
+			print "Solution did not converge - try again with higher number of iterations or lower convergence criterion"
+			continue
+
+		plt.show()
+		# Ask the user for the split clusters they want to choose
+		chosen_split = easygui.multchoicebox(msg = 'Which split cluster do you want to choose? Hit cancel to exit', choices = tuple([str(i) for i in range(n_clusters)]))
+		chosen_split = int(chosen_split[0])
+		
 
 	# Get list of existing nodes/groups under /sorted_units
 	node_list = hf5.listNodes('/sorted_units')
@@ -107,13 +166,25 @@ while True:
 	# Get a new unit_descriptor table row for this new unit
 	unit_description = table.row	
 
-	# Load data from the chosen electrode and solution
-	spike_waveforms = np.load('./spike_waveforms/electrode%i/spike_waveforms.npy' % electrode_num)
-	spike_times = np.load('./spike_times/electrode%i/spike_times.npy' % electrode_num)
-	predictions = np.load('./clustering_results/electrode%i/clusters%i/predictions.npy' % (electrode_num, num_clusters))
-	
-	# If only 1 cluster was chosen, add that as a new unit in /sorted_units. Ask if the isolated unit is an almost-SURE single unit
-	if len(clusters) == 1:
+	# If the user re-clustered/split clusters, add the chosen clusters in split_clusters
+	if re_cluster:
+		hf5.createGroup('/sorted_units', unit_name)
+		unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]	# Waveforms of originally chosen cluster
+		unit_waveforms = unit_waveforms[np.where(split_predictions == chosen_split)[0], :]	# Subsetting this set of waveforms to include only the chosen split
+		unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]			# Do the same thing for the spike times
+		unit_times = unit_times[np.where(split_predictions == chosen_split)[0]]
+		waveforms = hf5.createArray('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+		times = hf5.createArray('/sorted_units/%s' % unit_name, 'times', unit_times)
+		unit_description['electrode_number'] = electrode_num
+		single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
+		unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+		unit_description.append()
+		table.flush()
+		hf5.flush()
+		
+
+	# If only 1 cluster was chosen (and it wasn't split), add that as a new unit in /sorted_units. Ask if the isolated unit is an almost-SURE single unit
+	elif len(clusters) == 1:
 		hf5.createGroup('/sorted_units', unit_name)
 		unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]
 		unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
