@@ -27,8 +27,8 @@ def extract_waveforms(filt_el):
 	for i in range(len(changes) - 1):
 		minimum = np.where(filt_el[pos[changes[i]:changes[i+1]]] == np.min(filt_el[pos[changes[i]:changes[i+1]]]))[0]
 		#print minimum, len(slices), len(changes), len(filt_el)
-		# try slicing out the putative waveform, pass if it fails to have 150 data points (can happen if the waveform is too close to the end of the recording)
-		if pos[minimum[0]+changes[i]]+90 < len(filt_el):
+		# try slicing out the putative waveform, only do this if there are 150 data points (waveform is not too close to the start or end of the recording)
+		if pos[minimum[0]+changes[i]]-60 > 0 and pos[minimum[0]+changes[i]]+90 < len(filt_el):
 			slices.append(filt_el[pos[minimum[0]+changes[i]]-60:pos[minimum[0]+changes[i]]+90])
 			spike_times.append(pos[minimum[0]+changes[i]])
 
