@@ -142,8 +142,10 @@ while True:
 		plt.show()
 		# Ask the user for the split clusters they want to choose
 		chosen_split = easygui.multchoicebox(msg = 'Which split cluster do you want to choose? Hit cancel to exit', choices = tuple([str(i) for i in range(n_clusters)]))
-		chosen_split = int(chosen_split[0])
-		
+		try:
+			chosen_split = int(chosen_split[0])
+		except:
+			continue
 
 	# Get list of existing nodes/groups under /sorted_units
 	node_list = hf5.listNodes('/sorted_units')
