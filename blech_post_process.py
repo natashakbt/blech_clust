@@ -31,11 +31,11 @@ for files in file_list:
 		hdf5_name = files
 
 # Open the hdf5 file
-hf5 = tables.openFile(hdf5_name, 'r+')
+hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Delete the raw node, if it exists in the hdf5 file, to cut down on file size
 try:
-	hf5.removeNode('/raw', recursive = 1)
+	hf5.remove_node('/raw', recursive = 1)
 	# And if successful, close the currently open hdf5 file and ptrepack the file
 	hf5.close()
 	print "Raw recordings removed"
@@ -43,14 +43,14 @@ try:
 	# Delete the old (raw and big) hdf5 file
 	os.system("rm " + hdf5_name)
 	# And open the new, repacked file
-	hf5 = tables.openFile(hdf5_name[:-3] + "_repacked.h5", 'r+')
+	hf5 = tables.open_file(hdf5_name[:-3] + "_repacked.h5", 'r+')
 	print "File repacked"
 except:
 	print "Raw recordings have already been removed, so moving on .."
 
 # Make the sorted_units group in the hdf5 file if it doesn't already exist
 try:
-	hf5.createGroup('/', 'sorted_units')
+	hf5.create_group('/', 'sorted_units')
 except:
 	pass
 
@@ -61,7 +61,7 @@ class unit_descriptor(tables.IsDescription):
 
 # Make a table under /sorted_units describing the sorted units. If unit_descriptor already exists, just open it up in the variable table
 try:
-	table = hf5.createTable('/', 'unit_descriptor', description = unit_descriptor)
+	table = hf5.create_table('/', 'unit_descriptor', description = unit_descriptor)
 except:
 	table = hf5.root.unit_descriptor
 
@@ -148,7 +148,7 @@ while True:
 			continue
 
 	# Get list of existing nodes/groups under /sorted_units
-	node_list = hf5.listNodes('/sorted_units')
+	node_list = hf5.list_nodes('/sorted_units')
 
 	# If node_list is empty, start naming units from 001
 	unit_name = ''
@@ -170,13 +170,13 @@ while True:
 
 	# If the user re-clustered/split clusters, add the chosen clusters in split_clusters
 	if re_cluster:
-		hf5.createGroup('/sorted_units', unit_name)
+		hf5.create_group('/sorted_units', unit_name)
 		unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]	# Waveforms of originally chosen cluster
 		unit_waveforms = unit_waveforms[np.where(split_predictions == chosen_split)[0], :]	# Subsetting this set of waveforms to include only the chosen split
 		unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]			# Do the same thing for the spike times
 		unit_times = unit_times[np.where(split_predictions == chosen_split)[0]]
-		waveforms = hf5.createArray('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-		times = hf5.createArray('/sorted_units/%s' % unit_name, 'times', unit_times)
+		waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+		times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
 		unit_description['electrode_number'] = electrode_num
 		single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
 		unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
@@ -187,11 +187,11 @@ while True:
 
 	# If only 1 cluster was chosen (and it wasn't split), add that as a new unit in /sorted_units. Ask if the isolated unit is an almost-SURE single unit
 	elif len(clusters) == 1:
-		hf5.createGroup('/sorted_units', unit_name)
+		hf5.create_group('/sorted_units', unit_name)
 		unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]
 		unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
-		waveforms = hf5.createArray('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-		times = hf5.createArray('/sorted_units/%s' % unit_name, 'times', unit_times)
+		waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+		times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
 		unit_description['electrode_number'] = electrode_num
 		single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
 		unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
@@ -219,9 +219,9 @@ while True:
 
 			# Create unit if the user agrees to proceed, else abort and go back to start of the loop 
 			if proceed:	
-				hf5.createGroup('/sorted_units', unit_name)
-				waveforms = hf5.createArray('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-				times = hf5.createArray('/sorted_units/%s' % unit_name, 'times', unit_times)
+				hf5.create_group('/sorted_units', unit_name)
+				waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+				times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
 				unit_description['electrode_number'] = electrode_num
 				single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
 				unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
@@ -234,11 +234,11 @@ while True:
 		# Otherwise include each cluster as a separate unit
 		else:
 			for cluster in clusters:
-				hf5.createGroup('/sorted_units', unit_name)
+				hf5.create_group('/sorted_units', unit_name)
 				unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
 				unit_times = spike_times[np.where(predictions == int(cluster))[0]]
-				waveforms = hf5.createArray('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-				times = hf5.createArray('/sorted_units/%s' % unit_name, 'times', unit_times)
+				waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+				times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
 				unit_description['electrode_number'] = electrode_num
 				single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that electrode: %i cluster: %i is a beautiful single unit (True = Yes, False = No)' % (electrode_num, int(cluster)), choices = ('True', 'False'))
 				unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))

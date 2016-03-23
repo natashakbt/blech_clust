@@ -17,10 +17,10 @@ for files in file_list:
 		hdf5_name = files
 
 # Open the hdf5 file
-hf5 = tables.openFile(hdf5_name, 'r+')
+hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Grab the names of the arrays containing digital inputs, and pull the data into a numpy array
-dig_in_nodes = hf5.listNodes('/digital_in')
+dig_in_nodes = hf5.list_nodes('/digital_in')
 dig_in = []
 dig_in_pathname = []
 for node in dig_in_nodes:
@@ -74,12 +74,12 @@ for i in range(len(durations)):
 
 # Make the spike_trains node in the hdf5 file if it doesn't exist, else move on
 try:
-	hf5.createGroup('/', 'spike_trains')
+	hf5.create_group('/', 'spike_trains')
 except:
 	pass
 
 # Get list of units under the sorted_units group. Find the latest/largest spike time amongst the units, and get an experiment end time (to account for cases where the headstage fell off mid-experiment)
-units = hf5.listNodes('/sorted_units')
+units = hf5.list_nodes('/sorted_units')
 expt_end_time = 0
 for unit in units:
 	if unit.times[-1] > expt_end_time:
@@ -102,8 +102,8 @@ for i in range(len(dig_in_channels)):
 		# Append the spikes array to spike_train 
 		spike_train.append(spikes)
 	# And add spike_train to the hdf5 file
-	hf5.createGroup('/spike_trains', str.split(dig_in_channels[i], '/')[-1])
-	spike_array = hf5.createArray('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'spike_array', np.array(spike_train))
+	hf5.create_group('/spike_trains', str.split(dig_in_channels[i], '/')[-1])
+	spike_array = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'spike_array', np.array(spike_train))
 	hf5.flush()
 
 	# Make conditional stimulus array for this digital input if lasers were used
@@ -118,7 +118,7 @@ for i in range(len(dig_in_channels)):
 				if np.sum(np.abs(np.array(change_points[laser]) - change_points[dig_in_channel_nums[i]][j]) <= 5*30000) > 0:
 					cond_array[j] = 1
 		# Write the conditional stimulus array to the hdf5 file
-		laser_array = hf5.createArray('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_array', cond_array)
+		laser_array = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_array', cond_array)
 		hf5.flush() 
 
 hf5.close()

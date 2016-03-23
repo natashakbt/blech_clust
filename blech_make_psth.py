@@ -20,7 +20,7 @@ for files in file_list:
 		hdf5_name = files
 
 # Open the hdf5 file
-hf5 = tables.openFile(hdf5_name, 'r+')
+hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Ask the user for the pre stimulus duration used while making the spike arrays
 pre_stim = easygui.multenterbox(msg = 'What was the pre-stimulus duration pulled into the spike arrays?', fields = ['Pre stimulus (ms)'])
@@ -39,7 +39,7 @@ except:
 os.mkdir('./PSTH')
 
 # Get the list of spike trains by digital input channels
-trains_dig_in = hf5.listNodes('/spike_trains')
+trains_dig_in = hf5.list_nodes('/spike_trains')
 
 # Taste responsiveness calculation parameters
 r_pre_stim = 500

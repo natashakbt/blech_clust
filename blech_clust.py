@@ -24,11 +24,11 @@ file_list = os.listdir('./')
 hdf5_name = str.split(dir_name, '/')
 
 # Create hdf5 file, and make groups for raw data, raw emgs, digital outputs and digital inputs, and close
-hf5 = tables.openFile(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
-hf5.createGroup('/', 'raw')
-hf5.createGroup('/', 'raw_emg')
-hf5.createGroup('/', 'digital_in')
-hf5.createGroup('/', 'digital_out')
+hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
+hf5.create_group('/', 'raw')
+hf5.create_group('/', 'raw_emg')
+hf5.create_group('/', 'digital_in')
+hf5.create_group('/', 'digital_out')
 hf5.close()
 
 # Create directories to store waveforms, spike times, clustering results, and plots

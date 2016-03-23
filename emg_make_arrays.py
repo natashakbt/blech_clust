@@ -17,10 +17,10 @@ for files in file_list:
 		hdf5_name = files
 
 # Open the hdf5 file
-hf5 = tables.openFile(hdf5_name, 'r+')
+hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Grab the names of the arrays containing digital inputs, and pull the data into a numpy array
-dig_in_nodes = hf5.listNodes('/digital_in')
+dig_in_nodes = hf5.list_nodes('/digital_in')
 dig_in = []
 dig_in_pathname = []
 for node in dig_in_nodes:
@@ -66,7 +66,7 @@ for i in range(len(durations)):
 	durations[i] = int(durations[i])
 
 # Grab the names of the arrays containing emg recordings
-emg_nodes = hf5.listNodes('/raw_emg')
+emg_nodes = hf5.list_nodes('/raw_emg')
 emg_pathname = []
 for node in emg_nodes:
 	emg_pathname.append(node._v_pathname)

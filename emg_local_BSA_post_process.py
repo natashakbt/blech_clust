@@ -18,7 +18,7 @@ for files in file_list:
 		hdf5_name = files
 
 # Open the hdf5 file
-hf5 = tables.openFile(hdf5_name, 'r+')
+hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Load sig_trials.npy to get number of tastes
 sig_trials = np.load('sig_trials.npy')
@@ -33,7 +33,7 @@ for i in range(len(trials)):
 os.chdir('emg_BSA_results')
 
 # Add group to hdf5 file for emg BSA results
-hf5.createGroup('/', 'emg_BSA_results')
+hf5.create_group('/', 'emg_BSA_results')
 
 # Omega doesn't vary by trial, so just pick it up from the 1st taste and trial, and delete everything else
 omega = np.load('taste0_trial0_omega.npy')
@@ -41,7 +41,7 @@ os.system('rm *omega.npy')
 
 # Add omega to the hdf5 file
 atom = tables.Atom.from_dtype(omega.dtype)
-om = hf5.createCArray('/emg_BSA_results', 'omega', atom, omega.shape)
+om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
 om[:] = omega 
 hf5.flush()
 
@@ -57,7 +57,7 @@ for i in range(tastes):
 		p[j, :, :] = np.load('taste%i_trial%i_p.npy' % (i, j))
 	# Save p to hdf5 file
 	atom = tables.Atom.from_dtype(p.dtype)
-	prob = hf5.createCArray('/emg_BSA_results', 'taste%i_p' % i, atom, p.shape)
+	prob = hf5.create_carray('/emg_BSA_results', 'taste%i_p' % i, atom, p.shape)
 	prob[:, :, :] = p
 hf5.flush()
 

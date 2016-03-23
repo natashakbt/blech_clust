@@ -30,13 +30,13 @@ except:
 	pass'''
 
 # Open the hdf5 file
-hf5 = tables.openFile(hdf5_name, 'r')
+hf5 = tables.open_file(hdf5_name, 'r')
 
 # Ask the user for the HMM parameters  
 hmm_params = easygui.multenterbox(msg = 'Fill in the parameters for running a HMM (Poisson or Multinomial emissions) on your data', fields = ['Minimum number of states', 'Maximum number of states', 'Maximum number of iterations (300 is more than enough)', 'Convergence criterion (usually 1e-9)', 'Number of random restarts for HMM (50-60 is more than enough)', 'Transition probability inertia (between 0 and 1)', 'Emission Distribution intertia (between 0 and 1)'])
 
 # Ask the user for the taste to run the HMM on
-tastes = hf5.listNodes('/spike_trains')
+tastes = hf5.list_nodes('/spike_trains')
 hmm_taste = easygui.multchoicebox(msg = 'Which taste do you want to run the HMM on?', choices = ([str(taste).split('/')[-1] for taste in tastes]))
 taste_num = 0
 for i in range(len(tastes)):
