@@ -65,7 +65,12 @@ for dig_in in trains_dig_in:
 		plt.close("all")
 		
 		# Check if the laser_array exists, and plot laser PSTH if it does
-		if dig_in.laser_durations:
+		laser_exists = []		
+		try:
+			laser_exists = dig_in.laser_durations[:]
+		except:
+			pass
+		if laser_exists:
 			# First get the unique laser onset times (from end of taste delivery) in this dataset
 			onset_lags = np.unique(dig_in.laser_onset_lag[:])
 			# Then get the unique laser onset durations
