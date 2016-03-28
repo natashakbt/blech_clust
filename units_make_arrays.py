@@ -71,9 +71,10 @@ for i in range(len(dig_in_pathname)):
 # Ask the user which digital input channels should be used for conditioning the stimuli channels above (laser channels for instance)
 lasers = easygui.multchoicebox(msg = 'Which digital input channels were used for lasers? Click clear all and continue if you did not use lasers', choices = ([path for path in dig_in_pathname]))
 laser_nums = []
-for i in range(len(dig_in_pathname)):
-	if dig_in_pathname[i] in lasers:
-		laser_nums.append(i)
+if lasers:
+	for i in range(len(dig_in_pathname)):
+		if dig_in_pathname[i] in lasers:
+			laser_nums.append(i)
 
 # Ask the user for the pre and post stimulus durations to be pulled out, and convert to integers
 durations = easygui.multenterbox(msg = 'What are the signal durations pre and post stimulus that you want to pull out', fields = ['Pre stimulus (ms)', 'Post stimulus (ms)'])
