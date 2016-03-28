@@ -65,27 +65,36 @@ for dig_in in trains_dig_in:
 		plt.close("all")
 		
 		# Check if the laser_array exists, and plot laser PSTH if it does
-		if dig_in.laser_array:
-			on_trials = np.where(dig_in.laser_array[:] == 1.0)[0]
-			off_trials = np.where(dig_in.laser_array[:] == 0.0)[0]
-			trial_avg_on_array = np.mean(dig_in.spike_array[on_trials, :, :], axis = 0)
-			trial_avg_off_array = np.mean(dig_in.spike_array[off_trials, :, :], axis = 0)
-			time = []
-			on_spike_rate = []
-			off_spike_rate = []
-			for i in range(0, trial_avg_spike_array.shape[1] - params[0], params[1]):
-				time.append(i - pre_stim)
-				on_spike_rate.append(1000.0*np.sum(trial_avg_on_array[unit, i:i+params[0]])/float(params[0]))						
-				off_spike_rate.append(1000.0*np.sum(trial_avg_off_array[unit, i:i+params[0]])/float(params[0]))
+		if dig_in.laser_durations:
+			# First get the unique laser onset times (from end of taste delivery) in this dataset
+			onset_lags = np.unique(dig_in.laser_onset_lag[:])
+			# Then get the unique laser onset durations
+			durations = np.unique(dig_in.laser_durations[:])
+
+			# Then go through the combinations of the durations and onset lags and get and plot an averaged spike_rate array for each set of trials
 			fig = plt.figure()
+			for onset in onset_lags:
+				for duration in durations:
+					spike_rate = []
+					time = []
+					these_trials = np.where((dig_in.laser_durations[:] == duration)*(dig_in.laser_onset_lag[:] == onset) > 0)[0]
+					# If no trials have this combination of onset lag and duration (can happen when duration = 0, laser off), break out of the loop
+					if len(these_trials) == 0:
+						continue
+					trial_avg_array = np.mean(dig_in.spike_array[these_trials, :, :], axis = 0)
+					for i in range(0, trial_avg_array.shape[1] - params[0], params[1]):
+						time.append(i - pre_stim)
+						spike_rate.append(1000.0*np.sum(trial_avg_array[unit, i:i+params[0]])/float(params[0]))
+					# Now plot the PSTH for this combination of duration and onset lag
+					plt.plot(time, spike_rate, linewidth = 3.0, label = 'Dur: %i ms, Lag: %i ms' % (int(duration), int(onset)))
+
 			plt.title('Unit: %i laser PSTH, Window size: %i ms, Step size: %i ms' % (unit + 1, params[0], params[1]))
 			plt.xlabel('Time from taste delivery (ms)')
 			plt.ylabel('Firing rate (Hz)')
-			plt.plot(time, on_spike_rate, linewidth = 3.0, color = 'g')
-			plt.plot(time, off_spike_rate, linewidth = 3.0, color = 'k')			
+			plt.legend(bbox_to_anchor=(1.0, 1.0))
 			fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_laser_psth.png' % (unit + 1))
 			plt.close("all")
-
+						
 hf5.close()
 
 		

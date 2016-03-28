@@ -32,20 +32,28 @@ dig_in = np.array(dig_in)
 dig_on = []
 for i in range(len(dig_in)):
 	dig_on.append(np.where(dig_in[i,:] == 1)[0])
-change_points = []
+start_points = []
+end_points = []
 for on_times in dig_on:
-	changes = []
-	for j in range(len(on_times) - 1):
-		if np.abs(on_times[j] - on_times[j+1]) > 30:
-			changes.append(on_times[j])
+	start = []
+	end = []
 	try:
-		changes.append(on_times[-1]) # append the last trial which will be missed by this method
+		start.append(on_times[0]) # Get the start of the first trial
 	except:
 		pass # Continue without appending anything if this port wasn't on at all
-	change_points.append(changes)	
+	for j in range(len(on_times) - 1):
+		if np.abs(on_times[j] - on_times[j+1]) > 30:
+			end.append(on_times[j])
+			start.append(on_times[j+1])
+	try:
+		end.append(on_times[-1]) # append the last trial which will be missed by this method
+	except:
+		pass # Continue without appending anything if this port wasn't on at all
+	start_points.append(np.array(start))
+	end_points.append(np.array(end))	
 
 # Show the user the number of trials on each digital input channel, and ask them to confirm
-check = easygui.ynbox(msg = 'Digital input channels: ' + str(dig_in_pathname) + '\n' + 'No. of trials: ' + str([len(changes) for changes in change_points]), title = 'Check and confirm the number of trials detected on digital input channels')
+check = easygui.ynbox(msg = 'Digital input channels: ' + str(dig_in_pathname) + '\n' + 'No. of trials: ' + str([len(ends) for ends in end_points]), title = 'Check and confirm the number of trials detected on digital input channels')
 # Go ahead only if the user approves by saying yes
 if check:
 	pass
@@ -85,19 +93,19 @@ for unit in units:
 	if unit.times[-1] > expt_end_time:
 		expt_end_time = unit.times[-1]
 
-# Go through the dig_in_channel_nums and make an array of spike trains of dimensions (# trials x # units x trial duration (ms))
+# Go through the dig_in_channel_nums and make an array of spike trains of dimensions (# trials x # units x trial duration (ms)) - use end of digital input pulse as the time of taste delivery
 for i in range(len(dig_in_channels)):
 	spike_train = []
-	for j in range(len(change_points[dig_in_channel_nums[i]])):
+	for j in range(len(end_points[dig_in_channel_nums[i]])):
 		# Skip the trial if the headstage fell off before it
-		if change_points[dig_in_channel_nums[i]][j] >= expt_end_time:
+		if end_points[dig_in_channel_nums[i]][j] >= expt_end_time:
 			break
 		# Otherwise run through the units and convert their spike times to milliseconds
 		else:
 			spikes = np.zeros((len(units), durations[0] + durations[1]))
 			for k in range(len(units)):
 				for l in range(durations[0] + durations[1]):
-					spikes[k, l] = len(np.where((units[k].times[:]>=change_points[dig_in_channel_nums[i]][j] - (durations[0]-l)*30)*(units[k].times[:]< change_points[dig_in_channel_nums[i]][j] - (durations[0]-l-1)*30))[0])
+					spikes[k, l] = len(np.where((units[k].times[:] >= end_points[dig_in_channel_nums[i]][j] - (durations[0]-l)*30)*(units[k].times[:] < end_points[dig_in_channel_nums[i]][j] - (durations[0]-l-1)*30))[0])
 					
 		# Append the spikes array to spike_train 
 		spike_train.append(spikes)
@@ -108,17 +116,22 @@ for i in range(len(dig_in_channels)):
 
 	# Make conditional stimulus array for this digital input if lasers were used
 	if laser_nums:
-		cond_array = np.zeros(len(change_points[dig_in_channel_nums[i]]))
-		for j in range(len(change_points[dig_in_channel_nums[i]])):
-			# Skip the trial if the headstage fell off before it
-			if change_points[dig_in_channel_nums[i]][j] >= expt_end_time:
-				break
+		cond_array = np.zeros(len(end_points[dig_in_channel_nums[i]]))
+		laser_start = np.zeros(len(end_points[dig_in_channel_nums[i]]))
+		for j in range(len(end_points[dig_in_channel_nums[i]])):
+			# Skip the trial if the headstage fell off before it - mark these trials by -1
+			if end_points[dig_in_channel_nums[i]][j] >= expt_end_time:
+				cond_array[j] = -1
 			# Else run through the lasers and check if the lasers went off within 5 secs of the stimulus delivery time
 			for laser in laser_nums:
-				if np.sum(np.abs(np.array(change_points[laser]) - change_points[dig_in_channel_nums[i]][j]) <= 5*30000) > 0:
-					cond_array[j] = 1
-		# Write the conditional stimulus array to the hdf5 file
-		laser_array = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_array', cond_array)
+				on_trial = np.where(np.abs(end_points[laser] - end_points[dig_in_channel_nums[i]][j]) <= 5*30000)[0]
+				if len(on_trial) > 0:
+					# If the lasers did go off around stimulus delivery, get the duration and start time (from end of taste delivery) of the laser trial (as a multiple of 10 - so 53 gets rounded off to 50)
+					cond_array[j] = 10*((end_points[laser][on_trial][0] - start_points[laser][on_trial][0])/300)
+					laser_start[j] = 100*((start_points[laser][on_trial][0] - end_points[dig_in_channel_nums[i]][j])/3000)
+		# Write the conditional stimulus duration array to the hdf5 file
+		laser_durations = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_durations', cond_array)
+		laser_onset_lag = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_onset_lag', laser_start)
 		hf5.flush() 
 
 hf5.close()
