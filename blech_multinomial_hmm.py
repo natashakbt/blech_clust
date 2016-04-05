@@ -7,8 +7,6 @@ import tables
 import easygui
 import sys
 import os
-import multiprocessing as mp
-from yahmm import *
 from blech_hmm import *
 import pylab as plt
 
@@ -43,16 +41,15 @@ f.close()
 # Assign the params to variables
 min_states = int(params[0])
 max_states = int(params[1])
-max_iter = int(params[2])
-threshold = float(params[3])
-seeds = int(params[4])
-edge_inertia = float(params[5])
-dist_inertia = float(params[6])
-taste = int(params[7])
-pre_stim = int(params[8])
-bin_size = int(params[9])
-pre_stim_hmm = int(params[10])
-post_stim_hmm = int(params[11])
+threshold = float(params[2])
+seeds = int(params[3])
+edge_inertia = float(params[4])
+dist_inertia = float(params[5])
+taste = int(params[6])
+pre_stim = int(params[7])
+bin_size = int(params[8])
+pre_stim_hmm = int(params[9])
+post_stim_hmm = int(params[10])
 
 # Open up hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
@@ -79,7 +76,7 @@ for i in range(spikes.shape[0]):
 hmm_results = []
 on_trials = np.arange(binned_spikes.shape[0])
 for n_states in range(min_states, max_states + 1):
-	result = multinomial_hmm_implement(n_states, max_iter, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
+	result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
 	hmm_results.append((n_states, result))
 
 # Delete the multinomial_hmm_results node under /spike_trains/dig_in_(taste)/ if it exists
@@ -104,51 +101,56 @@ os.mkdir("HMM_plots/dig_in_%i/Multinomial" % taste)
 
 # Go through the HMM results, and make plots for each state and each trial
 for result in hmm_results:
-	# Skip the solution for these number of states if none of the seeds converged
-	if result[1] == 0:
-		continue
-	else:
-		# Make a directory for this number of states
-		os.mkdir("HMM_plots/dig_in_%i/Multinomial/states_%i" % (taste, result[0]))
+	
+	# Make a directory for this number of states
+	os.mkdir("HMM_plots/dig_in_%i/Multinomial/states_%i" % (taste, result[0]))
 		
-		# Make a group under multinomial_hmm_results for this number of states
-		hf5.create_group('/spike_trains/dig_in_%i/multinomial_hmm_results' % taste, 'states_%i' % (result[0])) 
-		# Write the emission and transition probabilties to this group
-		emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_labels', np.array(result[1][4][0].keys()))
-		emission_matrix = []
-		for i in range(len(result[1][4])):
-			emission_matrix.append(result[1][4][i].values())
-		emission_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_probs', np.array(emission_matrix))
-		transition_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'transition_probs', result[1][5])
-		posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
+	# Make a group under multinomial_hmm_results for this number of states
+	hf5.create_group('/spike_trains/dig_in_%i/multinomial_hmm_results' % taste, 'states_%i' % (result[0])) 
+	# Write the emission and transition probabilties to this group
+	emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_labels', np.array(result[1][4][0].keys()))
+	emission_matrix = []
+	for i in range(len(result[1][4])):
+		emission_matrix.append(result[1][4][i].values())
+	emission_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_probs', np.array(emission_matrix))
+	transition_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'transition_probs', result[1][5])
+	posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
 
-		# Write the log-likelihood, AIC/BIC score, and time vector to the hdf5 file too
-		log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
-		aic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'aic', np.array(result[1][2]))
-		bic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'bic', np.array(result[1][3]))
-		time_vect = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'time', time)
-		hf5.flush()
+	# Also write the json model string to file
+	model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
 
-		# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
-		for i in range(binned_spikes.shape[0]):
-			fig = plt.figure()
-			for j in range(posterior_proba.shape[2]):
-				plt.plot(time, posterior_proba[i, :, j])
-			plt.xlabel('Time post stimulus (ms)')
-			plt.ylabel('Probability of HMM states')
-			plt.title('Trial %i' % (i+1))
-			fig.savefig('HMM_plots/dig_in_%i/Multinomial/states_%i/Trial_%i.png' % (taste, result[0], (i+1)))
-			plt.close("all")
+	# Write the log-likelihood, AIC/BIC score, and time vector to the hdf5 file too
+	log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
+	aic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'aic', np.array(result[1][2]))
+	bic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'bic', np.array(result[1][3]))
+	time_vect = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'time', time)
+	hf5.flush()
+
+	# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
+	for i in range(binned_spikes.shape[0]):
+		fig = plt.figure()
+		for j in range(posterior_proba.shape[2]):
+			plt.plot(time, posterior_proba[i, :, j])
+		plt.xlabel('Time post stimulus (ms)')
+		plt.ylabel('Probability of HMM states')
+		plt.title('Trial %i' % (i+1))
+		fig.savefig('HMM_plots/dig_in_%i/Multinomial/states_%i/Trial_%i.png' % (taste, result[0], (i+1)))
+		plt.close("all")
 
 # Check if the laser_array exists - if it does, perform a 2nd round of HMM training on just the non-laser trials
 exec('dig_in = hf5.root.spike_trains.dig_in_%i' % taste)
-if dig_in.laser_array:
-	on_trials = np.where(dig_in.laser_array[:] == 1.0)[0]
+laser_exists = []
+try:
+	laser_exists = dig_in.laser_durations[:]
+except:
+	pass
+if laser_exists:
+	on_trials = np.where(dig_in.laser_durations[:] > 0.0)[0]
 	off_trials = np.where(dig_in.laser_array[:] == 0.0)[0]
 	# Implement a Multinomial HMM for no. of states defined by min_states and max_states
 	hmm_results = []
 	for n_states in range(min_states, max_states + 1):
-		result = multinomial_hmm_implement(n_states, max_iter, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
+		result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
 		hmm_results.append((n_states, result))
 
 	# Delete the laser node under /spike_trains/dig_in_(taste)/multinomial_hmm_results/ if it exists
@@ -172,45 +174,45 @@ if dig_in.laser_array:
 	
 	# Go through the HMM results, and make plots for each state and each trial
 	for result in hmm_results:
-		# Skip the solution for these number of states if none of the seeds converged
-		if result[1] == 0:
-			continue
-		else:
-			# Make a directory for this number of states
-			os.mkdir("HMM_plots/dig_in_%i/Multinomial/laser/states_%i" % (taste, result[0]))
 		
-			# Make a group under multinomial_hmm_results for this number of states
-			hf5.create_group('/spike_trains/dig_in_%i/multinomial_hmm_results/laser' % taste, 'states_%i' % (result[0])) 
-			# Write the emission and transition probabilties to this group
-			emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_labels', np.array(result[1][4][0].keys()))
-			emission_matrix = []
-			for i in range(len(result[1][4])):
-				emission_matrix.append(result[1][4][i].values())
-			emission_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_probs', np.array(emission_matrix))
-			transition_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'transition_probs', result[1][5])
-			posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
+		# Make a directory for this number of states
+		os.mkdir("HMM_plots/dig_in_%i/Multinomial/laser/states_%i" % (taste, result[0]))
+		
+		# Make a group under multinomial_hmm_results for this number of states
+		hf5.create_group('/spike_trains/dig_in_%i/multinomial_hmm_results/laser' % taste, 'states_%i' % (result[0])) 
+		# Write the emission and transition probabilties to this group
+		emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_labels', np.array(result[1][4][0].keys()))
+		emission_matrix = []
+		for i in range(len(result[1][4])):
+			emission_matrix.append(result[1][4][i].values())
+		emission_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_probs', np.array(emission_matrix))
+		transition_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'transition_probs', result[1][5])
+		posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
 
-			# Write the log-likelihood and AIC/BIC score to the hdf5 file too
-			log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
-			aic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'aic', np.array(result[1][2]))
-			bic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'bic', np.array(result[1][3]))
-			time_vect = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'time', time)
-			hf5.flush()
+		# Also write the json model string to file
+		model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
 
-			# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
-			for i in range(binned_spikes.shape[0]):
-				if i in on_trials:
-					label = 'laser_on_'
-				else:
-					label = 'laser_off_'
-				fig = plt.figure()
-				for j in range(posterior_proba.shape[2]):
-					plt.plot(time, posterior_proba[i, :, j])
-				plt.xlabel('Time post stimulus (ms)')
-				plt.ylabel('Probability of HMM states')
-				plt.title('Trial %i' % (i+1))
-				fig.savefig('HMM_plots/dig_in_%i/Multinomial/laser/states_%i/%sTrial_%i.png' % (taste, result[0], label, (i+1)))
-				plt.close("all")
+		# Write the log-likelihood and AIC/BIC score to the hdf5 file too
+		log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
+		aic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'aic', np.array(result[1][2]))
+		bic = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'bic', np.array(result[1][3]))
+		time_vect = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'time', time)
+		hf5.flush()
+
+		# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
+		for i in range(binned_spikes.shape[0]):
+			if i in on_trials:
+				label = 'laser_on_'
+			else:
+				label = 'laser_off_'
+			fig = plt.figure()
+			for j in range(posterior_proba.shape[2]):
+				plt.plot(time, posterior_proba[i, :, j])
+			plt.xlabel('Time post stimulus (ms)')
+			plt.ylabel('Probability of HMM states')
+			plt.title('Trial %i' % (i+1))
+			fig.savefig('HMM_plots/dig_in_%i/Multinomial/laser/states_%i/%sTrial_%i.png' % (taste, result[0], label, (i+1)))
+			plt.close("all")
 		
 hf5.close()
 

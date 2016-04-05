@@ -23,17 +23,11 @@ for files in file_list:
 	if files[-2:] == 'h5':
 		hdf5_name = files
 
-'''# Delete the HMM_plots folder if it exists
-try:
-	os.system("rm -r ./HMM_plots")
-except:
-	pass'''
-
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r')
 
 # Ask the user for the HMM parameters  
-hmm_params = easygui.multenterbox(msg = 'Fill in the parameters for running a HMM (Poisson or Multinomial emissions) on your data', fields = ['Minimum number of states', 'Maximum number of states', 'Maximum number of iterations (300 is more than enough)', 'Convergence criterion (usually 1e-9)', 'Number of random restarts for HMM (50-60 is more than enough)', 'Transition probability inertia (between 0 and 1)', 'Emission Distribution intertia (between 0 and 1)'])
+hmm_params = easygui.multenterbox(msg = 'Fill in the parameters for running a HMM (Poisson or Multinomial emissions) on your data', fields = ['Minimum number of states', 'Maximum number of states', 'Convergence criterion (usually 1e-9)', 'Number of random restarts for HMM (50-60 is more than enough)', 'Transition probability inertia (between 0 and 1)', 'Emission Distribution intertia (between 0 and 1)'])
 
 # Ask the user for the taste to run the HMM on
 tastes = hf5.list_nodes('/spike_trains')
@@ -72,10 +66,8 @@ username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
 f = open('blech_multinomial_hmm.sh', 'w')
 g = open('blech_poisson_hmm.sh', 'w')
-print >>f, "module load PYTHON/ANACONDA-1.8.0"
-print >>g, "module load PYTHON/ANACONDA-1.8.0"
-print >>f, "export PYTHONPATH=/share/apps/scisoft/PYTHON-MODULES/ANACONDA-1.8.0/lib/python2.7/site-packages/:$PYTHONPATH"
-print >>g, "export PYTHONPATH=/share/apps/scisoft/PYTHON-MODULES/ANACONDA-1.8.0/lib/python2.7/site-packages/:$PYTHONPATH"
+print >>f, "module load PYTHON/ANACONDA-2.5.0"
+print >>g, "module load PYTHON/ANACONDA-2.5.0"
 print >>f, "cd /home/%s/Desktop/blech_clust" % username[0]
 print >>g, "cd /home/%s/Desktop/blech_clust" % username[0]
 print >>f, "python blech_multinomial_hmm.py"
