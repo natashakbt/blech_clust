@@ -108,7 +108,7 @@ username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
 f = open('blech_clust.sh', 'w')
-print >>f, "module load PYTHON/ANACONDA-1.8.0"
+print >>f, "module load PYTHON/ANACONDA-2.5.0"
 print >>f, "cd /home/%s/Desktop/blech_clust" % username[0]
 print >>f, "python blech_process.py"
 f.close()
