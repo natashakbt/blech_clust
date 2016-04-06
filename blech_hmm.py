@@ -3,11 +3,11 @@ from pomegranate import *
 import numpy as np
 import multiprocessing as mp
 
-def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, spikes, on_trials, edge_inertia, dist_inertia):
+def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, spikes, off_trials, edge_inertia, dist_inertia):
 
 	# Create a pool of asynchronous n_cpu processes running poisson_hmm() - no. of processes equal to seeds
 	pool = mp.Pool(processes = n_cpu)
-	results = [pool.apply_async(poisson_hmm, args = (n_states, threshold, spikes, seed, on_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
+	results = [pool.apply_async(poisson_hmm, args = (n_states, threshold, spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 	output = [p.get() for p in results]
 
 	# Find the process that ended up with the highest log likelihood, and return it as the solution. If several processes ended up with the highest log likelihood, just pick the earliest one
@@ -15,11 +15,11 @@ def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, spikes, on_trials, 
 	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
 	return output[maximum_pos]	
 
-def multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, spikes, on_trials, edge_inertia, dist_inertia):
+def multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, spikes, off_trials, edge_inertia, dist_inertia):
 
 	# Create a pool of asynchronous n_cpu processes running multinomial_hmm() - no. of processes equal to seeds
 	pool = mp.Pool(processes = n_cpu)
-	results = [pool.apply_async(multinomial_hmm, args = (n_states, threshold, spikes, seed, on_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
+	results = [pool.apply_async(multinomial_hmm, args = (n_states, threshold, spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 	output = [p.get() for p in results]
 
 	# Find the process that ended up with the highest log likelihood, and return it as the solution. If several processes ended up with the highest log likelihood, just pick the earliest one
@@ -27,7 +27,7 @@ def multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, spikes, on_tria
 	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
 	return output[maximum_pos]		
 
-def poisson_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, dist_inertia):
+def poisson_hmm(n_states, threshold, spikes, seed, off_trials, edge_inertia, dist_inertia):
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
@@ -35,7 +35,7 @@ def poisson_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, dist
 	# Make a pomegranate independent components distribution object and represent every unit with a Poisson distribution - 1 for each state
 	for i in range(n_states):
 		#emission_slice = (int((float(i)/n_states)*spikes.shape[1]), int((float(i+1)/n_states)*spikes.shape[1]))
-		#initial_emissions = np.mean(spikes[on_trials, emission_slice[0]:emission_slice[1], :], axis = (0, 1))*(np.random.random())
+		#initial_emissions = np.mean(spikes[off_trials, emission_slice[0]:emission_slice[1], :], axis = (0, 1))*(np.random.random())
 		states.append(State(IndependentComponentsDistribution([PoissonDistribution(np.random.rand()) for unit in range(spikes.shape[2])]), name = 'State%i' % (i+1)))
 		
 	model.add_states(states)
@@ -55,9 +55,9 @@ def poisson_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, dist
 	# Bake the model
 	model.bake()
 
-	# Train the model only on the trials indicated by on_trials
-	model.fit(spikes[on_trials, :, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
-	log_prob = [model.log_probability(spikes[i, :, :]) for i in on_trials]
+	# Train the model only on the trials indicated by off_trials
+	model.fit(spikes[off_trials, :, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
+	log_prob = [model.log_probability(spikes[i, :, :]) for i in off_trials]
 	log_prob = np.sum(log_prob)
 
 	# Set up things to return the parameters of the model - the state emission and transition matrix 
@@ -77,9 +77,9 @@ def poisson_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, dist
 	# Get the json representation of the model - will be needed if we need to reload the model anytime
 	model_json = model.to_json()
 
-	return model_json, log_prob, 2*((n_states)**2 + n_states*spikes.shape[2]) - 2*log_prob, (np.log(len(on_trials)*spikes.shape[1]))*((n_states)**2 + n_states*spikes.shape[2]) - 2*log_prob, state_emissions, state_transitions, posterior_proba
+	return model_json, log_prob, 2*((n_states)**2 + n_states*spikes.shape[2]) - 2*log_prob, (np.log(len(off_trials)*spikes.shape[1]))*((n_states)**2 + n_states*spikes.shape[2]) - 2*log_prob, state_emissions, state_transitions, posterior_proba
 	
-def multinomial_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, dist_inertia):
+def multinomial_hmm(n_states, threshold, spikes, seed, off_trials, edge_inertia, dist_inertia):
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
@@ -111,9 +111,9 @@ def multinomial_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, 
 	# Bake the model
 	model.bake()
 
-	# Train the model only on the trials indicated by on_trials
-	model.train(spikes[on_trials, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia)
-	log_prob = [model.log_probability(spikes[i, :]) for i in on_trials]
+	# Train the model only on the trials indicated by off_trials
+	model.train(spikes[off_trials, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia)
+	log_prob = [model.log_probability(spikes[i, :]) for i in off_trials]
 	log_prob = np.sum(log_prob)
 
 	# Set up things to return the parameters of the model - the state emission dicts and transition matrix 
@@ -131,4 +131,4 @@ def multinomial_hmm(n_states, threshold, spikes, seed, on_trials, edge_inertia, 
 	# Get the json representation of the model - will be needed if we need to reload the model anytime
 	model_json = model.to_json()
 	
-	return model_json, log_prob, 2*((n_states)**2 + n_states*(n_units + 1)) - 2*log_prob, (np.log(len(on_trials)*spikes.shape[1]))*((n_states)**2 + n_states*(n_units + 1)) - 2*log_prob, state_emissions, state_transitions, posterior_proba	
+	return model_json, log_prob, 2*((n_states)**2 + n_states*(n_units + 1)) - 2*log_prob, (np.log(len(off_trials)*spikes.shape[1]))*((n_states)**2 + n_states*(n_units + 1)) - 2*log_prob, state_emissions, state_transitions, posterior_proba	

@@ -74,9 +74,9 @@ for i in range(spikes.shape[0]):
 
 # Implement a Multinomial HMM for no. of states defined by min_states and max_states - run all the trials through the HMM
 hmm_results = []
-on_trials = np.arange(binned_spikes.shape[0])
+off_trials = np.arange(binned_spikes.shape[0])
 for n_states in range(min_states, max_states + 1):
-	result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
+	result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia)
 	hmm_results.append((n_states, result))
 
 # Delete the multinomial_hmm_results node under /spike_trains/dig_in_(taste)/ if it exists
@@ -150,7 +150,7 @@ if len(laser_exists) > 0:
 	# Implement a Multinomial HMM for no. of states defined by min_states and max_states
 	hmm_results = []
 	for n_states in range(min_states, max_states + 1):
-		result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
+		result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia)
 		hmm_results.append((n_states, result))
 
 	# Delete the laser node under /spike_trains/dig_in_(taste)/multinomial_hmm_results/ if it exists
