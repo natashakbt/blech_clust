@@ -120,7 +120,7 @@ while True:
 		data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
 
 		# Cluster the data
-		g = GMM(n_components = n_clusters, covariance_type = 'full', thresh = thresh, n_iter = n_iter, n_init = n_restarts)
+		g = GMM(n_components = n_clusters, covariance_type = 'full', tol = thresh, n_iter = n_iter, n_init = n_restarts)
 		g.fit(data)
 	
 		# Show the cluster plots if the solution converged

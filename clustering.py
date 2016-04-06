@@ -71,7 +71,7 @@ def clusterGMM(data, n_clusters, n_iter, restarts, threshold):
 	bayesian = []
 
 	for i in range(restarts):
-		g.append(GMM(n_components = n_clusters, covariance_type = 'full', thresh = threshold, random_state = i, n_iter = n_iter))
+		g.append(GMM(n_components = n_clusters, covariance_type = 'full', tol = threshold, random_state = i, n_iter = n_iter))
 		g[-1].fit(data)
 		if g[-1].converged_:
 			bayesian.append(g[-1].bic(data))
