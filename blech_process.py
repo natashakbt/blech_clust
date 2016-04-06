@@ -243,7 +243,7 @@ for i in range(max_clusters-1):
 		#		plot_wf[time] = slices_dejittered[point, time*10]
 		#	plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
 		#	plt.hold(True)
-		plt.plot(x-15, slices_dejittered[cluster_points, ::10].T, linewidth = 0.1, color = 'red')
+		plt.plot(x-15, slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
 		plt.xlabel('Time')
 		plt.ylabel('Voltage (microvolts)')
 		plt.title('Cluster%i' % cluster)

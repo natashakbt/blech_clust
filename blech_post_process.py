@@ -131,7 +131,7 @@ while True:
 				split_points = np.where(split_predictions == cluster)[0]				
 				plt.figure(cluster)
 				slices_dejittered = spike_waveforms[this_cluster, ::10]
-				plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.1, color = 'red')
+				plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
 				plt.xlabel('Time')
 				plt.ylabel('Voltage (microvolts)')
 				plt.title('Split Cluster%i' % cluster)
