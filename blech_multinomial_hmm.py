@@ -144,7 +144,7 @@ try:
 	laser_exists = dig_in.laser_durations[:]
 except:
 	pass
-if laser_exists:
+if len(laser_exists) > 0:
 	on_trials = np.where(dig_in.laser_durations[:] > 0.0)[0]
 	off_trials = np.where(dig_in.laser_array[:] == 0.0)[0]
 	# Implement a Multinomial HMM for no. of states defined by min_states and max_states

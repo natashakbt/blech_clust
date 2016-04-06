@@ -38,6 +38,13 @@ except:
 	pass
 os.mkdir('./PSTH')
 
+# Make directory to store the raster plots. Delete and remake the directory if it exists
+try:
+	os.system('rm -r '+'./raster')
+except:
+	pass
+os.mkdir('./raster')
+
 # Get the list of spike trains by digital input channels
 trains_dig_in = hf5.list_nodes('/spike_trains')
 
@@ -45,9 +52,10 @@ trains_dig_in = hf5.list_nodes('/spike_trains')
 r_pre_stim = 500
 r_post_stim = 2500
 
-# Plot PSTHs by digital input channels
+# Plot PSTHs and rasters by digital input channels
 for dig_in in trains_dig_in:
 	os.mkdir('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1])
+	os.mkdir('./raster/'+str.split(dig_in._v_pathname, '/')[-1])
 	trial_avg_spike_array = np.mean(dig_in.spike_array[:], axis = 0)
 	for unit in range(trial_avg_spike_array.shape[0]):
 		time = []
@@ -63,6 +71,21 @@ for dig_in in trains_dig_in:
 		plt.plot(time, spike_rate, linewidth = 3.0)
 		fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit + 1))
 		plt.close("all")
+
+		# Now plot the rasters for this digital input channel and unit
+		# Run through the trials
+		time = np.arange(dig_in.spike_array[:].shape[2] + 1) - pre_stim
+		fig = plt.figure()
+		for trial in range(dig_in.spike_array[:].shape[0]):
+			x = np.where(dig_in.spike_array[trial, unit, :] > 0.0)[0]
+			plt.vlines(x, trial, trial + 1, colors = 'black')
+		plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 500), time[::500])
+		plt.yticks(np.arange(0, dig_in.spike_array[:].shape[0] + 1, 5))
+		plt.title('Unit: %i raster plot' % (unit + 1))	
+		plt.xlabel('Time from taste delivery (ms)')
+		plt.ylabel('Trial number')
+		fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit + 1))
+		plt.close("all")
 		
 		# Check if the laser_array exists, and plot laser PSTH if it does
 		laser_exists = []		
@@ -70,7 +93,7 @@ for dig_in in trains_dig_in:
 			laser_exists = dig_in.laser_durations[:]
 		except:
 			pass
-		if laser_exists:
+		if len(laser_exists) > 0:
 			# First get the unique laser onset times (from end of taste delivery) in this dataset
 			onset_lags = np.unique(dig_in.laser_onset_lag[:])
 			# Then get the unique laser onset durations
@@ -99,6 +122,27 @@ for dig_in in trains_dig_in:
 			plt.legend(bbox_to_anchor=(1.0, 1.0))
 			fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_laser_psth.png' % (unit + 1))
 			plt.close("all")
+
+			# And do the same to get the rasters
+			for onset in onset_lags:
+				for duration in durations:
+					time = np.arange(dig_in.spike_array[:].shape[2] + 1) - pre_stim
+					these_trials = np.where((dig_in.laser_durations[:] == duration)*(dig_in.laser_onset_lag[:] == onset) > 0)[0]
+					# If no trials have this combination of onset lag and duration (can happen when duration = 0, laser off), break out of the loop
+					if len(these_trials) == 0:
+						continue
+					fig = plt.figure()
+					# Run through the trials
+					for i in range(len(these_trials)):
+						x = np.where(dig_in.spike_array[these_trials[i], unit, :] > 0.0)[0]
+						plt.vlines(x, i, i + 1, colors = 'black')	
+					plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 500), time[::500])
+					plt.yticks(np.arange(0, len(these_trials) + 1, 5))
+					plt.title('Unit: %i Dur: %i ms, Lag: %i ms' % (unit + 1, int(duration), int(onset)))	
+					plt.xlabel('Time from taste delivery (ms)')
+					plt.ylabel('Trial number')
+					fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_Dur%ims_Lag%ims.png' % (unit + 1, int(duration), int(onset)))
+					plt.close("all")	
 						
 hf5.close()
 
