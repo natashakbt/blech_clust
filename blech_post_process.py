@@ -58,6 +58,8 @@ except:
 class unit_descriptor(tables.IsDescription):
 	electrode_number = tables.Int32Col()
 	single_unit = tables.Int32Col()
+	regular_spiking = tables.Int32Col()
+	fast_spiking = tables.Int32Col()
 
 # Make a table under /sorted_units describing the sorted units. If unit_descriptor already exists, just open it up in the variable table
 try:
@@ -180,6 +182,12 @@ while True:
 		unit_description['electrode_number'] = electrode_num
 		single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
 		unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+		# If the user says that this is a single unit, ask them whether its regular or fast spiking
+		unit_description['regular_spiking'] = 0
+		unit_description['fast_spiking'] = 0
+		if int(ast.literal_eval(single_unit[0])):
+			unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
+			unit_description[unit_type[0]] = 1		
 		unit_description.append()
 		table.flush()
 		hf5.flush()
@@ -195,6 +203,12 @@ while True:
 		unit_description['electrode_number'] = electrode_num
 		single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
 		unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+		# If the user says that this is a single unit, ask them whether its regular or fast spiking
+		unit_description['regular_spiking'] = 0
+		unit_description['fast_spiking'] = 0
+		if int(ast.literal_eval(single_unit[0])):
+			unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
+			unit_description[unit_type[0]] = 1
 		unit_description.append()
 		table.flush()
 		hf5.flush()
@@ -225,6 +239,12 @@ while True:
 				unit_description['electrode_number'] = electrode_num
 				single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
 				unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+				# If the user says that this is a single unit, ask them whether its regular or fast spiking
+				unit_description['regular_spiking'] = 0
+				unit_description['fast_spiking'] = 0
+				if int(ast.literal_eval(single_unit[0])):
+					unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
+					unit_description[unit_type[0]] = 1
 				unit_description.append()
 				table.flush()
 				hf5.flush()
@@ -242,6 +262,12 @@ while True:
 				unit_description['electrode_number'] = electrode_num
 				single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that electrode: %i cluster: %i is a beautiful single unit (True = Yes, False = No)' % (electrode_num, int(cluster)), choices = ('True', 'False'))
 				unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+				# If the user says that this is a single unit, ask them whether its regular or fast spiking
+				unit_description['regular_spiking'] = 0
+				unit_description['fast_spiking'] = 0
+				if int(ast.literal_eval(single_unit[0])):
+					unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
+					unit_description[unit_type[0]] = 1
 				unit_description.append()
 				table.flush()
 				hf5.flush()				
