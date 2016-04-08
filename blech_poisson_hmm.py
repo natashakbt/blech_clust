@@ -138,7 +138,7 @@ for result in hmm_results:
 				unit_type = 'multi_unit'
 			for j in range(spikes.shape[2]):
 				if spikes[i, unit, j] > 0:
-					plt.vlines(time[j], unit, unit + 1, color = raster_colors[unit_type])
+					plt.vlines(j - pre_stim_hmm, unit, unit + 1, color = raster_colors[unit_type])
 		plt.xlabel('Time post stimulus (ms)')
 		plt.ylabel('Probability of HMM states' + '\n' + 'Unit number')
 		plt.title('Trial %i' % (i+1) + '\n' + 'RSU: red, FS: blue, Multi: black')
@@ -207,7 +207,9 @@ if len(laser_exists) > 0:
 		time_vect = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'time', time)
 		hf5.flush()
 
-		# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
+		# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities and raster plots
+		# First make a dictionary of colors for the rasters
+		raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
 		for i in range(binned_spikes.shape[0]):
 			if i in on_trials:
 				label = 'laser_on_'
@@ -216,9 +218,20 @@ if len(laser_exists) > 0:
 			fig = plt.figure()
 			for j in range(posterior_proba.shape[2]):
 				plt.plot(time, posterior_proba[i, :, j])
+			for unit in range(binned_spikes.shape[2]):
+				# Determine the type of unit we are looking at - the color of the raster will depend on that
+				if hf5.root.unit_descriptor[unit]['regular_spiking'] == 1:
+					unit_type = 'regular_spiking'
+				elif hf5.root.unit_descriptor[unit]['fast_spiking'] == 1:
+					unit_type = 'fast_spiking'
+				else:
+					unit_type = 'multi_unit'
+				for j in range(spikes.shape[2]):
+					if spikes[i, unit, j] > 0:
+						plt.vlines(j - pre_stim_hmm, unit, unit + 1, color = raster_colors[unit_type])
 			plt.xlabel('Time post stimulus (ms)')
-			plt.ylabel('Probability of HMM states')
-			plt.title('Trial %i' % (i+1))
+			plt.ylabel('Probability of HMM states' + '\n' + 'Unit number')
+			plt.title('Trial %i' % (i+1) + '\n' + 'RSU: red, FS: blue, Multi: black')
 			fig.savefig('HMM_plots/dig_in_%i/Poisson/laser/states_%i/%sTrial_%i.png' % (taste, result[0], label, (i+1)))
 			plt.close("all")
 		
