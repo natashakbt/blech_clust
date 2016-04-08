@@ -100,13 +100,19 @@ for i in range(len(dig_in_channels)):
 	for j in range(len(end_points[dig_in_channel_nums[i]])):
 		# Skip the trial if the headstage fell off before it
 		if end_points[dig_in_channel_nums[i]][j] >= expt_end_time:
-			break
+			continue
 		# Otherwise run through the units and convert their spike times to milliseconds
 		else:
 			spikes = np.zeros((len(units), durations[0] + durations[1]))
 			for k in range(len(units)):
-				for l in range(durations[0] + durations[1]):
-					spikes[k, l] = len(np.where((units[k].times[:] >= end_points[dig_in_channel_nums[i]][j] - (durations[0]-l)*30)*(units[k].times[:] < end_points[dig_in_channel_nums[i]][j] - (durations[0]-l-1)*30))[0])
+				# Get the spike times around the end of taste delivery
+				spike_times = np.where((units[k].times[:] <= end_points[dig_in_channel_nums[i]][j] + durations[1]*30)*(units[k].times[:] >= end_points[dig_in_channel_nums[i]][j] - durations[0]*30))[0]
+				spike_times = units[k].times[spike_times]
+				spike_times = spike_times - end_points[dig_in_channel_nums[i]][j]
+				spike_times = spike_times.astype(int)/30 + durations[0]
+				spikes[k, spike_times] = 1
+				#for l in range(durations[0] + durations[1]):
+				#	spikes[k, l] = len(np.where((units[k].times[:] >= end_points[dig_in_channel_nums[i]][j] - (durations[0]-l)*30)*(units[k].times[:] < end_points[dig_in_channel_nums[i]][j] - (durations[0]-l-1)*30))[0])
 					
 		# Append the spikes array to spike_train 
 		spike_train.append(spikes)
