@@ -225,6 +225,14 @@ while True:
 				else:
 					unit_waveforms = np.concatenate((unit_waveforms, spike_waveforms[np.where(predictions == int(cluster))[0], :]))
 					unit_times = np.concatenate((unit_times, spike_times[np.where(predictions == int(cluster))[0]]))
+
+			# Show the merged cluster to the user, and ask if they still want to merge
+			plt.plot(np.arange(45) - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+			plt.xlabel('Time (30 samples per ms)')
+			plt.ylabel('Voltage (microvolts)')
+			plt.title('Merged cluster')
+			plt.show()
+ 
 			# Warn the user about the frequency of ISI violations in the merged unit
 			ISIs = np.ediff1d(unit_times)/30.0
 			violations = np.where(ISIs < 2.0)[0]
