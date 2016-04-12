@@ -252,7 +252,7 @@ for i in range(max_clusters-1):
 		
 		fig = plt.figure()
 		cluster_times = times_dejittered[cluster_points]
-		ISIs = np.ediff1d(cluster_times)
+		ISIs = np.ediff1d(np.sort(cluster_times))
 		ISIs = ISIs/30.0
 		plt.hist(ISIs, bins = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, np.max(ISIs)])
 		plt.xlim([0.0, 10.0])

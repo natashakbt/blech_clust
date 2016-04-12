@@ -234,7 +234,7 @@ while True:
 			plt.show()
  
 			# Warn the user about the frequency of ISI violations in the merged unit
-			ISIs = np.ediff1d(unit_times)/30.0
+			ISIs = np.ediff1d(np.sort(unit_times))/30.0
 			violations = np.where(ISIs < 2.0)[0]
 			proceed = easygui.multchoicebox(msg = 'My merged cluster has %f percent (%i/%i) ISI violations (<2ms). I want to still merge these clusters into one unit (True = Yes, False = No)' % ((float(len(violations))/float(len(unit_times)))*100.0, len(violations), len(unit_times)), choices = ('True', 'False'))
 			proceed = ast.literal_eval(proceed[0])
