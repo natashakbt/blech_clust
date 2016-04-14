@@ -244,7 +244,7 @@ for i in range(max_clusters-1):
 		#	plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
 		#	plt.hold(True)
 		plt.plot(x-15, slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
-		plt.xlabel('Time')
+		plt.xlabel('Time (30 samples per ms)')
 		plt.ylabel('Voltage (microvolts)')
 		plt.title('Cluster%i' % cluster)
 		fig.savefig('./Plots/%i/Plots/%i_clusters_waveforms_ISIs/Cluster%i_waveforms' % (electrode_num, i+2, cluster))
