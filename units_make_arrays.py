@@ -110,6 +110,8 @@ for i in range(len(dig_in_channels)):
 				spike_times = units[k].times[spike_times]
 				spike_times = spike_times - end_points[dig_in_channel_nums[i]][j]
 				spike_times = spike_times.astype(int)/30 + durations[0]
+				# Drop any spikes that are too close to the ends of the trial
+				spike_times = spike_times[np.where((spike_times >= 0)*(spike_times < durations[0] + durations[1]))[0]]
 				spikes[k, spike_times] = 1
 				#for l in range(durations[0] + durations[1]):
 				#	spikes[k, l] = len(np.where((units[k].times[:] >= end_points[dig_in_channel_nums[i]][j] - (durations[0]-l)*30)*(units[k].times[:] < end_points[dig_in_channel_nums[i]][j] - (durations[0]-l-1)*30))[0])
