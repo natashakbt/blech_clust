@@ -217,7 +217,7 @@ if len(laser_exists) > 0:
 				label = 'laser_off_'
 			fig = plt.figure()
 			for j in range(posterior_proba.shape[2]):
-				plt.plot(time, posterior_proba[i, :, j])
+				plt.plot(time, binned_spikes.shape[2]*posterior_proba[i, :, j])
 			for unit in range(binned_spikes.shape[2]):
 				# Determine the type of unit we are looking at - the color of the raster will depend on that
 				if hf5.root.unit_descriptor[unit]['regular_spiking'] == 1:
