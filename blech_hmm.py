@@ -2,6 +2,7 @@
 from pomegranate import *
 import numpy as np
 import multiprocessing as mp
+import math
 
 def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia):
 
@@ -10,10 +11,17 @@ def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_
 	results = [pool.apply_async(poisson_hmm, args = (n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 	output = [p.get() for p in results]
 
+	cleaned_output = []
+	for i in range(len(output)):
+		if math.isnan(output[i][1]):
+			continue
+		else:
+			cleaned_output.append(output[i])
+
 	# Find the process that ended up with the highest log likelihood, and return it as the solution. If several processes ended up with the highest log likelihood, just pick the earliest one
-	log_probs = [output[i][1] for i in range(len(output))]
+	log_probs = [cleaned_output[i][1] for i in range(len(cleaned_output))]
 	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
-	return output[maximum_pos]	
+	return cleaned_output[maximum_pos]	
 
 def multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia):
 
