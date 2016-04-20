@@ -34,9 +34,9 @@ def poisson_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inert
 	states = []
 	# Make a pomegranate independent components distribution object and represent every unit with a Poisson distribution - 1 for each state
 	for i in range(n_states):
-		#emission_slice = (int((float(i)/n_states)*spikes.shape[1]), int((float(i+1)/n_states)*spikes.shape[1]))
-		#initial_emissions = np.mean(spikes[off_trials, emission_slice[0]:emission_slice[1], :], axis = (0, 1))*(np.random.random())
-		states.append(State(IndependentComponentsDistribution([PoissonDistribution(np.random.rand()) for unit in range(binned_spikes.shape[2])]), name = 'State%i' % (i+1)))
+		emission_slice = (int((float(i)/n_states)*binned_spikes.shape[1]), int((float(i+1)/n_states)*binned_spikes.shape[1]))
+		initial_emissions = np.mean(binned_spikes[off_trials, emission_slice[0]:emission_slice[1], :], axis = (0, 1)) 
+		states.append(State(IndependentComponentsDistribution([PoissonDistribution(initial_emissions[unit]) for unit in range(binned_spikes.shape[2])]), name = 'State%i' % (i+1)))
 		
 	model.add_states(states)
 	# Add transitions from model.start to each state (equal probabilties)
