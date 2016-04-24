@@ -73,10 +73,10 @@ for this_unit in range(len(units)):
 	
 # Make a node for storing unit distances under /sorted_units. First try to delete it, and pass if it exists
 try:
-	hf5.remove_node('/sorted_units/unit_distances')
+	hf5.remove_node('/unit_distances')
 except:
 	pass
-hf5.create_array('/sorted_units', 'unit_distances', unit_distances)
+hf5.create_array('/', 'unit_distances', unit_distances)
 
 hf5.close()
 
