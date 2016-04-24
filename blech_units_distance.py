@@ -27,35 +27,19 @@ units = hf5.list_nodes('/sorted_units')
 # Distance is defined as the percentage of spikes of the reference unit that have a spike from the compared unit within 1 ms
 unit_distances = np.zeros((len(units), len(units)))
 for this_unit in range(len(units)):
-	# print this_unit, this_unit_times.shape
+	this_unit_times = units[this_unit].times[:]
 	for other_unit in range(len(units)): 
 		if other_unit < this_unit:
 			continue
-		this_unit_times = units[this_unit].times[:]
 		other_unit_times = units[other_unit].times[:]
-		# print other_unit, other_unit_times.shape
-		# Tiling doesn't work in this case because it copies data, memory error happens
-		# this_unit_times = np.vstack((this_unit_times for i in range(other_unit_times.shape[0])))
-		# other_unit_times = np.vstack((other_unit_times for i in range(this_unit_times.shape[1])))
-		# this_unit_times = np.tile(this_unit_times, (other_unit_times.shape[0], 1))
-		# other_unit_times = np.tile(other_unit_times, (this_unit_times.shape[1], 1))
-		# Broadcast this_unit_times to the shape of #other_unit_times x #this_unit_times. Then broadcast other_unit_times to #this_unit_times X #other_unit_times
-		x_this_unit = np.zeros(len(other_unit_times))
-		x_other_unit = np.zeros(len(this_unit_times))
-		this_unit_times = np.broadcast_arrays(x_this_unit[:, None], this_unit_times[None, :])
-		this_unit_times = this_unit_times[1]
-		other_unit_times = np.broadcast_arrays(x_other_unit[:, None], other_unit_times[None, :])
-		other_unit_times = other_unit_times[1]
-		other_unit_times = other_unit_times.T
-		diff = np.abs(this_unit_times - other_unit_times)/30.0
-		del this_unit_times, other_unit_times
-		diff_this_other = np.min(diff, axis = 0)
-		diff_other_this = np.min(diff, axis = 1)
+		# The outer keyword can be attached to any numpy ufunc to apply that operation to every element in x AND in y. So here we calculate diff[i, j] = this_unit_times[i] - other_unit_times[j] for all i and j
+		diff = np.abs(np.subtract.outer(this_unit_times, other_unit_times))
+		# Divide the diffs by 30 to convert to milliseconds - then check how many spikes have a spike in the other unit within 1 millisecond	
+		diff_this_other = np.min(diff, axis = 1)/30.0
+		diff_other_this = np.min(diff, axis = 0)/30.0
 		unit_distances[this_unit, other_unit] = 100.0*len(np.where(diff_this_other <= 1.0)[0])/len(diff_this_other)
 		unit_distances[other_unit, this_unit] = 100.0*len(np.where(diff_other_this <= 1.0)[0])/len(diff_other_this)
-
-	# del this_unit_times, other_unit_times, diff
-
+	
 # Make a node for storing unit distances under /sorted_units. First try to delete it, and pass if it exists
 try:
 	hf5.remove_node('/sorted_units/unit_distances')
