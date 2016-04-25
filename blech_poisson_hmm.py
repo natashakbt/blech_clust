@@ -97,8 +97,9 @@ try:
 except:
 	pass
 
-# Then create the poisson_hmm_results group
+# Then create the poisson_hmm_results group, and save the identities of the chosen units to this group
 hf5.create_group('/spike_trains/dig_in_%i/' % taste, '%s_poisson_hmm_results' % hmm_type)
+hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/' % (taste, hmm_type), 'chosen_units', chosen_units)
 hf5.flush()
 
 # Delete the Poisson folder within HMM_plots if it exists for this taste
@@ -149,7 +150,7 @@ for result in hmm_results:
 				unit_type = 'multi_unit'
 			for j in range(spikes.shape[2]):
 				if spikes[i, unit, j] > 0:
-					plt.vlines(j - pre_stim_hmm, unit, unit + 1, color = raster_colors[unit_type])
+					plt.vlines(j - pre_stim_hmm, unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 		plt.xlabel('Time post stimulus (ms)')
 		plt.ylabel('Probability of HMM states' + '\n' + 'Unit number')
 		plt.title('Trial %i' % (i+1) + '\n' + 'RSU: red, FS: blue, Multi: black')
@@ -239,7 +240,7 @@ if len(laser_exists) > 0:
 					unit_type = 'multi_unit'
 				for j in range(spikes.shape[2]):
 					if spikes[i, unit, j] > 0:
-						plt.vlines(j - pre_stim_hmm, unit, unit + 1, color = raster_colors[unit_type])
+						plt.vlines(j - pre_stim_hmm, unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 			plt.xlabel('Time post stimulus (ms)')
 			plt.ylabel('Probability of HMM states' + '\n' + 'Unit number')
 			plt.title('Trial %i' % (i+1) + '\n' + 'RSU: red, FS: blue, Multi: black')
