@@ -141,9 +141,9 @@ for result in hmm_results:
 			plt.plot(time, binned_spikes.shape[2]*posterior_proba[i, :, j])
 		for unit in range(binned_spikes.shape[2]):
 			# Determine the type of unit we are looking at - the color of the raster will depend on that
-			if hf5.root.unit_descriptor[unit]['regular_spiking'] == 1:
+			if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
 				unit_type = 'regular_spiking'
-			elif hf5.root.unit_descriptor[unit]['fast_spiking'] == 1:
+			elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
 				unit_type = 'fast_spiking'
 			else:
 				unit_type = 'multi_unit'
@@ -231,9 +231,9 @@ if len(laser_exists) > 0:
 				plt.plot(time, binned_spikes.shape[2]*posterior_proba[i, :, j])
 			for unit in range(binned_spikes.shape[2]):
 				# Determine the type of unit we are looking at - the color of the raster will depend on that
-				if hf5.root.unit_descriptor[unit]['regular_spiking'] == 1:
+				if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
 					unit_type = 'regular_spiking'
-				elif hf5.root.unit_descriptor[unit]['fast_spiking'] == 1:
+				elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
 					unit_type = 'fast_spiking'
 				else:
 					unit_type = 'multi_unit'
