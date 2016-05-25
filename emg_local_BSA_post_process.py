@@ -20,6 +20,13 @@ for files in file_list:
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
+# Delete the raw_emg node, if it exists in the hdf5 file, to cut down on file size
+try:
+	hf5.remove_node('/raw_emg', recursive = 1)
+except:
+	print "Raw EMG recordings have already been removed, so moving on .."
+
+
 # Load sig_trials.npy to get number of tastes
 sig_trials = np.load('sig_trials.npy')
 tastes = sig_trials.shape[0]
