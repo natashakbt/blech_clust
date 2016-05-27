@@ -135,9 +135,9 @@ for i in range(len(dig_in_channels)):
 			for laser in laser_nums:
 				on_trial = np.where(np.abs(end_points[laser] - end_points[dig_in_channel_nums[i]][j]) <= 5*30000)[0]
 				if len(on_trial) > 0:
-					# If the lasers did go off around stimulus delivery, get the duration and start time (from end of taste delivery) of the laser trial (as a multiple of 10 - so 53 gets rounded off to 50)
+					# If the lasers did go off around stimulus delivery, get the duration and start time in ms (from end of taste delivery) of the laser trial (as a multiple of 10 - so 53 gets rounded off to 50)
 					cond_array[j] = 10*((end_points[laser][on_trial][0] - start_points[laser][on_trial][0])/300)
-					laser_start[j] = 100*((start_points[laser][on_trial][0] - end_points[dig_in_channel_nums[i]][j])/3000)
+					laser_start[j] = 10*((start_points[laser][on_trial][0] - end_points[dig_in_channel_nums[i]][j])/300)
 		# Write the conditional stimulus duration array to the hdf5 file
 		laser_durations = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_durations', cond_array)
 		laser_onset_lag = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_onset_lag', laser_start)
