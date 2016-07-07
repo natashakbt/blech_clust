@@ -77,7 +77,7 @@ for i in range(len(unique_lasers)):
 		this_order = []
 		for j in range(unique_lasers[i].shape[0]):
 			for k in range(unique_lasers[i].shape[0]):
-				if unique_lasers[0][j, :] == unique_laser[i][k, :]:
+				if np.array_equal(unique_lasers[0][j, :], unique_lasers[i][k, :]):
 					this_order.append(k)
 		laser_order.append(np.array(this_order))
 
@@ -92,13 +92,13 @@ if len(laser_order) == 1:
 	lda_palatability = lda_palatability[0]
 	lda_identity = lda_identity[0]
 else:
-	r_pearson = np.concatenate((r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
-	r_spearman = np.concatenate((r_spearman[i][laser_order[i], :, :] for i in range(len(r_spearman))), axis = 2)
-	p_pearson = np.concatenate((p_pearson[i][laser_order[i], :, :] for i in range(len(p_pearson))), axis = 2)
-	p_spearman = np.concatenate((p_spearman[i][laser_order[i], :, :] for i in range(len(p_spearman))), axis = 2)
-	p_identity = np.concatenate((p_identity[i][laser_order[i], :, :] for i in range(len(p_identity))), axis = 2)
-	lda_palatability = np.stack((lda_palatability[i][laser_order[i], :] for i in range(len(lda_palatability))), axis = -1)
-	lda_identity = np.stack((lda_identity[i][laser_order[i], :] for i in range(len(lda_identity))), axis = -1)
+	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
+	r_spearman = np.concatenate(tuple(r_spearman[i][laser_order[i], :, :] for i in range(len(r_spearman))), axis = 2)
+	p_pearson = np.concatenate(tuple(p_pearson[i][laser_order[i], :, :] for i in range(len(p_pearson))), axis = 2)
+	p_spearman = np.concatenate(tuple(p_spearman[i][laser_order[i], :, :] for i in range(len(p_spearman))), axis = 2)
+	p_identity = np.concatenate(tuple(p_identity[i][laser_order[i], :, :] for i in range(len(p_identity))), axis = 2)
+	lda_palatability = np.stack(tuple(lda_palatability[i][laser_order[i], :] for i in range(len(lda_palatability))), axis = -1)
+	lda_identity = np.stack(tuple(lda_identity[i][laser_order[i], :] for i in range(len(lda_identity))), axis = -1)
 	# Now average the lda results along the last axis (i.e across sessions)
 	lda_palatability = np.mean(lda_palatability, axis = 2)
 	lda_identity = np.mean(lda_identity, axis = 2)
@@ -120,6 +120,16 @@ time_limits = easygui.multenterbox(msg = 'Enter the time limits for plotting the
 for i in range(len(time_limits)):
 	time_limits[i] = int(time_limits[i])
 plot_indices = np.where((x>=time_limits[0])*(x<=time_limits[1]))[0]
+
+# Save all these arrays in the output directory
+np.save('r_pearson.npy', r_pearson)
+np.save('r_spearman.npy', r_spearman)
+np.save('p_pearson.npy', p_pearson)
+np.save('p_spearman.npy', p_spearman)
+np.save('p_identity.npy', p_identity)
+np.save('lda_palatability.npy', lda_palatability)
+np.save('lda_identity.npy', lda_identity)
+np.save('unique_lasers.npy', unique_lasers)
 
 # Plot the r_squared values together first (for the different laser conditions)
 fig = plt.figure()
