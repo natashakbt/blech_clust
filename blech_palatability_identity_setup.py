@@ -45,9 +45,22 @@ for i in range(len(params)):
 pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike trains', fields = ['Pre stim (ms)'])
 pre_stim = int(pre_stim[0])
 
+# Ask the user about the type of units they want to do the calculations on (single or all units)
+unit_type = easygui.multchoicebox(msg = 'Which type of units do you want to use?', choices = ('All units', 'Single units', 'Multi units'))
+all_units = np.arange(trains_dig_in[0].spike_array.shape[1])
+single_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 1])
+multi_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 0])
+chosen_units = []
+if unit_type[0] == 'All units':
+	chosen_units = all_units
+elif unit_type[0] == 'Single units':
+	chosen_units = single_units
+else:
+	chosen_units = multi_units
+
 # Now make arrays to pull the data out
 num_trials = trains_dig_in[0].spike_array.shape[0]
-num_units = trains_dig_in[0].spike_array.shape[1]
+num_units = len(chosen_units)
 time = trains_dig_in[0].spike_array.shape[2]
 num_tastes = len(trains_dig_in)
 palatability = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = int)
@@ -69,7 +82,7 @@ for i in range(0, time - params[0] + params[1], params[1]):
 				laser[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.vstack((trains_dig_in[k].laser_durations[:], trains_dig_in[k].laser_onset_lag[:])).T
 			except:
 				laser[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.zeros((num_trials, 2))
-			response[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, j, i:i + params[0]], axis = 1)
+			response[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, chosen_units[j], i:i + params[0]], axis = 1)
 
 # Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
 try:
