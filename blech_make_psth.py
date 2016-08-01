@@ -119,7 +119,7 @@ for dig_in in trains_dig_in:
 			plt.title('Unit: %i laser PSTH, Window size: %i ms, Step size: %i ms' % (unit + 1, params[0], params[1]) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
 			plt.xlabel('Time from taste delivery (ms)')
 			plt.ylabel('Firing rate (Hz)')
-			plt.legend(bbox_to_anchor=(1.0, 1.0))
+			plt.legend(loc = 'upper left', fontsize = 10)
 			fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_laser_psth.png' % (unit + 1))
 			plt.close("all")
 
