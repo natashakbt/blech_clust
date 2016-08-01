@@ -105,11 +105,40 @@ trials = []
 for i in range(len(unique_lasers)):
 	this_trials = [j for j in range(laser.shape[2]) if np.array_equal(laser[0, 0, j, :], unique_lasers[i, :])]
 	trials.append(this_trials)
+trials = np.array(trials)
 
 # Save the trials and unique laser combos to the hdf5 file as well
-hf5.create_array('/ancillary_analysis', 'trials', np.array(trials))
+hf5.create_array('/ancillary_analysis', 'trials', trials)
 hf5.create_array('/ancillary_analysis', 'laser_combination_d_l', unique_lasers)
 hf5.flush()
+
+#---------Taste similarity calculation (use cosine similarity)----------------------------------------------------
+# Also restructure the neural response array by # laser conditions X time X # tastes X # units X trials. Save this array to file as well
+neural_response_laser = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_units, num_trials/unique_lasers.shape[0]), dtype = np.dtype('float64'))
+for i in range(unique_lasers.shape[0]):
+	for j in range((time - params[0])/params[1] + 1):
+		for k in range(num_tastes):
+			neural_response_laser[i, j, k, :, :] = response[j, :, trials[i][np.where((trials[i] >= num_trials*k)*(trials[i] < num_trials*(k+1)) == True)[0]]].T 
+
+# Set up an array to store similarity calculation results - similarity of every taste to every other taste at each time point in every laser condition
+taste_cosine_similarity = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
+for i in range(unique_lasers.shape[0]):
+	for j in range((time - params[0])/params[1] + 1):
+		for k in range(num_tastes):
+			for l in range(num_tastes):
+				numerator_dot_product = np.sum(np.mean(neural_response_laser[i, j, k, :, :], axis = -1)*np.mean(neural_response_laser[i, j, l, :, :], axis = -1))
+				denominator_mods = np.sqrt(np.sum(np.mean(neural_response_laser[i, j, k, :, :], axis = -1)**2))*np.sqrt(np.sum(np.mean(neural_response_laser[i, j, l, :, :], axis = -1)**2)) 
+				taste_cosine_similarity[i, j, k, l] = numerator_dot_product/denominator_mods
+
+# Save this array to file
+hf5.create_array('/ancillary_analysis', 'taste_cosine_similarity', taste_cosine_similarity)
+
+#---------End taste similarity calculation-------------------------------------------------------------------------
+
+#---------Taste discriminability calculation (ANOVA in user-defined bins)------------------------------------------
+
+pass
+#---------End taste discriminability calculation-------------------------------------------------------------------
 
 # --------Palatability calculation - separate r and p values for Spearman and Pearson correlations----------------
 # Set up arrays to store palatability calculation results
