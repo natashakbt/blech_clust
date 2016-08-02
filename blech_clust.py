@@ -64,7 +64,7 @@ else:
 # If only one amplifier port was used in the experiment, that's the emg_port. Else ask the user to specify
 emg_port = ''
 if len(ports) == 1:
-	emg_port = ports[0]
+	emg_port = list(ports[0])
 else:
 	emg_port = easygui.multchoicebox(msg = 'Which amplifier port were the EMG electrodes hooked up to? Just choose any amplifier port if you did not hook up an EMG at all.', choices = tuple(ports))
 # Now get the emg channel numbers, and convert them to integers
