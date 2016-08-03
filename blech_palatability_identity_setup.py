@@ -46,7 +46,7 @@ pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike
 pre_stim = int(pre_stim[0])
 
 # Ask the user about the type of units they want to do the calculations on (single or all units)
-unit_type = easygui.multchoicebox(msg = 'Which type of units do you want to use?', choices = ('All units', 'Single units', 'Multi units'))
+unit_type = easygui.multchoicebox(msg = 'Which type of units do you want to use?', choices = ('All units', 'Single units', 'Multi units', 'Custom choice'))
 all_units = np.arange(trains_dig_in[0].spike_array.shape[1])
 single_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 1])
 multi_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 0])
@@ -55,8 +55,14 @@ if unit_type[0] == 'All units':
 	chosen_units = all_units
 elif unit_type[0] == 'Single units':
 	chosen_units = single_units
-else:
+elif unit_type[0] == 'Multi units':
 	chosen_units = multi_units
+else:
+	chosen_units = easygui.multchoicebox(msg = 'Which units do you want to choose?', choices = ([i for i in all_units]))
+	for i in range(len(chosen_units)):
+		chosen_units[i] = int(chosen_units[i])
+	chosen_units = np.array(chosen_units)
+
 
 # Now make arrays to pull the data out
 num_trials = trains_dig_in[0].spike_array.shape[0]
@@ -66,6 +72,7 @@ num_tastes = len(trains_dig_in)
 palatability = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = int)
 identity = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = int)
 response = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
+unscaled_response = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
 laser = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials, 2), dtype = float)
 
 # Fill in the palatabilities and identities
@@ -82,7 +89,13 @@ for i in range(0, time - params[0] + params[1], params[1]):
 				laser[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.vstack((trains_dig_in[k].laser_durations[:], trains_dig_in[k].laser_onset_lag[:])).T
 			except:
 				laser[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.zeros((num_trials, 2))
-			response[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, chosen_units[j], i:i + params[0]], axis = 1)
+			unscaled_response[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, chosen_units[j], i:i + params[0]], axis = 1)
+
+# Now scale the responses by the maximum firing of each neuron in each trial, and save that in response
+for j in range(unscaled_response.shape[1]):
+	for k in range(unscaled_response.shape[2]):
+		# Remember to add 1 in the denominator - the max can be 0 sometimes
+		response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k])) 
 
 # Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
 try:
@@ -93,7 +106,8 @@ hf5.create_group('/', 'ancillary_analysis')
 hf5.create_array('/ancillary_analysis', 'palatability', palatability)
 hf5.create_array('/ancillary_analysis', 'identity', identity)
 hf5.create_array('/ancillary_analysis', 'laser', laser)
-hf5.create_array('/ancillary_analysis', 'neural_response', response)
+hf5.create_array('/ancillary_analysis', 'scaled_neural_response', response)
+hf5.create_array('/ancillary_analysis', 'unscaled_neural_response', unscaled_response)
 hf5.create_array('/ancillary_analysis', 'params', params)
 hf5.create_array('/ancillary_analysis', 'pre_stim', np.array(pre_stim))
 hf5.flush()
@@ -113,7 +127,7 @@ hf5.create_array('/ancillary_analysis', 'laser_combination_d_l', unique_lasers)
 hf5.flush()
 
 #---------Taste similarity calculation (use cosine similarity)----------------------------------------------------
-# Also restructure the neural response array by # laser conditions X time X # tastes X # units X trials. Save this array to file as well
+# Also restructure the scaled neural response array by # laser conditions X time X # tastes X # units X trials. Save this array to file as well
 neural_response_laser = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_units, num_trials/unique_lasers.shape[0]), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
 	for j in range((time - params[0])/params[1] + 1):
@@ -132,12 +146,68 @@ for i in range(unique_lasers.shape[0]):
 
 # Save this array to file
 hf5.create_array('/ancillary_analysis', 'taste_cosine_similarity', taste_cosine_similarity)
+hf5.flush()
 
 #---------End taste similarity calculation-------------------------------------------------------------------------
 
-#---------Taste discriminability calculation (ANOVA in user-defined bins)------------------------------------------
+#---------Taste discriminability/responsiveness calculation (ANOVA in user-defined bins)------------------------------------------
+# Ask the user for the number/size of bins to use
+bin_params = easygui.multenterbox(msg = 'Enter the number of bins and their size for taste discriminability/responsiveness analysis', fields = ['Number of bins (integers only)', 'Width of bins (ms)'])
+for i in range(len(bin_params)):
+	bin_params[i] = int(bin_params[i])
 
-pass
+# Ask the user for the significance level to use for the taste discrimination ANOVA
+discrim_p = easygui.multenterbox(msg = 'Enter the significance level to use for taste discrimination/responsiveness ANOVA', fields = ['p value'])
+discrim_p = float(discrim_p[0])
+
+# Run through the bins, and find the neurons that have significantly different firing than baseline (-500ms to 0ms) for any of the tastes in any of these bins
+responsive_neurons = []
+for i in range(bin_params[0]):
+	x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
+	places = np.where((x >= bin_params[1]*i)*(x <= bin_params[1]*(i+1)))[0]
+	baseline_places = np.where((x >= -500)*( x <= 0))[0]
+	for j in range(num_units):
+		f, p = f_oneway(np.mean(response[places, j, :], axis = 0), np.mean(response[baseline_places, j, :], axis = 0))
+		# Some sanity check error correction - remove NaNs, they arise when all spike counts are 0s
+		if np.isnan(f):
+			f = 0.0
+			p = 1.0
+		# If the ANOVA gives a significant p value, append the unit number to discriminating neurons
+		if p <= discrim_p and (chosen_units[j] not in responsive_neurons):
+			responsive_neurons.append(chosen_units[j])
+responsive_neurons = np.sort(responsive_neurons)
+
+# Run through the bins, and find the neurons that have significantly different firing for any of the tastes in any of these bins
+discriminating_neurons = []
+for i in range(bin_params[0]):
+	x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
+	places = np.where((x >= bin_params[1]*i)*(x < bin_params[1]*(i+1)))[0]
+	for j in range(num_units):
+		f, p = f_oneway(*[np.mean(response[places, j, num_trials*k:num_trials*(k+1)], axis = 0) for k in range(num_tastes)])
+		# Some sanity check error correction - remove NaNs, they arise when all spike counts are 0s
+		if np.isnan(f):
+			f = 0.0
+			p = 1.0
+		# If the ANOVA gives a significant p value, append the unit number to discriminating neurons
+		if p <= discrim_p and (chosen_units[j] not in discriminating_neurons):
+			discriminating_neurons.append(chosen_units[j])
+discriminating_neurons = np.sort(discriminating_neurons)
+
+# Open a file to save the identities of the taste discriminating and responsive neurons
+f = open('discriminative_responsive_neurons.txt', 'w')
+print>>f, "Taste discriminative neurons"
+for neuron in discriminating_neurons:
+	print>>f, neuron
+print>>f, "Taste responsive neurons"
+for neuron in responsive_neurons:
+	print>>f, neuron
+f.close()
+
+# Save the taste discriminating/responsive neurons to the hdf5 file	
+hf5.create_array('/ancillary_analysis', 'taste_discriminating_neurons', discriminating_neurons)	
+hf5.create_array('/ancillary_analysis', 'taste_responsive_neurons', responsive_neurons)
+hf5.flush()	
+
 #---------End taste discriminability calculation-------------------------------------------------------------------
 
 # --------Palatability calculation - separate r and p values for Spearman and Pearson correlations----------------
