@@ -4,12 +4,17 @@ import tables
 import easygui
 import sys
 import os
+import itertools
 from scipy.stats import rankdata
 from scipy.stats import spearmanr
 from scipy.stats import pearsonr
 from scipy.stats import f_oneway
+from scipy.spatial.distance import cdist
+from scipy.stats import ttest_ind
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.cross_validation import LeavePOut
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import PCA
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -127,6 +132,7 @@ hf5.create_array('/ancillary_analysis', 'laser_combination_d_l', unique_lasers)
 hf5.flush()
 
 #---------Taste similarity calculation (use cosine similarity)----------------------------------------------------
+# Also calculate Euclidean/Mahalanobis distance between each pair of tastes in each laser condition
 # Also restructure the scaled neural response array by # laser conditions X time X # tastes X # units X trials. Save this array to file as well
 neural_response_laser = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_units, num_trials/unique_lasers.shape[0]), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
@@ -136,16 +142,22 @@ for i in range(unique_lasers.shape[0]):
 
 # Set up an array to store similarity calculation results - similarity of every taste to every other taste at each time point in every laser condition
 taste_cosine_similarity = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
+taste_euclidean_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
+taste_mahalanobis_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
 	for j in range((time - params[0])/params[1] + 1):
 		for k in range(num_tastes):
 			for l in range(num_tastes):
-				numerator_dot_product = np.sum(np.mean(neural_response_laser[i, j, k, :, :], axis = -1)*np.mean(neural_response_laser[i, j, l, :, :], axis = -1))
-				denominator_mods = np.sqrt(np.sum(np.mean(neural_response_laser[i, j, k, :, :], axis = -1)**2))*np.sqrt(np.sum(np.mean(neural_response_laser[i, j, l, :, :], axis = -1)**2)) 
-				taste_cosine_similarity[i, j, k, l] = numerator_dot_product/denominator_mods
+				taste_cosine_similarity[i, j, k, l] = np.mean(cosine_similarity(neural_response_laser[i, j, k, :, :].T, neural_response_laser[i, j, l, :, :].T))
+				taste_euclidean_distance[i, j, k, l] = np.mean(cdist(neural_response_laser[i, j, k, :, :].T, neural_response_laser[i, j, l, :, :].T, metric = 'euclidean'))
+				# Can't run Mahalanobis distance in situations where num_units > num_trials in every laser condition. The covariance matrix cannot be inverted - so instead, reduce dimensions by running a PCA
+				pca = PCA(n_components = 3)
+				taste_mahalanobis_distance[i, j, k, l] = np.mean(cdist(pca.fit_transform(neural_response_laser[i, j, k, :, :].T), pca.fit_transform(neural_response_laser[i, j, l, :, :].T), metric = 'mahalanobis'))
 
-# Save this array to file
+# Save these arrays to file
 hf5.create_array('/ancillary_analysis', 'taste_cosine_similarity', taste_cosine_similarity)
+hf5.create_array('/ancillary_analysis', 'taste_euclidean_distance', taste_euclidean_distance)
+hf5.create_array('/ancillary_analysis', 'taste_mahalanobis_distance', taste_mahalanobis_distance)
 hf5.flush()
 
 #---------End taste similarity calculation-------------------------------------------------------------------------
@@ -209,6 +221,70 @@ hf5.create_array('/ancillary_analysis', 'taste_responsive_neurons', responsive_n
 hf5.flush()	
 
 #---------End taste discriminability calculation-------------------------------------------------------------------
+
+#---------Taste discriminability time course (T tests between pairs of tastes)-------------------------------------
+
+# Make an array to store the results of taste discriminability time course analysis
+p_discriminability = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes, num_units), dtype = np.dtype('float64'))
+
+for i in range(unique_lasers.shape[0]):
+	for j in range((time - params[0])/params[1] + 1):
+		for k in range(num_tastes):
+			for l in range(num_tastes):
+				for m in range(num_units):
+					t, p = ttest_ind(neural_response_laser[i, j, k, m, :], neural_response_laser[i, j, l, m, :], equal_var = False)
+					if np.isnan(p):
+						p_discriminability[i, j, k, l, m] = 1.0
+					else:
+						p_discriminability[i, j, k, l, m] = p
+
+# Save the taste discriminability time course to file
+hf5.create_array('/ancillary_analysis', 'p_discriminability', p_discriminability)
+hf5.flush()
+
+#---------End taste discriminability time course-------------------------------------------------------------------
+
+#---------Palatability rank order deduction-----------------------------------------------------------------------------------
+# Use the mean firing of neurons in a user-defined time bin (usually 700-1200ms) and find the rank order of palatabilities that gives the highest linear/Pearson correlation
+
+# Ask the user for the limits of the bin to use for palatability deduction
+p_deduce_params = easygui.multenterbox(msg = 'Enter the start and end times to use for palatability deduction', fields = ['Start time (ms)', 'End time (ms)'])
+for i in range(len(p_deduce_params)):
+	p_deduce_params[i] = int(p_deduce_params[i])
+
+# Open a file to write the results of palatability deduction
+f = open('palatability_deduction.txt', 'w')
+
+# The basic possible palatability patterns - permutations of these give all possible palatability rank orders
+base_p_patterns = [[1, 1, 1, 1], [1, 1, 1, 2], [1, 1, 2, 2], [1, 1, 2, 3], [1, 2, 2, 3], [1, 2, 3, 4]]
+
+# Find the times/places from the neural_response_laser array that we need in the analysis
+x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
+places = np.where((x >= p_deduce_params[0])*(x <= p_deduce_params[1]))[0]
+
+# Run through the laser conditions
+for i in range(unique_lasers.shape[0]):
+	print>>f, "Laser condition: ", unique_lasers[i, :]
+	# Run through the basic palatability patterns	
+	for pattern in base_p_patterns:
+		order = []
+		corrs = []
+		# Run through all permutations of this pattern
+		for per in itertools.permutations(pattern):
+    			order.append(per)
+			this_corr = []
+			# Run through the units
+			for unit in range(num_units):
+				# Get correlation for 1.) ith laser condition, 2.) in times indicated by places, 3.) for this unit, and 4.) this permutation of the basic pattern
+				this_corr.append(pearsonr(np.mean(neural_response_laser[i, places, :, unit, :], axis = 0).T.reshape(-1), np.tile(per, neural_response_laser.shape[-1]))[0]**2)
+			corrs.append(np.mean(this_corr))
+		# Now get the order with the maximum average correlation across units
+		print>>f, "Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs)
+	print>>f, ""
+
+f.close()
+		
+#---------End palatability rank order deduction--------------------------------------------------------------------
 
 # --------Palatability calculation - separate r and p values for Spearman and Pearson correlations----------------
 # Set up arrays to store palatability calculation results
@@ -276,7 +352,7 @@ for i in range(unique_lasers.shape[0]):
 			if np.isnan(f_identity[i, j, k]):
 				f_identity[i, j, k] = 0.0
 				p_identity[i, j, k] = 1.0
-
+			
 # Move to linear discriminant analysis
 lda_identity = np.zeros((unique_lasers.shape[0], identity.shape[0]))
 for i in range(unique_lasers.shape[0]):
