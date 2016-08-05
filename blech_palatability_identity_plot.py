@@ -25,6 +25,10 @@ p_spearman = []
 p_identity = []
 lda_palatability = []
 lda_identity = []
+taste_cosine_similarity = []
+taste_euclidean_distance = []
+taste_mahalanobis_distance = []
+p_discriminability = []
 pre_stim = []
 params = []
 num_units = 0
@@ -50,6 +54,10 @@ for dir_name in dirs:
 	p_identity.append(hf5.root.ancillary_analysis.p_identity[:])
 	lda_palatability.append(hf5.root.ancillary_analysis.lda_palatability[:])
 	lda_identity.append(hf5.root.ancillary_analysis.lda_identity[:])
+	taste_cosine_similarity.append(hf5.root.ancillary_analysis.taste_cosine_similarity[:])
+	taste_euclidean_distance.append(hf5.root.ancillary_analysis.taste_euclidean_distance[:])
+	taste_mahalanobis_distance.append(hf5.root.ancillary_analysis.taste_mahalanobis_distance[:])
+	p_discriminability.append(hf5.root.ancillary_analysis.p_discriminability[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
 	params.append(hf5.root.ancillary_analysis.params[:])
@@ -91,6 +99,10 @@ if len(laser_order) == 1:
 	p_identity = p_identity[0]
 	lda_palatability = lda_palatability[0]
 	lda_identity = lda_identity[0]
+	taste_cosine_similarity = taste_cosine_similarity[0]
+	taste_euclidean_distance = taste_euclidean_distance[0]
+	taste_mahalanobis_distance = taste_mahalanobis_distance[0]
+	p_discriminability = p_discriminability[0]
 else:
 	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
 	r_spearman = np.concatenate(tuple(r_spearman[i][laser_order[i], :, :] for i in range(len(r_spearman))), axis = 2)
@@ -99,9 +111,16 @@ else:
 	p_identity = np.concatenate(tuple(p_identity[i][laser_order[i], :, :] for i in range(len(p_identity))), axis = 2)
 	lda_palatability = np.stack(tuple(lda_palatability[i][laser_order[i], :] for i in range(len(lda_palatability))), axis = -1)
 	lda_identity = np.stack(tuple(lda_identity[i][laser_order[i], :] for i in range(len(lda_identity))), axis = -1)
-	# Now average the lda results along the last axis (i.e across sessions)
+	taste_cosine_similarity = np.stack(tuple(taste_cosine_similarity[i][laser_order[i], :] for i in range(len(taste_cosine_similarity))), axis = -1)
+	taste_euclidean_distance = np.stack(tuple(taste_euclidean_distance[i][laser_order[i], :] for i in range(len(taste_euclidean_distance))), axis = -1)
+	taste_mahalanobis_distance = np.stack(tuple(taste_mahalanobis_distance[i][laser_order[i], :] for i in range(len(taste_mahalanobis_distance))), axis = -1)
+	p_discriminability = np.concatenate(tuple(p_discriminability[i][laser_order[i], :, :] for i in range(len(p_discriminability))), axis = 4)
+	# Now average the lda and distance results along the last axis (i.e across sessions)
 	lda_palatability = np.mean(lda_palatability, axis = 2)
 	lda_identity = np.mean(lda_identity, axis = 2)
+	taste_cosine_similarity = np.mean(taste_cosine_similarity, axis = -1)
+	taste_euclidean_distance = np.mean(taste_euclidean_distance, axis = -1)
+	taste_mahalanobis_distance = np.mean(taste_mahalanobis_distance, axis = -1)
 
 # Ask the user for the directory to save plots etc in
 dir_name = easygui.diropenbox(msg = 'Choose the output directory for palatability/identity analysis')
@@ -130,6 +149,10 @@ np.save('p_identity.npy', p_identity)
 np.save('lda_palatability.npy', lda_palatability)
 np.save('lda_identity.npy', lda_identity)
 np.save('unique_lasers.npy', unique_lasers)
+np.save('taste_cosine_similarity.npy', taste_cosine_similarity)
+np.save('taste_euclidean_distance.npy', taste_euclidean_distance)
+np.save('taste_mahalanobis_distance.npy', taste_mahalanobis_distance)
+np.save('p_discriminability.npy', p_discriminability)
 
 # Plot the r_squared values together first (for the different laser conditions)
 fig = plt.figure()
@@ -188,6 +211,31 @@ for i in range(p_pearson_final.shape[0]):
 					p_spearman_final[i, j, k] = 1 
 				if all(p_identity[i, j:j + p_values[1], k] <= p_values[0]):
 					p_identity_final[i, j, k] = 1
+
+# Also put the p_discriminability values together with the same rule as above
+p_discriminability_final = np.zeros(p_discriminability.shape)
+for i in range(p_discriminability.shape[0]):
+	for j in range(p_discriminability.shape[1]):
+		for k in range(p_discriminability.shape[2]):
+			for l in range(p_discriminability.shape[3]):
+				for m in range(p_discriminability.shape[4]):
+					if (j < p_discriminability.shape[1] - p_values[1]):
+						if all(p_discriminability[i, j:j + p_values[1], k, l, m] <= p_values[0]):
+							p_discriminability_final[i, j, k, l, m] = 1.0
+
+# Plot the p_discriminability values separately for each taste and laser condition
+for i in range(p_discriminability_final.shape[0]):
+	for j in range(p_discriminability_final.shape[2]):
+		fig = plt.figure()
+		for k in range(p_discriminability.shape[3]):
+			plt.plot(x[plot_indices], np.mean(p_discriminability_final[i, plot_indices, j, k, :], axis = -1), linewidth = 3.0, label = '%i vs %i' % (j+1, k+1))
+		plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+		plt.xlabel('Time from stimulus (ms)')	
+		plt.ylabel('Fraction of significant neurons')
+		plt.legend(loc = 'upper left', fontsize = 10)
+		fig.savefig('Taste %i discriminability p values-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
+		plt.close("all")
+		
 
 # Now first plot the p values together for the different laser conditions
 fig = plt.figure()
@@ -292,6 +340,7 @@ for i in range(lda_identity.shape[0]):
 	plt.legend(loc = 'upper left', fontsize = 10)
 	fig.savefig('Identity_LDA,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all') 
+
 
 
 
