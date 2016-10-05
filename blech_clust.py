@@ -72,6 +72,9 @@ emg_channels = easygui.multchoicebox(msg = 'Choose the channel numbers for the E
 if emg_channels:
 	for i in range(len(emg_channels)):
 		emg_channels[i] = int(emg_channels[i])
+# set emg_channels to an empty list if no channels were chosen
+if emg_channels is None:
+	emg_channels = []
 emg_channels.sort()
 
 # Create arrays for each electrode
