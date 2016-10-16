@@ -62,7 +62,7 @@ plot.multi_line('xs', 'ys', source=source, line_width=1, line_alpha=1.0)
 
 # Set up widgets
 # text = TextInput(title="title", value='my sine wave')
-offset = Slider(title="offset", value=0, start=0, end=len(plot_data) - 50, step= 100)
+offset = Slider(title="offset", value=0, start=0, end=50000, step= 100) # put the end of the slider at a large enough value so that almost all cluster sizes will fit in
 electrode = TextInput(title = 'Electrode Number', value = '0')
 clusters = TextInput(title = 'Number of clusters', value = '2')
 cluster_num = TextInput(title = 'Cluster Number', value = '0')
@@ -81,7 +81,7 @@ def update_data(attrname, old, new):
     spike_waveforms = np.load('./spike_waveforms/electrode%i/spike_waveforms.npy' % electrode_num)
     predictions = np.load('./clustering_results/electrode%i/clusters%i/predictions.npy' % (electrode_num, num_clusters))
     plot_data = spike_waveforms[np.where(predictions == cluster)[0]]
-    
+
     # Get the current slider values
     b = offset.value
     
@@ -93,7 +93,6 @@ def update_data(attrname, old, new):
 
 for w in [offset]:
     w.on_change('value', update_data)
-
 
 # Set up layouts and add to document
 inputs = VBoxForm(children=[offset, electrode, clusters, cluster_num])
