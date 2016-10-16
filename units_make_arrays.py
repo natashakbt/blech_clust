@@ -81,11 +81,12 @@ durations = easygui.multenterbox(msg = 'What are the signal durations pre and po
 for i in range(len(durations)):
 	durations[i] = int(durations[i])
 
-# Make the spike_trains node in the hdf5 file if it doesn't exist, else move on
+# Delete the spike_trains node in the hdf5 file if it exists, and then create it
 try:
-	hf5.create_group('/', 'spike_trains')
+	hf5.remove_node('/spike_trains', recursive = True)
 except:
 	pass
+hf5.create_group('/', 'spike_trains')
 
 # Get list of units under the sorted_units group. Find the latest/largest spike time amongst the units, and get an experiment end time (to account for cases where the headstage fell off mid-experiment)
 units = hf5.list_nodes('/sorted_units')
