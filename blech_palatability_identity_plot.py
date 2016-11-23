@@ -27,7 +27,7 @@ lda_palatability = []
 lda_identity = []
 taste_cosine_similarity = []
 taste_euclidean_distance = []
-taste_mahalanobis_distance = []
+#taste_mahalanobis_distance = []
 p_discriminability = []
 pre_stim = []
 params = []
@@ -56,7 +56,7 @@ for dir_name in dirs:
 	lda_identity.append(hf5.root.ancillary_analysis.lda_identity[:])
 	taste_cosine_similarity.append(hf5.root.ancillary_analysis.taste_cosine_similarity[:])
 	taste_euclidean_distance.append(hf5.root.ancillary_analysis.taste_euclidean_distance[:])
-	taste_mahalanobis_distance.append(hf5.root.ancillary_analysis.taste_mahalanobis_distance[:])
+	#taste_mahalanobis_distance.append(hf5.root.ancillary_analysis.taste_mahalanobis_distance[:])
 	p_discriminability.append(hf5.root.ancillary_analysis.p_discriminability[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
@@ -101,7 +101,7 @@ if len(laser_order) == 1:
 	lda_identity = lda_identity[0]
 	taste_cosine_similarity = taste_cosine_similarity[0]
 	taste_euclidean_distance = taste_euclidean_distance[0]
-	taste_mahalanobis_distance = taste_mahalanobis_distance[0]
+	#taste_mahalanobis_distance = taste_mahalanobis_distance[0]
 	p_discriminability = p_discriminability[0]
 else:
 	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
@@ -113,14 +113,14 @@ else:
 	lda_identity = np.stack(tuple(lda_identity[i][laser_order[i], :] for i in range(len(lda_identity))), axis = -1)
 	taste_cosine_similarity = np.stack(tuple(taste_cosine_similarity[i][laser_order[i], :] for i in range(len(taste_cosine_similarity))), axis = -1)
 	taste_euclidean_distance = np.stack(tuple(taste_euclidean_distance[i][laser_order[i], :] for i in range(len(taste_euclidean_distance))), axis = -1)
-	taste_mahalanobis_distance = np.stack(tuple(taste_mahalanobis_distance[i][laser_order[i], :] for i in range(len(taste_mahalanobis_distance))), axis = -1)
+	#taste_mahalanobis_distance = np.stack(tuple(taste_mahalanobis_distance[i][laser_order[i], :] for i in range(len(taste_mahalanobis_distance))), axis = -1)
 	p_discriminability = np.concatenate(tuple(p_discriminability[i][laser_order[i], :, :] for i in range(len(p_discriminability))), axis = 4)
 	# Now average the lda and distance results along the last axis (i.e across sessions)
 	lda_palatability = np.mean(lda_palatability, axis = 2)
 	lda_identity = np.mean(lda_identity, axis = 2)
 	taste_cosine_similarity = np.mean(taste_cosine_similarity, axis = -1)
 	taste_euclidean_distance = np.mean(taste_euclidean_distance, axis = -1)
-	taste_mahalanobis_distance = np.mean(taste_mahalanobis_distance, axis = -1)
+	#taste_mahalanobis_distance = np.mean(taste_mahalanobis_distance, axis = -1)
 
 # Ask the user for the directory to save plots etc in
 dir_name = easygui.diropenbox(msg = 'Choose the output directory for palatability/identity analysis')
@@ -151,7 +151,7 @@ np.save('lda_identity.npy', lda_identity)
 np.save('unique_lasers.npy', unique_lasers)
 np.save('taste_cosine_similarity.npy', taste_cosine_similarity)
 np.save('taste_euclidean_distance.npy', taste_euclidean_distance)
-np.save('taste_mahalanobis_distance.npy', taste_mahalanobis_distance)
+#np.save('taste_mahalanobis_distance.npy', taste_mahalanobis_distance)
 np.save('p_discriminability.npy', p_discriminability)
 
 # Plot the r_squared values together first (for the different laser conditions)
@@ -341,7 +341,46 @@ for i in range(lda_identity.shape[0]):
 	fig.savefig('Identity_LDA,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all') 
 
+# Plot the taste cosine similarity and distance plots for every laser condition and taste
+# Start with cosine similarity
+for i in range(taste_cosine_similarity.shape[0]):
+	for j in range(taste_cosine_similarity.shape[2]):
+		fig = plt.figure()
+		for k in range(taste_cosine_similarity.shape[3]):
+			plt.plot(x[plot_indices], taste_cosine_similarity[i, plot_indices, j, k], linewidth = 3.0, label = '%i vs %i' % (j+1, k+1))
+		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+		plt.xlabel('Time from stimulus (ms)')	
+		plt.ylabel('Average cosine similarity')
+		plt.legend(loc = 'upper left', fontsize = 10)
+		fig.savefig('Taste %i similarity values-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
+		plt.close("all")
 
+# Now do the distances
+for i in range(taste_euclidean_distance.shape[0]):
+	for j in range(taste_euclidean_distance.shape[2]):
+		fig = plt.figure()
+		for k in range(taste_euclidean_distance.shape[3]):
+			plt.plot(x[plot_indices], taste_euclidean_distance[i, plot_indices, j, k], linewidth = 3.0, label = '%i vs %i' % (j+1, k+1))
+		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+		plt.xlabel('Time from stimulus (ms)')	
+		plt.ylabel('Average Euclidean distance')
+		plt.legend(loc = 'upper left', fontsize = 10)
+		fig.savefig('Taste %i Euclidean distances-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
+		plt.close("all")
+
+'''
+for i in range(taste_mahalanobis_distance.shape[0]):
+	for j in range(taste_mahalanobis_distance.shape[2]):
+		fig = plt.figure()
+		for k in range(taste_mahalanobis_distance.shape[3]):
+			plt.plot(x[plot_indices], taste_mahalanobis_distance[i, plot_indices, j, k], linewidth = 3.0, label = '%i vs %i' % (j+1, k+1))
+		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+		plt.xlabel('Time from stimulus (ms)')	
+		plt.ylabel('Average Mahalanobis distance')
+		plt.legend(loc = 'upper left', fontsize = 10)
+		fig.savefig('Taste %i Mahalanobis distances-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
+		plt.close("all")
+'''
 
 
 
