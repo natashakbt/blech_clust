@@ -100,7 +100,8 @@ for i in range(0, time - params[0] + params[1], params[1]):
 for j in range(unscaled_response.shape[1]):
 	for k in range(unscaled_response.shape[2]):
 		# Remember to add 1 in the denominator - the max can be 0 sometimes
-		response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k])) 
+		response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k]))
+		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.sum(unscaled_response[:, :, k], axis = 1)) 
 
 # Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
 try:
@@ -143,7 +144,7 @@ for i in range(unique_lasers.shape[0]):
 # Set up an array to store similarity calculation results - similarity of every taste to every other taste at each time point in every laser condition
 taste_cosine_similarity = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
 taste_euclidean_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
-taste_mahalanobis_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
+#taste_mahalanobis_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
 	for j in range((time - params[0])/params[1] + 1):
 		for k in range(num_tastes):
@@ -151,13 +152,14 @@ for i in range(unique_lasers.shape[0]):
 				taste_cosine_similarity[i, j, k, l] = np.mean(cosine_similarity(neural_response_laser[i, j, k, :, :].T, neural_response_laser[i, j, l, :, :].T))
 				taste_euclidean_distance[i, j, k, l] = np.mean(cdist(neural_response_laser[i, j, k, :, :].T, neural_response_laser[i, j, l, :, :].T, metric = 'euclidean'))
 				# Can't run Mahalanobis distance in situations where num_units > num_trials in every laser condition. The covariance matrix cannot be inverted - so instead, reduce dimensions by running a PCA
-				pca = PCA(n_components = 3)
-				taste_mahalanobis_distance[i, j, k, l] = np.mean(cdist(pca.fit_transform(neural_response_laser[i, j, k, :, :].T), pca.fit_transform(neural_response_laser[i, j, l, :, :].T), metric = 'mahalanobis'))
-
+				# Eventually not doing Mahalanobis because its not informative and causes issues with singular covariance matrices
+				#pca = PCA(n_components = 3)
+				#taste_mahalanobis_distance[i, j, k, l] = np.mean(cdist(pca.fit_transform(neural_response_laser[i, j, k, :, :].T), pca.fit_transform(neural_response_laser[i, j, l, :, :].T), metric = 'mahalanobis'))
+				
 # Save these arrays to file
 hf5.create_array('/ancillary_analysis', 'taste_cosine_similarity', taste_cosine_similarity)
 hf5.create_array('/ancillary_analysis', 'taste_euclidean_distance', taste_euclidean_distance)
-hf5.create_array('/ancillary_analysis', 'taste_mahalanobis_distance', taste_mahalanobis_distance)
+#hf5.create_array('/ancillary_analysis', 'taste_mahalanobis_distance', taste_mahalanobis_distance)
 hf5.flush()
 
 #---------End taste similarity calculation-------------------------------------------------------------------------
@@ -172,12 +174,12 @@ for i in range(len(bin_params)):
 discrim_p = easygui.multenterbox(msg = 'Enter the significance level to use for taste discrimination/responsiveness ANOVA', fields = ['p value'])
 discrim_p = float(discrim_p[0])
 
-# Run through the bins, and find the neurons that have significantly different firing than baseline (-500ms to 0ms) for any of the tastes in any of these bins
+# Run through the bins, and find the neurons that have significantly different firing than baseline (-2000ms to 0ms) for any of the tastes in any of these bins
 responsive_neurons = []
 for i in range(bin_params[0]):
 	x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
 	places = np.where((x >= bin_params[1]*i)*(x <= bin_params[1]*(i+1)))[0]
-	baseline_places = np.where((x >= -500)*( x <= 0))[0]
+	baseline_places = np.where((x >= -2000)*( x <= 0))[0]
 	for j in range(num_units):
 		f, p = f_oneway(np.mean(response[places, j, :], axis = 0), np.mean(response[baseline_places, j, :], axis = 0))
 		# Some sanity check error correction - remove NaNs, they arise when all spike counts are 0s
