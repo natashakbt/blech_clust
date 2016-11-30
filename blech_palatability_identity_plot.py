@@ -28,6 +28,7 @@ lda_identity = []
 taste_cosine_similarity = []
 taste_euclidean_distance = []
 #taste_mahalanobis_distance = []
+pairwise_NB_identity = []
 p_discriminability = []
 pre_stim = []
 params = []
@@ -57,6 +58,7 @@ for dir_name in dirs:
 	taste_cosine_similarity.append(hf5.root.ancillary_analysis.taste_cosine_similarity[:])
 	taste_euclidean_distance.append(hf5.root.ancillary_analysis.taste_euclidean_distance[:])
 	#taste_mahalanobis_distance.append(hf5.root.ancillary_analysis.taste_mahalanobis_distance[:])
+	pairwise_NB_identity.append(hf5.root.ancillary_analysis.pairwise_NB_identity[:])
 	p_discriminability.append(hf5.root.ancillary_analysis.p_discriminability[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
@@ -102,6 +104,7 @@ if len(laser_order) == 1:
 	taste_cosine_similarity = taste_cosine_similarity[0]
 	taste_euclidean_distance = taste_euclidean_distance[0]
 	#taste_mahalanobis_distance = taste_mahalanobis_distance[0]
+	pairwise_NB_identity = pairwise_NB_identity[0]
 	p_discriminability = p_discriminability[0]
 else:
 	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
@@ -114,12 +117,14 @@ else:
 	taste_cosine_similarity = np.stack(tuple(taste_cosine_similarity[i][laser_order[i], :] for i in range(len(taste_cosine_similarity))), axis = -1)
 	taste_euclidean_distance = np.stack(tuple(taste_euclidean_distance[i][laser_order[i], :] for i in range(len(taste_euclidean_distance))), axis = -1)
 	#taste_mahalanobis_distance = np.stack(tuple(taste_mahalanobis_distance[i][laser_order[i], :] for i in range(len(taste_mahalanobis_distance))), axis = -1)
+	pairwise_NB_identity = np.stack(tuple(pairwise_NB_identity[i][laser_order[i], :, :, :] for i in range(len(pairwise_NB_identity))), axis = -1)
 	p_discriminability = np.concatenate(tuple(p_discriminability[i][laser_order[i], :, :] for i in range(len(p_discriminability))), axis = 4)
 	# Now average the lda and distance results along the last axis (i.e across sessions)
 	lda_palatability = np.mean(lda_palatability, axis = 2)
 	lda_identity = np.mean(lda_identity, axis = 2)
 	taste_cosine_similarity = np.mean(taste_cosine_similarity, axis = -1)
 	taste_euclidean_distance = np.mean(taste_euclidean_distance, axis = -1)
+	pairwise_NB_identity = np.mean(pairwise_NB_identity, axis = -1)
 	#taste_mahalanobis_distance = np.mean(taste_mahalanobis_distance, axis = -1)
 
 # Ask the user for the directory to save plots etc in
@@ -366,6 +371,18 @@ for i in range(taste_euclidean_distance.shape[0]):
 		plt.ylabel('Average Euclidean distance')
 		plt.legend(loc = 'upper left', fontsize = 10)
 		fig.savefig('Taste %i Euclidean distances-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
+		plt.close("all")
+
+for i in range(pairwise_NB_identity.shape[0]):
+	for j in range(pairwise_NB_identity.shape[2]):
+		fig = plt.figure()
+		for k in range(pairwise_NB_identity.shape[3]):
+			plt.plot(x[plot_indices], pairwise_NB_identity[i, plot_indices, j, k], linewidth = 3.0, label = '%i vs %i' % (j+1, k+1))
+		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+		plt.xlabel('Time from stimulus (ms)')	
+		plt.ylabel('Average Pairwise Identity Accuracy (Naive Bayes)')
+		plt.legend(loc = 'upper left', fontsize = 10)
+		fig.savefig('Taste %i Pairwise Identity NB-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
 		plt.close("all")
 
 '''

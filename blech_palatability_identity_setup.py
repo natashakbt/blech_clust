@@ -11,10 +11,13 @@ from scipy.stats import pearsonr
 from scipy.stats import f_oneway
 from scipy.spatial.distance import cdist
 from scipy.stats import ttest_ind
+from scipy.misc import comb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.cross_validation import LeavePOut
+from sklearn.model_selection import LeavePOut
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
+from sklearn.naive_bayes import GaussianNB
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -102,6 +105,7 @@ for j in range(unscaled_response.shape[1]):
 		# Remember to add 1 in the denominator - the max can be 0 sometimes
 		response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k]))
 		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.sum(unscaled_response[:, :, k], axis = 1)) 
+		#response[:, j, k] = 1000.0*unscaled_response[:, j, k]
 
 # Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
 try:
@@ -317,8 +321,8 @@ for i in range(unique_lasers.shape[0]):
 		Y = palatability[j, 0, trials[i]]
 		# Use k-fold cross validation where k = 1 sample left out
 		test_results = []
-		c_validator = LeavePOut(len(Y), 1)
-		for train, test in c_validator:
+		c_validator = LeavePOut(1)
+		for train, test in c_validator.split(X, Y):
 			model = LDA()
 			model.fit(X[train, :], Y[train])
 			# And test on the left out kth trial - compare to the actual class of the kth trial and store in test results
@@ -363,8 +367,8 @@ for i in range(unique_lasers.shape[0]):
 		Y = identity[j, 0, trials[i]]
 		# Use k-fold cross validation where k = 1 sample left out
 		test_results = []
-		c_validator = LeavePOut(len(Y), 1)
-		for train, test in c_validator:
+		c_validator = LeavePOut(1)
+		for train, test in c_validator.split(X, Y):
 			model = LDA()
 			model.fit(X[train, :], Y[train])
 			# And test on the left out kth trial - compare to the actual class of the kth trial and store in test results
@@ -378,5 +382,32 @@ hf5.create_array('/ancillary_analysis', 'lda_identity', lda_identity)
 hf5.flush()		
 
 #---------End identity calculation--------------------------------------------------------------------------------
+
+#---------Pairwise identity calculation---------------------------------------------------------------------------
+# First pick out the unique identities in the dataset
+unique_identities = np.unique(identities)
+pairwise_identity = np.zeros((unique_lasers.shape[0], identity.shape[0], unique_identities.shape[0], unique_identities.shape[0]))
+for i in range(unique_lasers.shape[0]):
+	for j in range(identity.shape[0]):
+		for k in range(unique_identities.shape[0]):
+			for l in range(unique_identities.shape[0]):
+				this_pair_trials = np.where((identity[j, 0, :] == unique_identities[k]) + (identity[j, 0, :] == unique_identities[l]))[0]
+				X = response[j, :, [trial for trial in trials[i] if trial in this_pair_trials]]
+				Y = identity[j, 0, [trial for trial in trials[i] if trial in this_pair_trials]]
+
+				# Use k-fold cross validation k = n_splits
+				test_results = []
+				c_validator = StratifiedShuffleSplit(n_splits = 10, test_size = 0.25, random_state = 0)
+				for train, test in c_validator.split(X, Y):
+					model = GaussianNB()
+					model.fit(X[train, :], Y[train])
+					test_results.append(model.score(X[test, :], Y[test]))
+				pairwise_identity[i, j, k, l] = np.mean(test_results)
+
+# Save this array to file
+hf5.create_array('/ancillary_analysis', 'pairwise_NB_identity', pairwise_identity)		
+hf5.flush()
+
+#-----------------------------------------------------------------------------------------------------------------
 
 hf5.close()
