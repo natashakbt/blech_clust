@@ -24,7 +24,7 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 try:
 	hf5.remove_node('/raw_emg', recursive = 1)
 except:
-	print "Raw EMG recordings have already been removed, so moving on .."
+	print("Raw EMG recordings have already been removed, so moving on ..")
 
 
 # Load sig_trials.npy to get number of tastes

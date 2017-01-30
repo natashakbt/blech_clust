@@ -50,7 +50,7 @@ check = easygui.ynbox(msg = 'Digital input channels: ' + str(dig_in_pathname) + 
 if check:
 	pass
 else:
-	print "Well, if you don't agree, blech_clust can't do much!"
+	print("Well, if you don't agree, blech_clust can't do much!")
 	sys.exit()
 
 # Ask the user which digital input channels should be used for slicing out EMG arrays, and convert the channel numbers into integers for pulling stuff out of change_points

@@ -57,7 +57,7 @@ check = easygui.ynbox(msg = 'Ports used: ' + str(ports) + '\n' + 'Sampling rate:
 if check:
 	pass
 else:
-	print "Well, if you don't agree, blech_clust can't do much!"
+	print("Well, if you don't agree, blech_clust can't do much!")
 	sys.exit()
 
 # Get the emg electrode ports and channel numbers from the user
@@ -84,7 +84,7 @@ read_file.create_hdf_arrays(hdf5_name[-1]+'.h5', ports, dig_in, emg_port, emg_ch
 if file_type[0] == 'one file per channel':
 	read_file.read_files(hdf5_name[-1]+'.h5', ports, dig_in, emg_port, emg_channels)
 else:
-	print "Only files structured as one file per channel can be read at this time..."
+	print("Only files structured as one file per channel can be read at this time...")
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
 
 # Read in clustering parameters
@@ -94,9 +94,9 @@ data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning yo
 # And print them to a blech_params file
 f = open(hdf5_name[-1]+'.params', 'w')
 for i in clustering_params:
-	print>>f, i
+	print(i, file=f)
 for i in data_params:
-	print>>f, i
+	print(i, file=f)
 f.close()
 
 # Make a directory for dumping files talking about memory usage in blech_process.py
@@ -111,17 +111,17 @@ username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
 f = open('blech_clust.sh', 'w')
-print >>f, "module load PYTHON/ANACONDA-2.5.0"
-print >>f, "cd /home/%s/Desktop/blech_clust" % username[0]
-print >>f, "python blech_process.py"
+print("module load PYTHON/ANACONDA-2.5.0", file=f)
+print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
+print("python blech_process.py", file=f)
 f.close()
 
 # Dump the directory name where blech_process has to cd
 f = open('blech.dir', 'w')
-print >>f, dir_name
+print(dir_name, file=f)
 f.close()
 
-print "Now logout of the compute node and go back to the login node. Then go to the bkech_clust folder on your desktop and say: qsub -t 1-"+str(len(ports)*32-len(emg_channels))+" -q all.q -ckpt reloc -l mem_free=4G -l mem_token=4G blech_clust.sh"
+print("Now logout of the compute node and go back to the login node. Then go to the bkech_clust folder on your desktop and say: qsub -t 1-"+str(len(ports)*32-len(emg_channels))+" -q all.q -ckpt reloc -l mem_free=4G -l mem_token=4G blech_clust.sh")
 
 
 

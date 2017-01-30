@@ -213,12 +213,12 @@ discriminating_neurons = np.sort(discriminating_neurons)
 
 # Open a file to save the identities of the taste discriminating and responsive neurons
 f = open('discriminative_responsive_neurons.txt', 'w')
-print>>f, "Taste discriminative neurons"
+print("Taste discriminative neurons", file=f)
 for neuron in discriminating_neurons:
-	print>>f, neuron
-print>>f, "Taste responsive neurons"
+	print(neuron, file=f)
+print("Taste responsive neurons", file=f)
 for neuron in responsive_neurons:
-	print>>f, neuron
+	print(neuron, file=f)
 f.close()
 
 # Save the taste discriminating/responsive neurons to the hdf5 file	
@@ -270,7 +270,7 @@ places = np.where((x >= p_deduce_params[0])*(x <= p_deduce_params[1]))[0]
 
 # Run through the laser conditions
 for i in range(unique_lasers.shape[0]):
-	print>>f, "Laser condition: ", unique_lasers[i, :]
+	print("Laser condition: ", unique_lasers[i, :], file=f)
 	# Run through the basic palatability patterns	
 	for pattern in base_p_patterns:
 		order = []
@@ -285,8 +285,8 @@ for i in range(unique_lasers.shape[0]):
 				this_corr.append(pearsonr(np.mean(neural_response_laser[i, places, :, unit, :], axis = 0).T.reshape(-1), np.tile(per, neural_response_laser.shape[-1]))[0]**2)
 			corrs.append(np.mean(this_corr))
 		# Now get the order with the maximum average correlation across units
-		print>>f, "Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs)
-	print>>f, ""
+		print("Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs), file=f)
+	print("", file=f)
 
 f.close()
 		

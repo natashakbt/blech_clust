@@ -85,7 +85,7 @@ percent_criterion = float(percent_criterion[0])
 
 # Make a file to save the numbers of the units that are deemed to have been held across days
 f = open('held_units.txt', 'w')
-print>>f, 'Day1', '\t', 'Day2'
+print('Day1', '\t', 'Day2', file=f)
 
 # Calculate the intra-unit J3 numbers by taking every unit, and calculating the J3 between the first 3rd and last 3rd of its spikes
 intra_J3 = []
@@ -116,7 +116,7 @@ for unit1 in range(len(hf51.root.unit_descriptor[:])):
 	if hf51.root.unit_descriptor[unit1]['single_unit'] == 1:
 		# Run through the units on day 2 and check if it was present (same electrode and unit type)
 		for unit2 in range(len(hf52.root.unit_descriptor[:])):
-			print unit1, unit2, len(hf51.root.unit_descriptor[:]), len(hf52.root.unit_descriptor[:])
+			print(unit1, unit2, len(hf51.root.unit_descriptor[:]), len(hf52.root.unit_descriptor[:]))
  			if hf52.root.unit_descriptor[unit2] == hf51.root.unit_descriptor[unit1]:
 				# Load up the waveforms for unit1 and unit2
 				exec("wf_day1 = hf51.root.sorted_units.unit%03d.waveforms[:]" % (unit1 + 1))
@@ -140,7 +140,7 @@ for unit1 in range(len(hf51.root.unit_descriptor[:])):
 				#print inter_J3, np.percentile(intra_J3, 95.0)
 				#wait = raw_input()
 				if inter_J3[-1] <= np.percentile(intra_J3, percent_criterion):
-					print>>f, unit1, '\t', unit2
+					print(unit1, '\t', unit2, file=f)
 					# Also plot both these units on the same graph
 					fig = plt.figure(figsize=(18, 6))
 					plt.subplot(121)

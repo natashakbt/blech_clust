@@ -10,7 +10,7 @@ dir_name = easygui.diropenbox()
 
 # Store the directory path to blech.dir
 f = open('blech.dir', 'w')
-print >>f, dir_name
+print(dir_name, file=f)
 f.close()
 
 # Change to the directory
@@ -83,17 +83,17 @@ hmm_type = hmm_type[0]
 # Print the paramaters to blech.hmm_params
 f = open('blech.hmm_params', 'w')
 for params in hmm_params:
-	print>>f, params
-print>>f, taste_num
+	print(params, file=f)
+print(taste_num, file=f)
 for params in spike_params:
-	print>>f, params
-print>>f, hmm_type
+	print(params, file=f)
+print(hmm_type, file=f)
 f.close()
 
 # Print the chosen units to blech.hmm_units
 f = open('blech.hmm_units', 'w')
 for unit in chosen_units:
-	print>>f, unit
+	print(unit, file=f)
 f.close()
 
 # Grab Brandeis unet username
@@ -103,12 +103,12 @@ username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
 f = open('blech_multinomial_hmm.sh', 'w')
 g = open('blech_poisson_hmm.sh', 'w')
-print >>f, "module load PYTHON/ANACONDA-2.5.0"
-print >>g, "module load PYTHON/ANACONDA-2.5.0"
-print >>f, "cd /home/%s/Desktop/blech_clust" % username[0]
-print >>g, "cd /home/%s/Desktop/blech_clust" % username[0]
-print >>f, "python blech_multinomial_hmm.py"
-print >>g, "python blech_poisson_hmm.py"
+print("module load PYTHON/ANACONDA-2.5.0", file=f)
+print("module load PYTHON/ANACONDA-2.5.0", file=g)
+print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
+print("cd /home/%s/Desktop/blech_clust" % username[0], file=g)
+print("python blech_multinomial_hmm.py", file=f)
+print("python blech_poisson_hmm.py", file=g)
 f.close()
 g.close()
 

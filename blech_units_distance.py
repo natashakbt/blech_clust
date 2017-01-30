@@ -37,8 +37,8 @@ units = hf5.list_nodes('/sorted_units')
 
 # Now go through the units one by one, and get the pairwise distances between them
 # Distance is defined as the percentage of spikes of the reference unit that have a spike from the compared unit within 1 ms
-print "=================="
-print "Distance calculation starting"
+print("==================")
+print("Distance calculation starting")
 unit_distances = np.zeros((len(units), len(units)))
 for this_unit in range(len(units)):
 	this_unit_times = (units[this_unit].times[:])/30.0
@@ -50,9 +50,9 @@ for this_unit in range(len(units)):
 		unit_distances[this_unit, other_unit] = 100.0*(float(this_unit_counter)/len(this_unit_times))
 		unit_distances[other_unit, this_unit] = 100.0*(float(other_unit_counter)/len(other_unit_times))
 	# Print the progress to the window
-	print "Unit %i of %i completed" % (this_unit+1, len(units))
-print "Distance calculation complete, results being saved to file"
-print "=================="
+	print("Unit %i of %i completed" % (this_unit+1, len(units)))
+print("Distance calculation complete, results being saved to file")
+print("==================")
 
 
 '''

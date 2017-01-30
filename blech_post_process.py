@@ -17,7 +17,7 @@ if not os.path.exists('./memory_monitor_clustering/memory_usage.txt'):
 	for files in file_list:
 		try:
 			mem_usage = np.loadtxt('./memory_monitor_clustering/' + files)
-			print>>f, 'electrode'+files[:-4], '\t', str(mem_usage)+'MB'
+			print('electrode'+files[:-4], '\t', str(mem_usage)+'MB', file=f)
 			os.system('rm ' + './memory_monitor_clustering/' + files)
 		except:
 			pass	
@@ -38,15 +38,15 @@ try:
 	hf5.remove_node('/raw', recursive = 1)
 	# And if successful, close the currently open hdf5 file and ptrepack the file
 	hf5.close()
-	print "Raw recordings removed"
+	print("Raw recordings removed")
 	os.system("ptrepack --chunkshape=auto --propindexes --complevel=9 --complib=blosc " + hdf5_name + " " + hdf5_name[:-3] + "_repacked.h5")
 	# Delete the old (raw and big) hdf5 file
 	os.system("rm " + hdf5_name)
 	# And open the new, repacked file
 	hf5 = tables.open_file(hdf5_name[:-3] + "_repacked.h5", 'r+')
-	print "File repacked"
+	print("File repacked")
 except:
-	print "Raw recordings have already been removed, so moving on .."
+	print("Raw recordings have already been removed, so moving on ..")
 
 # Make the sorted_units group in the hdf5 file if it doesn't already exist
 try:
@@ -138,7 +138,7 @@ while True:
 				plt.ylabel('Voltage (microvolts)')
 				plt.title('Split Cluster%i' % cluster)
 		else:
-			print "Solution did not converge - try again with higher number of iterations or lower convergence criterion"
+			print("Solution did not converge - try again with higher number of iterations or lower convergence criterion")
 			continue
 
 		plt.show()

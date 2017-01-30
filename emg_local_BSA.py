@@ -25,13 +25,13 @@ username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['
 # Dump a shell file for the BSA analysis in the user's blech_clust directory on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
 f = open('blech_emg.sh', 'w')
-print >>f, "module load PYTHON/ANACONDA-2.5.0"
-print >>f, "module load R"
-print >>f, "cd /home/%s/Desktop/blech_clust" % username[0]
-print >>f, "python emg_local_BSA_execute.py"
+print("module load PYTHON/ANACONDA-2.5.0", file=f)
+print("module load R", file=f)
+print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
+print("python emg_local_BSA_execute.py", file=f)
 f.close()
 
-print "Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q "+queue[0]+" blech_emg.sh"
+print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q "+queue[0]+" blech_emg.sh")
 
 
 

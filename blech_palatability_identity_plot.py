@@ -73,7 +73,7 @@ for dir_name in dirs:
 if all(unique_lasers[i].shape == unique_lasers[0].shape for i in range(len(unique_lasers))):
 	pass
 else:
-	print "Number of inactivation/activation windows doesn't seem to be the same across days. Please check and try again"
+	print("Number of inactivation/activation windows doesn't seem to be the same across days. Please check and try again")
 	sys.exit()
 
 # Now first set the ordering of laser trials straight across data files

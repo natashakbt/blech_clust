@@ -262,7 +262,7 @@ for i in range(max_clusters-1):
 
 # Make file for dumping info about memory usage
 f = open('./memory_monitor_clustering/%i.txt' % electrode_num, 'w')
-print>>f, mm.memory_usage_resource()
+print(mm.memory_usage_resource(), file=f)
 f.close()	
 	
 hf5.close()

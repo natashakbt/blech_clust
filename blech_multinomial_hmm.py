@@ -112,10 +112,10 @@ for result in hmm_results:
 	# Make a group under multinomial_hmm_results for this number of states
 	hf5.create_group('/spike_trains/dig_in_%i/multinomial_hmm_results' % taste, 'states_%i' % (result[0])) 
 	# Write the emission and transition probabilties to this group
-	emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_labels', np.array(result[1][4][0].keys()))
+	emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_labels', np.array(list(result[1][4][0].keys())))
 	emission_matrix = []
 	for i in range(len(result[1][4])):
-		emission_matrix.append(result[1][4][i].values())
+		emission_matrix.append(list(result[1][4][i].values()))
 	emission_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'emission_probs', np.array(emission_matrix))
 	transition_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'transition_probs', result[1][5])
 	posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
@@ -189,10 +189,10 @@ if len(laser_exists) > 0:
 		# Make a group under multinomial_hmm_results for this number of states
 		hf5.create_group('/spike_trains/dig_in_%i/multinomial_hmm_results/laser' % taste, 'states_%i' % (result[0])) 
 		# Write the emission and transition probabilties to this group
-		emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_labels', np.array(result[1][4][0].keys()))
+		emission_labels = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_labels', np.array(list(result[1][4][0].keys())))
 		emission_matrix = []
 		for i in range(len(result[1][4])):
-			emission_matrix.append(result[1][4][i].values())
+			emission_matrix.append(list(result[1][4][i].values()))
 		emission_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'emission_probs', np.array(emission_matrix))
 		transition_probs = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'transition_probs', result[1][5])
 		posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
