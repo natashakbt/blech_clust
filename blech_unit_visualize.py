@@ -5,7 +5,8 @@ import sys
 import os
 
 from bokeh.plotting import Figure
-from bokeh.models import ColumnDataSource, HBox, VBoxForm
+from bokeh.models import ColumnDataSource, HBox
+from bokeh.layouts import widgetbox
 from bokeh.models.widgets import Slider, TextInput
 from bokeh.io import curdoc
 from bokeh.models.glyphs import MultiLine
@@ -71,12 +72,14 @@ cluster_num = TextInput(title = 'Cluster Number', value = '0')
 #freq = Slider(title="frequency", value=1.0, start=0.1, end=5.1)
 
 def update_data(attrname, old, new):
-
+    
+    os.chdir(dir_name)
+    
     # Get text values
     electrode_num = int(electrode.value)
     num_clusters = int(clusters.value)
     cluster = int(cluster_num.value)
-
+    
     # Now get new data
     spike_waveforms = np.load('./spike_waveforms/electrode%i/spike_waveforms.npy' % electrode_num)
     predictions = np.load('./clustering_results/electrode%i/clusters%i/predictions.npy' % (electrode_num, num_clusters))
@@ -95,7 +98,7 @@ for w in [offset]:
     w.on_change('value', update_data)
 
 # Set up layouts and add to document
-inputs = VBoxForm(children=[offset, electrode, clusters, cluster_num])
+inputs = widgetbox(children=[offset, electrode, clusters, cluster_num])
 
 curdoc().add_root(HBox(children=[inputs, plot], width=800))
 	
