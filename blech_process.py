@@ -83,7 +83,7 @@ del raw_el
 
 # Calculate the 3 voltage parameters
 breach_rate = float(len(np.where(filt_el>voltage_cutoff)[0])*30000)/len(filt_el)
-test_el = np.reshape(filt_el[:30000*(len(filt_el)/30000)], (-1, 30000))
+test_el = np.reshape(filt_el[:30000*int(len(filt_el)/30000)], (-1, 30000))
 breaches_per_sec = [len(np.where(test_el[i] > voltage_cutoff)[0]) for i in range(len(test_el))]
 breaches_per_sec = np.array(breaches_per_sec)
 secs_above_cutoff = len(np.where(breaches_per_sec > 0)[0])
@@ -93,7 +93,7 @@ else:
 	mean_breach_rate_persec = np.mean(breaches_per_sec[np.where(breaches_per_sec > 0)[0]])
 
 # And if they all exceed the cutoffs, assume that the headstage fell off mid-experiment
-recording_cutoff = len(filt_el)/30000
+recording_cutoff = int(len(filt_el)/30000)
 if breach_rate >= max_breach_rate and secs_above_cutoff >= max_secs_above_cutoff and mean_breach_rate_persec >= max_mean_breach_rate_persec:
 	# Find the first 1 second epoch where the number of cutoff breaches is higher than the maximum allowed mean breach rate 
 	recording_cutoff = np.where(breaches_per_sec > max_mean_breach_rate_persec)[0][0]
