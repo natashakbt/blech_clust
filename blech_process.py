@@ -76,6 +76,7 @@ wf_amplitude_sd_cutoff = int(params[8])
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
 exec("raw_el = hf5.root.raw.electrode"+str(electrode_num)+"[:]")
+hf5.close()
 
 # High bandpass filter the raw electrode recordings
 filt_el = get_filtered_electrode(raw_el)
@@ -197,8 +198,7 @@ for i in range(max_clusters-1):
 				for cluster in range(i+2):
 					plot_data = np.where(predictions[:] == cluster)[0]
 					plt_names.append(plt.scatter(data[plot_data, feature1], data[plot_data, feature2], color = colors[cluster], s = 0.8))
-					plt.hold(True)
-					
+										
 				plt.xlabel("Feature %i" % feature1)
 				plt.ylabel("Feature %i" % feature2)
 				# Produce figure legend
@@ -214,15 +214,14 @@ for i in range(max_clusters-1):
 		for other_cluster in range(i+2):
 			mahalanobis_dist = []
 			other_cluster_mean = model.means_[other_cluster, :]
-			other_cluster_covar_I = linalg.inv(model.covars_[other_cluster, :, :])
+			other_cluster_covar_I = linalg.inv(model.covariances_[other_cluster, :, :])
 			for points in cluster_points:
  				mahalanobis_dist.append(mahalanobis(data[points, :], other_cluster_mean, other_cluster_covar_I))
 			# Plot histogram of Mahalanobis distances
 			y,binEdges=np.histogram(mahalanobis_dist)
 			bincenters = 0.5*(binEdges[1:] + binEdges[:-1])
 			plt.plot(bincenters, y, label = 'Dist from cluster %i' % other_cluster)	
-			plt.hold(True)
-			
+						
 		plt.xlabel('Mahalanobis distance')
 		plt.ylabel('Frequency')
 		plt.legend(loc = 'upper right', fontsize = 8)
@@ -267,7 +266,7 @@ f = open('./memory_monitor_clustering/%i.txt' % electrode_num, 'w')
 print(mm.memory_usage_resource(), file=f)
 f.close()	
 	
-hf5.close()
+
 
  
 
