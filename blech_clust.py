@@ -4,6 +4,7 @@ import os
 import tables
 import sys
 import numpy as np
+import multiprocessing
 
 # Necessary blech_clust modules
 import read_file
@@ -106,7 +107,7 @@ os.mkdir('memory_monitor_clustering')
 #queue = easygui.multchoicebox(msg = 'Which HPC queue do you want to use?', choices = ('neuro.q', 'dk.q'))
 
 # Grab Brandeis unet username
-username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['unet username'])
+username = easygui.multenterbox(msg = 'Enter your Brandeis/Jetstream/personal computer id', fields = ['unet username'])
 
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
@@ -114,6 +115,19 @@ f = open('blech_clust.sh', 'w')
 print("module load PYTHON/ANACONDA-2.5.0", file=f)
 print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
 print("python blech_process.py", file=f)
+f.close()
+
+# Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
+# First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
+num_cpu = multiprocessing.cpu_count()
+# Then produce the file generating the parallel command
+f = open('blech_clust_jetstream_parallel.sh', 'w')
+print("parallel -k -j {:d} --noswap --load 100% --progress --joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}".format(int(num_cpu)-1, dir_name, int(len(ports)*32-len(emg_channels))), file = f)
+f.close()
+# Then produce the file that runs blech_process.py
+f = open('blech_clust_jetstream_parallel1.sh', 'w')
+print("export OMP_NUM_THREADS=1", file = f)
+print("python blech_process.py $1", file = f)
 f.close()
 
 # Dump the directory name where blech_process has to cd

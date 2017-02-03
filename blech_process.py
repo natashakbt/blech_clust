@@ -26,6 +26,7 @@ os.chdir(dir_name[0][:-1])
 try:
 	electrode_num = int(os.getenv('SGE_TASK_ID')) - 1
 except:
+# Alternatively, if running on jetstream (or personal computer) using GNU parallel, get sys.argv[1]
 	electrode_num = int(sys.argv[1]) - 1 
 
 # Check if the directories for this electrode number exist - if they do, delete them (existence of the directories indicates a job restart on the cluster, so restart afresh)
