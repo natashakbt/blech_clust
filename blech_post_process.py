@@ -136,7 +136,7 @@ while True:
 				plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
 				plt.xlabel('Time')
 				plt.ylabel('Voltage (microvolts)')
-				plt.title('Split Cluster%i' % cluster)
+				plt.title('Split Cluster{:d}, Number of waveforms={:d}'.format(cluster, split_points.shape[0]))
 		else:
 			print("Solution did not converge - try again with higher number of iterations or lower convergence criterion")
 			continue
@@ -230,7 +230,7 @@ while True:
 			plt.plot(np.arange(45) - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
 			plt.xlabel('Time (30 samples per ms)')
 			plt.ylabel('Voltage (microvolts)')
-			plt.title('Merged cluster')
+			plt.title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
 			plt.show()
  
 			# Warn the user about the frequency of ISI violations in the merged unit
