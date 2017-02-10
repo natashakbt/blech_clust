@@ -4,6 +4,7 @@
 import numpy as np
 import easygui
 import os
+import sys
 
 # Read blech.dir, and cd to that directory. 
 f = open('blech.dir', 'r')
