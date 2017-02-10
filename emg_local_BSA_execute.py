@@ -27,8 +27,8 @@ try:
 except:
 # Alternatively, if running on jetstream (or personal computer) using GNU parallel, get sys.argv[1]
 	task = int(sys.argv[1])
-taste = (task-1)/sig_trials.shape[-1]
-trial = (task-1)%sig_trials.shape[-1]
+taste = int((task-1)/sig_trials.shape[-1])
+trial = int((task-1)%sig_trials.shape[-1])
 
 # Import R related stuff - use rpy2 for Python->R and pandas for R->Python
 import readline # Needed for the next line to work on Anaconda. Also needed to do conda install -c r rpy2 at the command line
