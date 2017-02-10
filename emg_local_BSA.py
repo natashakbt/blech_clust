@@ -31,6 +31,19 @@ print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
 print("python emg_local_BSA_execute.py", file=f)
 f.close()
 
+# Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
+# First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
+num_cpu = multiprocessing.cpu_count()
+# Then produce the file generating the parallel command
+f = open('blech_emg_jetstream_parallel.sh', 'w')
+print("parallel -k -j {:d} --noswap --load 100% --progress --joblog {:s}/results.log bash blech_emg_jetstream_parallel1.sh ::: {{1..{:d}}}".format(int(num_cpu)-1, dir_name, sig_trials.shape[0]*sig_trials.shape[1]), file = f)
+f.close()
+# Then produce the file that runs blech_process.py
+f = open('blech_emg_jetstream_parallel1.sh', 'w')
+print("export OMP_NUM_THREADS=1", file = f)
+print("python emg_local_BSA_execute.py $1", file = f)
+f.close()
+
 print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q "+queue[0]+" blech_emg.sh")
 
 

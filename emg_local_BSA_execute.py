@@ -21,12 +21,16 @@ sig_trials = np.load('sig_trials.npy')
 os.chdir('emg_BSA_results')
 
 # Get SGE_TASK_ID # - this will determine the taste+trial to be looked at
-task = int(os.getenv('SGE_TASK_ID'))
+try:
+	task = int(os.getenv('SGE_TASK_ID'))
+except:
+# Alternatively, if running on jetstream (or personal computer) using GNU parallel, get sys.argv[1]
+	task = int(sys.argv[1])
 taste = (task-1)/sig_trials.shape[-1]
 trial = (task-1)%sig_trials.shape[-1]
 
 # Import R related stuff - use rpy2 for Python->R and pandas for R->Python
-import readline # Needed for the next line to work on Anaconda
+import readline # Needed for the next line to work on Anaconda. Also needed to do conda install -c r rpy2 at the command line
 import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
 rpy2.robjects.numpy2ri.activate()
