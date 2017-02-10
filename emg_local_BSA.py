@@ -6,6 +6,7 @@
 import numpy as np
 import easygui
 import os
+import multiprocessing
 
 # Change to the directory that has the emg data files (env.npy and sig_trials.npy). Make a directory for storing the BSA results and change to it
 dir_name = easygui.diropenbox()
