@@ -18,10 +18,11 @@ env = np.load('env.npy')
 sig_trials = np.load('sig_trials.npy')
 
 # Ask for the HPC queue to use
-queue = easygui.multchoicebox(msg = 'Which HPC queue do you want to use for EMG analysis?', choices = ('neuro.q', 'dk.q'))
+# No longer asking for this, just submit to all.q
+#queue = easygui.multchoicebox(msg = 'Which HPC queue do you want to use for EMG analysis?', choices = ('neuro.q', 'dk.q'))
 
 # Grab Brandeis unet username
-username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['unet username'])
+username = easygui.multenterbox(msg = 'Enter your Brandeis/Jetstream/personal computer username', fields = ['username'])
 
 # Dump a shell file for the BSA analysis in the user's blech_clust directory on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
@@ -45,7 +46,7 @@ print("export OMP_NUM_THREADS=1", file = f)
 print("python emg_local_BSA_execute.py $1", file = f)
 f.close()
 
-print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q "+queue[0]+" blech_emg.sh")
+print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q all.q -ckpt reloc blech_emg.sh")
 
 
 
