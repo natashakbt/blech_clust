@@ -4,7 +4,7 @@ import numpy as np
 import easygui
 import ast
 import pylab as plt
-from sklearn.mixture import GMM
+from sklearn.mixture import GaussianMixture
 
 # Get directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -122,7 +122,7 @@ while True:
 		data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
 
 		# Cluster the data
-		g = GMM(n_components = n_clusters, covariance_type = 'full', tol = thresh, n_iter = n_iter, n_init = n_restarts)
+		g = GaussianMixture(n_components = n_clusters, covariance_type = 'full', tol = thresh, max_iter = n_iter, n_init = n_restarts)
 		g.fit(data)
 	
 		# Show the cluster plots if the solution converged
