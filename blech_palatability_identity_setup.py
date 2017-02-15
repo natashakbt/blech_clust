@@ -277,7 +277,7 @@ for i in range(unique_lasers.shape[0]):
 		corrs = []
 		# Run through all permutations of this pattern
 		for per in itertools.permutations(pattern):
-    			order.append(per)
+			order.append(per)
 			this_corr = []
 			# Run through the units
 			for unit in range(num_units):
@@ -405,7 +405,7 @@ for i in range(unique_lasers.shape[0]):
 				pairwise_identity[i, j, k, l] = np.mean(test_results)
 
 # Save this array to file
-hf5.create_array('/ancillary_analysis', 'pairwise_NB_identity', pairwise_identity)		
+hf5.create_array('/ancillary_analysis', 'pairwise_NB_identity', pairwise_identity)
 hf5.flush()
 
 #-----------------------------------------------------------------------------------------------------------------
