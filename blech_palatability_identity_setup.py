@@ -77,11 +77,11 @@ num_trials = trains_dig_in[0].spike_array.shape[0]
 num_units = len(chosen_units)
 time = trains_dig_in[0].spike_array.shape[2]
 num_tastes = len(trains_dig_in)
-palatability = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = int)
-identity = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = int)
-response = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
-unscaled_response = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
-laser = np.empty(shape = ((time - params[0])/params[1] + 1, num_units, num_tastes*num_trials, 2), dtype = float)
+palatability = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = int)
+identity = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = int)
+response = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
+unscaled_response = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
+laser = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials, 2), dtype = float)
 
 # Fill in the palatabilities and identities
 for i in range(num_tastes):
@@ -94,10 +94,10 @@ for i in range(0, time - params[0] + params[1], params[1]):
 		for k in range(num_tastes):
 			# If the lasers were used, get the appropriate durations and lags. Else assign zeros to both
 			try:
-				laser[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.vstack((trains_dig_in[k].laser_durations[:], trains_dig_in[k].laser_onset_lag[:])).T
+				laser[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = np.vstack((trains_dig_in[k].laser_durations[:], trains_dig_in[k].laser_onset_lag[:])).T
 			except:
-				laser[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.zeros((num_trials, 2))
-			unscaled_response[i/params[1], j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, chosen_units[j], i:i + params[0]], axis = 1)
+				laser[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = np.zeros((num_trials, 2))
+			unscaled_response[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, chosen_units[j], i:i + params[0]], axis = 1)
 
 # Now scale the responses by the maximum firing of each neuron in each trial, and save that in response
 for j in range(unscaled_response.shape[1]):
@@ -139,18 +139,18 @@ hf5.flush()
 #---------Taste similarity calculation (use cosine similarity)----------------------------------------------------
 # Also calculate Euclidean/Mahalanobis distance between each pair of tastes in each laser condition
 # Also restructure the scaled neural response array by # laser conditions X time X # tastes X # units X trials. Save this array to file as well
-neural_response_laser = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_units, num_trials/unique_lasers.shape[0]), dtype = np.dtype('float64'))
+neural_response_laser = np.empty((unique_lasers.shape[0], int((time - params[0])/params[1]) + 1, num_tastes, num_units, num_trials/unique_lasers.shape[0]), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
-	for j in range((time - params[0])/params[1] + 1):
+	for j in range(int((time - params[0])/params[1]) + 1):
 		for k in range(num_tastes):
 			neural_response_laser[i, j, k, :, :] = response[j, :, trials[i][np.where((trials[i] >= num_trials*k)*(trials[i] < num_trials*(k+1)) == True)[0]]].T 
 
 # Set up an array to store similarity calculation results - similarity of every taste to every other taste at each time point in every laser condition
-taste_cosine_similarity = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
-taste_euclidean_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
+taste_cosine_similarity = np.empty((unique_lasers.shape[0], int((time - params[0])/params[1]) + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
+taste_euclidean_distance = np.empty((unique_lasers.shape[0], int((time - params[0])/params[1]) + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
 #taste_mahalanobis_distance = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
-	for j in range((time - params[0])/params[1] + 1):
+	for j in range(int((time - params[0])/params[1]) + 1):
 		for k in range(num_tastes):
 			for l in range(num_tastes):
 				taste_cosine_similarity[i, j, k, l] = np.mean(cosine_similarity(neural_response_laser[i, j, k, :, :].T, neural_response_laser[i, j, l, :, :].T))
@@ -231,10 +231,10 @@ hf5.flush()
 #---------Taste discriminability time course (T tests between pairs of tastes)-------------------------------------
 
 # Make an array to store the results of taste discriminability time course analysis
-p_discriminability = np.empty((unique_lasers.shape[0], (time - params[0])/params[1] + 1, num_tastes, num_tastes, num_units), dtype = np.dtype('float64'))
+p_discriminability = np.empty((unique_lasers.shape[0], int((time - params[0])/params[1]) + 1, num_tastes, num_tastes, num_units), dtype = np.dtype('float64'))
 
 for i in range(unique_lasers.shape[0]):
-	for j in range((time - params[0])/params[1] + 1):
+	for j in range(int((time - params[0])/params[1]) + 1):
 		for k in range(num_tastes):
 			for l in range(num_tastes):
 				for m in range(num_units):
