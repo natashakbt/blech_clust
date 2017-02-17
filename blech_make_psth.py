@@ -7,6 +7,8 @@ import os
 import ast
 import pylab as plt
 from scipy.stats import ttest_ind
+#import seaborn as sns
+#sns.set(style="white", context="talk", font_scale=2)
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -79,8 +81,8 @@ for dig_in in trains_dig_in:
 		for trial in range(dig_in.spike_array[:].shape[0]):
 			x = np.where(dig_in.spike_array[trial, unit, :] > 0.0)[0]
 			plt.vlines(x, trial, trial + 1, colors = 'black')
-		plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 500), time[::500])
-		plt.yticks(np.arange(0, dig_in.spike_array[:].shape[0] + 1, 5))
+		plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 1000), time[::1000])
+		#plt.yticks(np.arange(0, dig_in.spike_array[:].shape[0] + 1, 5))
 		plt.title('Unit: %i raster plot' % (unit + 1) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
 		plt.xlabel('Time from taste delivery (ms)')
 		plt.ylabel('Trial number')
@@ -136,14 +138,114 @@ for dig_in in trains_dig_in:
 					for i in range(len(these_trials)):
 						x = np.where(dig_in.spike_array[these_trials[i], unit, :] > 0.0)[0]
 						plt.vlines(x, i, i + 1, colors = 'black')	
-					plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 500), time[::500])
-					plt.yticks(np.arange(0, len(these_trials) + 1, 5))
+					plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 1000), time[::1000])
+					#plt.yticks(np.arange(0, len(these_trials) + 1, 5))
 					plt.title('Unit: %i Dur: %i ms, Lag: %i ms' % (unit + 1, int(duration), int(onset)) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
 					plt.xlabel('Time from taste delivery (ms)')
 					plt.ylabel('Trial number')
 					fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_Dur%ims_Lag%ims.png' % (unit + 1, int(duration), int(onset)))
 					plt.close("all")	
-						
+
+# Also plot PSTHs for all the digital inputs/tastes together, on the same scale, to help in comparison
+
+# First ask the user for the time limits of plotting
+plot_lim = easygui.multenterbox(msg = 'Enter the time limits for plotting combined PSTHs', fields = ['Start time (ms)', 'End time (ms)'])
+for i in range(len(plot_lim)):
+	plot_lim[i] = int(plot_lim[i])
+
+# Get number of units
+num_units = trains_dig_in[0].spike_array[:].shape[1]
+
+# Run through the units
+for unit in range(num_units):
+	# Load up the data from all the digital inputs
+	data = []
+	for dig_in in trains_dig_in:
+		data.append(np.mean(dig_in.spike_array[:, unit, :], axis = 0))
+	# Convert into a big numpy array of all the data for this unit, from all the digital inputs
+	data = np.array(data)
+
+	# Now get ready for the plotting by first making the axes (both x and y axis will be shared across plots)
+	fig, ax = plt.subplots(len(trains_dig_in), sharex=True, sharey=True)
+
+	# Now run through the tastes and make the plots
+	for taste in range(len(trains_dig_in)):
+		time = []
+		spike_rate = []
+		for i in range(0, data.shape[1] - params[0], params[1]):
+			time.append(i - pre_stim)
+			spike_rate.append(1000.0*np.sum(data[taste, i:i+params[0]])/float(params[0]))
+
+		# Get the points to be plotted
+		spike_rate = np.array(spike_rate)
+		time = np.array(time)
+		plot_points = np.where((time >= plot_lim[0])*(time <= plot_lim[1]))[0]
+
+		ax[taste].plot(time[plot_points], spike_rate[plot_points], label = 'Taste {:d}'.format(taste+1))
+		ax[taste].legend(loc = 'upper right', fontsize = 10)
+	ax[0].set_title("Unit: {:d}, Window size: {:d} ms, Step size: {:d} ms".format(unit+1, params[0], params[1]))	
+	# Bring the plots closer together
+	fig.subplots_adjust(hspace=0)
+	# Remove xticks from all but the last plot
+	plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+	fig.text(0.5, 0.02, 'Time from taste delivery (ms)', ha='center')
+	fig.text(0.03, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')	
+
+	# Save the combined plot
+	fig.savefig("./PSTH/Unit{:d}_combined_PSTH.png".format(unit+1))
+	plt.close("all")
+
+	# Check if the laser_array exists, and plot laser PSTH if it does
+	laser_exists = []		
+	try:
+		laser_exists = dig_in.laser_durations[:]
+	except:
+		pass
+	if len(laser_exists) > 0:
+		# Now get ready for the plotting by first making the axes (both x and y axis will be shared across plots)
+		fig, ax = plt.subplots(len(trains_dig_in), sharex=True, sharey=True)
+		# Run through the tastes
+		for taste in range(len(trains_dig_in)):
+			# First get the unique laser onset times (from end of taste delivery) in this dataset
+			onset_lags = np.unique(trains_dig_in[taste].laser_onset_lag[:])
+			# Then get the unique laser onset durations
+			durations = np.unique(trains_dig_in[taste].laser_durations[:])
+
+			# Then go through the combinations of the durations and onset lags and get and plot an averaged spike_rate array for each set of trials
+			for onset in onset_lags:
+				for duration in durations:
+					spike_rate = []
+					time = []
+					these_trials = np.where((trains_dig_in[taste].laser_durations[:] == duration)*(trains_dig_in[taste].laser_onset_lag[:] == onset) > 0)[0]
+					# If no trials have this combination of onset lag and duration (can happen when duration = 0, laser off), break out of the loop
+					if len(these_trials) == 0:
+						continue
+					trial_avg_array = np.mean(trains_dig_in[taste].spike_array[these_trials, :, :], axis = 0)
+					for i in range(0, trial_avg_array.shape[1] - params[0], params[1]):
+						time.append(i - pre_stim)
+						spike_rate.append(1000.0*np.sum(trial_avg_array[unit, i:i+params[0]])/float(params[0]))
+
+					# Get the points to be plotted
+					spike_rate = np.array(spike_rate)
+					time = np.array(time)
+					plot_points = np.where((time >= plot_lim[0])*(time <= plot_lim[1]))[0]
+					# Now plot the PSTH for this combination of duration and onset lag
+					ax[taste].plot(time[plot_points], spike_rate[plot_points], label = "Taste:{:d}, Dur:{:d} ms, Lag:{:d} ms".format(taste+1, int(duration), int(onset)))
+
+			ax[taste].legend(loc = 'upper right', fontsize = 6)
+		
+		# Bring the plots closer together
+		fig.subplots_adjust(hspace=0)
+		# Remove xticks from all but the last plot
+		plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+		fig.text(0.5, 0.02, 'Time from taste delivery (ms)', ha='center')
+		fig.text(0.03, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')
+		
+		# Save the combined plot
+		ax[0].set_title("Unit: {:d}, Window size: {:d} ms, Step size: {:d} ms".format(unit+1, params[0], params[1]))
+		fig.savefig("./PSTH/Unit{:d}_combined_laser_PSTH.png".format(unit+1))
+		plt.close("all")
+
 hf5.close()
 
 		
