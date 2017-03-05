@@ -40,6 +40,8 @@ os.mkdir('Plots')
 
 # Get the amplifier ports used
 ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
+# Sort the ports in alphabetical order
+ports.sort()
 
 # Pull out the digital input channels used, and convert them to integers
 dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
