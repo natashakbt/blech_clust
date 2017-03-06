@@ -5,10 +5,18 @@ import easygui
 import sys
 import os
 import ast
+import matplotlib
+matplotlib.use('Agg')
 import pylab as plt
+#matplotlib.rcParams.update({'figure.autolayout': True})
 from scipy.stats import ttest_ind
-#import seaborn as sns
-#sns.set(style="white", context="talk", font_scale=2)
+import seaborn as sns
+sns.set(style="white", context="talk", font_scale=1.8)
+sns.set_color_codes(palette = 'colorblind')
+#plt.style.use(['seaborn-colorblind', 'seaborn-talk'])
+#font = {'weight' : 'bold',
+#        'size'   : '50'}
+#matplotlib.rc("font", **font)
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -66,12 +74,13 @@ for dig_in in trains_dig_in:
 			time.append(i - pre_stim)
 			spike_rate.append(1000.0*np.sum(trial_avg_spike_array[unit, i:i+params[0]])/float(params[0]))
 		taste_responsiveness_t, taste_responsiveness_p = ttest_ind(np.mean(dig_in.spike_array[:, unit, pre_stim:pre_stim + r_post_stim], axis = 1), np.mean(dig_in.spike_array[:, unit, pre_stim - r_pre_stim:pre_stim], axis = 1))   
-		fig = plt.figure()
-		plt.title('Unit: %i, Window size: %i ms, Step size: %i ms, Taste responsive: %s' % (unit + 1, params[0], params[1], str(bool(taste_responsiveness_p<0.001))) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
+		fig = plt.figure() #figsize = (12.8, 7.2), dpi = 100)
+		plt.title('Window: %i ms, Step: %i ms, Taste responsive: %s' % (params[0], params[1], str(bool(taste_responsiveness_p<0.001))) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
 		plt.xlabel('Time from taste delivery (ms)')
 		plt.ylabel('Firing rate (Hz)')
-		plt.plot(time, spike_rate, linewidth = 3.0)
-		fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit + 1))
+		plt.plot(time, spike_rate)
+		plt.tight_layout()
+		fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit))
 		plt.close("all")
 
 		# Now plot the rasters for this digital input channel and unit
@@ -83,10 +92,11 @@ for dig_in in trains_dig_in:
 			plt.vlines(x, trial, trial + 1, colors = 'black')
 		plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 1000), time[::1000])
 		#plt.yticks(np.arange(0, dig_in.spike_array[:].shape[0] + 1, 5))
-		plt.title('Unit: %i raster plot' % (unit + 1) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
+		plt.title('Unit: %i raster plot' % (unit) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
 		plt.xlabel('Time from taste delivery (ms)')
 		plt.ylabel('Trial number')
-		fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit + 1))
+		plt.tight_layout()
+		fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit))
 		plt.close("all")
 		
 		# Check if the laser_array exists, and plot laser PSTH if it does
@@ -118,11 +128,12 @@ for dig_in in trains_dig_in:
 					# Now plot the PSTH for this combination of duration and onset lag
 					plt.plot(time, spike_rate, linewidth = 3.0, label = 'Dur: %i ms, Lag: %i ms' % (int(duration), int(onset)))
 
-			plt.title('Unit: %i laser PSTH, Window size: %i ms, Step size: %i ms' % (unit + 1, params[0], params[1]) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
+			plt.title('Unit: %i laser PSTH, Window: %i ms, Step: %i ms' % (unit, params[0], params[1]) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
 			plt.xlabel('Time from taste delivery (ms)')
 			plt.ylabel('Firing rate (Hz)')
-			plt.legend(loc = 'upper left', fontsize = 10)
-			fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_laser_psth.png' % (unit + 1))
+			plt.legend(loc = 'upper left', fontsize = 15)
+			plt.tight_layout()
+			fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_laser_psth.png' % (unit))
 			plt.close("all")
 
 			# And do the same to get the rasters
@@ -140,10 +151,11 @@ for dig_in in trains_dig_in:
 						plt.vlines(x, i, i + 1, colors = 'black')	
 					plt.xticks(np.arange(0, dig_in.spike_array[:].shape[2] + 1, 1000), time[::1000])
 					#plt.yticks(np.arange(0, len(these_trials) + 1, 5))
-					plt.title('Unit: %i Dur: %i ms, Lag: %i ms' % (unit + 1, int(duration), int(onset)) + '\n' + 'Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
+					plt.title('Unit: %i Dur: %i ms, Lag: %i ms' % (unit, int(duration), int(onset)) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
 					plt.xlabel('Time from taste delivery (ms)')
 					plt.ylabel('Trial number')
-					fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_Dur%ims_Lag%ims.png' % (unit + 1, int(duration), int(onset)))
+					plt.tight_layout()
+					fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_Dur%ims_Lag%ims.png' % (unit, int(duration), int(onset)))
 					plt.close("all")	
 
 # Also plot PSTHs for all the digital inputs/tastes together, on the same scale, to help in comparison
@@ -182,17 +194,18 @@ for unit in range(num_units):
 		plot_points = np.where((time >= plot_lim[0])*(time <= plot_lim[1]))[0]
 
 		ax[taste].plot(time[plot_points], spike_rate[plot_points], label = 'Taste {:d}'.format(taste+1))
-		ax[taste].legend(loc = 'upper right', fontsize = 10)
-	ax[0].set_title("Unit: {:d}, Window size: {:d} ms, Step size: {:d} ms".format(unit+1, params[0], params[1]))	
+		ax[taste].legend(loc = 'upper right', fontsize = 15)
+	ax[0].set_title("Unit: {:d}, Window: {:d} ms, Step: {:d} ms".format(unit, params[0], params[1]))	
 	# Bring the plots closer together
 	fig.subplots_adjust(hspace=0)
 	# Remove xticks from all but the last plot
 	plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
 	fig.text(0.5, 0.02, 'Time from taste delivery (ms)', ha='center')
 	fig.text(0.03, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')	
-
+	plt.tight_layout()
+	
 	# Save the combined plot
-	fig.savefig("./PSTH/Unit{:d}_combined_PSTH.png".format(unit+1))
+	fig.savefig("./PSTH/Unit{:d}_combined_PSTH.png".format(unit))
 	plt.close("all")
 
 	# Check if the laser_array exists, and plot laser PSTH if it does
@@ -232,7 +245,7 @@ for unit in range(num_units):
 					# Now plot the PSTH for this combination of duration and onset lag
 					ax[taste].plot(time[plot_points], spike_rate[plot_points], label = "Taste:{:d}, Dur:{:d} ms, Lag:{:d} ms".format(taste+1, int(duration), int(onset)))
 
-			ax[taste].legend(loc = 'upper right', fontsize = 6)
+			ax[taste].legend(loc = 'upper right', fontsize = 10)
 		
 		# Bring the plots closer together
 		fig.subplots_adjust(hspace=0)
@@ -240,10 +253,11 @@ for unit in range(num_units):
 		plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
 		fig.text(0.5, 0.02, 'Time from taste delivery (ms)', ha='center')
 		fig.text(0.03, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')
-		
+		plt.tight_layout()		
+
 		# Save the combined plot
-		ax[0].set_title("Unit: {:d}, Window size: {:d} ms, Step size: {:d} ms".format(unit+1, params[0], params[1]))
-		fig.savefig("./PSTH/Unit{:d}_combined_laser_PSTH.png".format(unit+1))
+		ax[0].set_title("Unit: {:d}, Window size: {:d} ms, Step size: {:d} ms".format(unit, params[0], params[1]))
+		fig.savefig("./PSTH/Unit{:d}_combined_laser_PSTH.png".format(unit))
 		plt.close("all")
 
 hf5.close()
