@@ -4,9 +4,15 @@ import tables
 import easygui
 import sys
 import os
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import pylab as plt
 import seaborn as sns
-sns.set(context="poster")
+sns.set(style="white", context="talk", font_scale=1.8)
+sns.set_color_codes(palette = 'colorblind')
+#import matplotlib.pyplot as plt
+#import seaborn as sns
+#sns.set(context="poster")
 import pandas as pd
 
 # Ask the user for the hdf5 files that need to be plotted together
@@ -80,8 +86,9 @@ for condition in range(mean_firing_rates.shape[1]):
 		#plt.tick_params(axis='both', which='major', labelsize=20)
 		plt.xlim([0.0, 1.0])
 		plt.title('Proportion of units against P{(laser_off firing - laser_on firing) <= 0}') 
-	plt.legend(loc = 'upper left')
-	fig.set_size_inches(18.5, 10.5)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	#fig.set_size_inches(18.5, 10.5)
+	plt.tight_layout()
 	fig.savefig('duration:{},lag:{}.png'.format(lasers[condition + 1, 0], lasers[condition + 1, 1]), bbox_inches = 'tight')
 	plt.close('all')
 
@@ -103,8 +110,9 @@ for taste in range(mean_firing_rates.shape[2]):
 		#plt.tick_params(axis='both', which='major', labelsize=20)
 		plt.xlim([0.0, 1.0])
 		plt.title('Proportion of units against P{(laser_off firing - laser_on firing) <= 0}') 
-	plt.legend(loc = 'upper left')
-	fig.set_size_inches(18.5, 10.5)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
+	#fig.set_size_inches(18.5, 10.5)
 	fig.savefig('Taste{}.png'.format(taste), bbox_inches = 'tight')
 	plt.close('all')
 
@@ -139,8 +147,9 @@ plt.xlabel('Laser conditions')
 plt.ylabel('Number of neurons with significant' + '\n' + 'suppression of firing')
 plt.title('Total number of neurons = {:d}'.format(mean_firing_rates.shape[0]))
 sns.despine(bottom=True)
+plt.legend(loc = 'upper left', fontsize = 15)
 plt.tight_layout(h_pad=3)
-fig.set_size_inches(18.5, 10.5)
+#fig.set_size_inches(18.5, 10.5)
 fig.savefig('Significant_neurons.png', bbox_inches = 'tight')
 plt.close('all')
 

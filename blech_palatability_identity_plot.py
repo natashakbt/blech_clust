@@ -4,7 +4,12 @@ import tables
 import easygui
 import sys
 import os
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import pylab as plt
+import seaborn as sns
+sns.set(style="white", context="talk", font_scale=1.8)
+sns.set_color_codes(palette = 'colorblind')
 
 # Ask the user for the hdf5 files that need to be plotted together
 dirs = []
@@ -166,7 +171,8 @@ for i in range(r_pearson.shape[0]):
 plt.title('Pearson $r^2$ with palatability ranks' + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
 plt.xlabel('Time from stimulus (ms)')
 plt.ylabel('Average Pearson $r^2$')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('Pearson correlation-palatability.png', bbox_inches = 'tight')
 plt.close('all')
 
@@ -176,7 +182,8 @@ for i in range(r_spearman.shape[0]):
 plt.title('Spearman $rho^2$ with palatability ranks' + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
 plt.xlabel('Time from stimulus (ms)')
 plt.ylabel('Average Spearman $rho^2$')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('Spearman correlation-palatability.png', bbox_inches = 'tight')
 plt.close('all')
 
@@ -187,7 +194,8 @@ for i in range(r_pearson.shape[0]):
 	plt.title('Pearson $r^2$ with palatability ranks, laser condition %i' % (i+1) + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))	
 	plt.xlabel('Time from stimulus (ms)')
 	plt.ylabel('Average Pearson $r^2$')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('Pearson correlation-palatability,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all')
 
@@ -197,7 +205,8 @@ for i in range(r_spearman.shape[0]):
 	plt.title('Spearman $rho^2$ with palatability ranks, laser condition %i' % (i+1) + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
 	plt.xlabel('Time from stimulus (ms)')
 	plt.ylabel('Average Spearman $rho^2$')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('Spearman correlation-palatability,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all')
 
@@ -234,10 +243,11 @@ for i in range(p_discriminability_final.shape[0]):
 		fig = plt.figure()
 		for k in range(p_discriminability.shape[3]):
 			plt.plot(x[plot_indices], np.mean(p_discriminability_final[i, plot_indices, j, k, :], axis = -1), linewidth = 3.0, label = '%i vs %i' % (j+1, k+1))
-		plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]) + ' ' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 		plt.xlabel('Time from stimulus (ms)')	
 		plt.ylabel('Fraction of significant neurons')
-		plt.legend(loc = 'upper left', fontsize = 10)
+		plt.legend(loc = 'upper left', fontsize = 15)
+		plt.tight_layout()
 		fig.savefig('Taste %i discriminability p values-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
 		plt.close("all")
 		
@@ -246,30 +256,33 @@ for i in range(p_discriminability_final.shape[0]):
 fig = plt.figure()
 for i in range(p_pearson_final.shape[0]):
 	plt.plot(x[plot_indices], np.mean(p_pearson_final[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
-plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]))
+plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]))
 plt.xlabel('Time from stimulus (ms)')	
 plt.ylabel('Fraction of significant neurons')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('Pearson correlation p values-palatability.png', bbox_inches = 'tight')
 plt.close('all') 
 
 fig = plt.figure()
 for i in range(p_spearman_final.shape[0]):
 	plt.plot(x[plot_indices], np.mean(p_spearman_final[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
-plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]))
+plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]))
 plt.xlabel('Time from stimulus (ms)')	
 plt.ylabel('Fraction of significant neurons')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('Spearman correlation p values-palatability.png', bbox_inches = 'tight')
 plt.close('all')
 
 fig = plt.figure()
 for i in range(p_identity_final.shape[0]):
 	plt.plot(x[plot_indices], np.mean(p_identity_final[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
-plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]))
+plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]))
 plt.xlabel('Time from stimulus (ms)')	
 plt.ylabel('Fraction of significant neurons')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('ANOVA p values-identity.png', bbox_inches = 'tight')
 plt.close('all')
 
@@ -277,30 +290,33 @@ plt.close('all')
 for i in range(p_pearson_final.shape[0]):
 	fig = plt.figure()
 	plt.plot(x[plot_indices], np.mean(p_pearson_final[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
-	plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]))
+	plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]))
 	plt.xlabel('Time from stimulus (ms)')	
 	plt.ylabel('Fraction of significant neurons')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('Pearson correlation p values-palatability,laser condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all') 
 
 for i in range(p_spearman_final.shape[0]):
 	fig = plt.figure()
 	plt.plot(x[plot_indices], np.mean(p_spearman_final[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
-	plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]))
+	plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]))
 	plt.xlabel('Time from stimulus (ms)')	
 	plt.ylabel('Fraction of significant neurons')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('Spearman correlation p values-palatability,laser condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all')
 
 for i in range(p_identity_final.shape[0]):
 	fig = plt.figure()
 	plt.plot(x[plot_indices], np.mean(p_identity_final[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
-	plt.title('Units:%i, Window (ms):%i, Step (ms):%i, threshold:%f, consecutive windows:%i' % (num_units, params[0][0], params[0][1], p_values[0], p_values[1]))
+	plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'threshold:%.02f, consecutive windows:%i' % (p_values[0], p_values[1]))
 	plt.xlabel('Time from stimulus (ms)')	
 	plt.ylabel('Fraction of significant neurons')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('ANOVA p values-identity,laser condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all')
 
@@ -310,8 +326,9 @@ for i in range(lda_palatability.shape[0]):
 	plt.plot(x[plot_indices], lda_palatability[i, plot_indices], linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 plt.title('Units:%i, Window (ms):%i, Step (ms):%i, palatability LDA' % (num_units, params[0][0], params[0][1]))
 plt.xlabel('Time from stimulus (ms)')	
-plt.ylabel('Fraction correct trials (average across sessions)')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.ylabel('Fraction correct trials')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('Palatability_LDA.png', bbox_inches = 'tight')
 plt.close('all') 
 
@@ -320,8 +337,9 @@ for i in range(lda_identity.shape[0]):
 	plt.plot(x[plot_indices], lda_identity[i, plot_indices], linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 plt.title('Units:%i, Window (ms):%i, Step (ms):%i, identity LDA' % (num_units, params[0][0], params[0][1]))
 plt.xlabel('Time from stimulus (ms)')	
-plt.ylabel('Fraction correct trials (average across sessions)')
-plt.legend(loc = 'upper left', fontsize = 10)
+plt.ylabel('Fraction correct trials')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
 fig.savefig('Identity_LDA.png', bbox_inches = 'tight')
 plt.close('all') 
 
@@ -331,8 +349,9 @@ for i in range(lda_palatability.shape[0]):
 	plt.plot(x[plot_indices], lda_palatability[i, plot_indices], linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 	plt.title('Units:%i, Window (ms):%i, Step (ms):%i, palatability LDA' % (num_units, params[0][0], params[0][1]))
 	plt.xlabel('Time from stimulus (ms)')	
-	plt.ylabel('Fraction correct trials (average across sessions)')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.ylabel('Fraction correct trials')
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('Palatability_LDA,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all') 
 
@@ -341,8 +360,9 @@ for i in range(lda_identity.shape[0]):
 	plt.errorbar(x[plot_indices], lda_identity[i, plot_indices], linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 	plt.title('Units:%i, Window (ms):%i, Step (ms):%i, identity LDA' % (num_units, params[0][0], params[0][1]))
 	plt.xlabel('Time from stimulus (ms)')	
-	plt.ylabel('Fraction correct trials (average across sessions)')
-	plt.legend(loc = 'upper left', fontsize = 10)
+	plt.ylabel('Fraction correct trials')
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
 	fig.savefig('Identity_LDA,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all') 
 
@@ -356,7 +376,8 @@ for i in range(taste_cosine_similarity.shape[0]):
 		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 		plt.xlabel('Time from stimulus (ms)')	
 		plt.ylabel('Average cosine similarity')
-		plt.legend(loc = 'upper left', fontsize = 10)
+		plt.legend(loc = 'upper left', fontsize = 15)
+		plt.tight_layout()
 		fig.savefig('Taste %i similarity values-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
 		plt.close("all")
 
@@ -369,7 +390,8 @@ for i in range(taste_euclidean_distance.shape[0]):
 		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 		plt.xlabel('Time from stimulus (ms)')	
 		plt.ylabel('Average Euclidean distance')
-		plt.legend(loc = 'upper left', fontsize = 10)
+		plt.legend(loc = 'upper left', fontsize = 15)
+		plt.tight_layout()
 		fig.savefig('Taste %i Euclidean distances-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
 		plt.close("all")
 
@@ -381,7 +403,8 @@ for i in range(pairwise_NB_identity.shape[0]):
 		plt.title('Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]) + '\n' + 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 		plt.xlabel('Time from stimulus (ms)')	
 		plt.ylabel('Average Pairwise Identity Accuracy (Naive Bayes)')
-		plt.legend(loc = 'upper left', fontsize = 10)
+		plt.legend(loc = 'upper left', fontsize = 15)
+		plt.tight_layout()
 		fig.savefig('Taste %i Pairwise Identity NB-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
 		plt.close("all")
 

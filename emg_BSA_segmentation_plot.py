@@ -4,7 +4,12 @@ import tables
 import easygui
 import sys
 import os
+#import matplotlib
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+#import seaborn as sns
+#sns.set(style="white", context="talk", font_scale=1.8)
+#sns.set_color_codes(palette = 'colorblind')
 
 # Ask the user for the hdf5 files that need to be plotted together
 dirs = []
