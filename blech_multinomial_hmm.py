@@ -19,7 +19,8 @@ f.close()
 os.chdir(dir_name[0][:-1])
 
 # Pull out the NSLOTS - number of CPUs allotted
-n_cpu = int(os.getenv('NSLOTS'))
+#n_cpu = int(os.getenv('NSLOTS'))
+n_cpu = int(sys.argv[1])
 
 # Get the names of all files in the current directory, and find the .params and hdf5 (.h5) file
 file_list = os.listdir('./')
@@ -121,7 +122,7 @@ for result in hmm_results:
 	posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
 
 	# Also write the json model string to file
-	model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
+	#model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
 
 	# Write the log-likelihood, AIC/BIC score, and time vector to the hdf5 file too
 	log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
@@ -150,7 +151,7 @@ except:
 	pass
 if len(laser_exists) > 0:
 	on_trials = np.where(dig_in.laser_durations[:] > 0.0)[0]
-	off_trials = np.where(dig_in.laser_array[:] == 0.0)[0]
+	off_trials = np.where(dig_in.laser_durations[:] == 0.0)[0]
 	# Implement a Multinomial HMM for no. of states defined by min_states and max_states
 	hmm_results = []
 	for n_states in range(min_states, max_states + 1):
@@ -198,7 +199,7 @@ if len(laser_exists) > 0:
 		posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'posterior_proba', result[1][6])
 
 		# Also write the json model string to file
-		model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
+		#model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
 
 		# Write the log-likelihood and AIC/BIC score to the hdf5 file too
 		log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))

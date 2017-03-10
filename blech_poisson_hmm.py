@@ -19,7 +19,8 @@ f.close()
 os.chdir(dir_name[0][:-1])
 
 # Pull out the NSLOTS - number of CPUs allotted
-n_cpu = int(os.getenv('NSLOTS'))
+#n_cpu = int(os.getenv('NSLOTS'))
+n_cpu = int(sys.argv[1])
 
 # Get the names of all files in the current directory, and find the .hmm_params, .hmm_units and hdf5 (.h5) file
 file_list = os.listdir('./')
@@ -70,13 +71,13 @@ exec('spikes = hf5.root.spike_trains.dig_in_%i.spike_array[:]' % taste)
 
 # Slice out the required portion of the spike array, and bin it (only use the units in chosen_units)
 spikes = spikes[:, chosen_units, pre_stim - pre_stim_hmm:pre_stim + post_stim_hmm]
-binned_spikes = np.zeros((spikes.shape[0], spikes.shape[1], (pre_stim_hmm + post_stim_hmm)/bin_size))
+binned_spikes = np.zeros((spikes.shape[0], spikes.shape[1], int((pre_stim_hmm + post_stim_hmm)/bin_size)))
 time = []
 for i in range(spikes.shape[0]):
 	time = []
 	for k in range(0, spikes.shape[2], bin_size):
 		time.append(k - pre_stim_hmm)
-		binned_spikes[i, :, k/bin_size] = np.sum(spikes[i, :, k:k+bin_size], axis = 1)
+		binned_spikes[i, :, int(k/bin_size)] = np.sum(spikes[i, :, k:k+bin_size], axis = 1)
 # Now reshape binned_spikes so that its shaped n_trials x time x n_units
 binned_spikes = np.swapaxes(binned_spikes, 1, 2)
 
@@ -124,7 +125,7 @@ for result in hmm_results:
 	posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/states_%i' % (taste, hmm_type, result[0]), 'posterior_proba', result[1][6])
 
 	# Also write the json model string to file
-	model_json = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/states_%i' % (taste, hmm_type, result[0]), 'model_json', result[1][0])
+	# model_json = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/states_%i' % (taste, hmm_type, result[0]), 'model_json', result[1][0])
 
 	# Write the log-likelihood, AIC/BIC score, and time vector to the hdf5 file too
 	log_prob = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/states_%i' % (taste, hmm_type, result[0]), 'log_likelihood', np.array(result[1][1]))
@@ -210,7 +211,7 @@ if len(laser_exists) > 0:
 		posterior_proba = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/laser/states_%i' % (taste, hmm_type, result[0]), 'posterior_proba', result[1][6])
 
 		# Also write the json model string to file
-		model_json = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/laser/states_%i' % (taste, hmm_type, result[0]), 'model_json', result[1][0])
+		# model_json = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/laser/states_%i' % (taste, hmm_type, result[0]), 'model_json', result[1][0])
 
 		# Write the log-likelihood and AIC/BIC score to the hdf5 file too
 		log_prob = hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/laser/states_%i' % (taste, hmm_type, result[0]), 'log_likelihood', np.array(result[1][1]))
