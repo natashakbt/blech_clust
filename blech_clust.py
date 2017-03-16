@@ -124,7 +124,7 @@ f.close()
 num_cpu = multiprocessing.cpu_count()
 # Then produce the file generating the parallel command
 f = open('blech_clust_jetstream_parallel.sh', 'w')
-print("parallel -k -j {:d} --noswap --load 100% --progress --joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}".format(int(num_cpu)-1, dir_name, int(len(ports)*32-len(emg_channels))), file = f)
+print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed --joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}".format(int(num_cpu)-1, dir_name, int(len(ports)*32-len(emg_channels))), file = f)
 f.close()
 # Then produce the file that runs blech_process.py
 f = open('blech_clust_jetstream_parallel1.sh', 'w')
