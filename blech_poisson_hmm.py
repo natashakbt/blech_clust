@@ -244,7 +244,7 @@ if len(laser_exists) > 0:
 						plt.vlines(j - pre_stim_hmm, unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 			plt.xlabel('Time post stimulus (ms)')
 			plt.ylabel('Probability of HMM states' + '\n' + 'Unit number')
-			plt.title('Trial %i' % (i+1) + '\n' + 'RSU: red, FS: blue, Multi: black')
+			plt.title('Trial %i, Dur: %ims, Lag: %ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]) + '\n' + 'RSU: red, FS: blue, Multi: black')
 			fig.savefig('HMM_plots/dig_in_%i/%s_Poisson/laser/states_%i/%sTrial_%i.png' % (taste, hmm_type, result[0], label, (i+1)))
 			plt.close("all")
 		

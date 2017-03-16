@@ -26,11 +26,14 @@ n_cpu = int(sys.argv[1])
 file_list = os.listdir('./')
 hdf5_name = ''
 params_file = ''
+units_file = ''
 for files in file_list:
 	if files[-2:] == 'h5':
 		hdf5_name = files
 	if files[-10:] == 'hmm_params':
 		params_file = files
+	if files[-9:] == 'hmm_units':
+		units_file = files
 
 # Read the .hmm_params file
 f = open(params_file, 'r')
@@ -52,6 +55,13 @@ bin_size = int(params[8])
 pre_stim_hmm = int(params[9])
 post_stim_hmm = int(params[10])
 
+# Read the chosen units
+f = open(units_file, 'r')
+chosen_units = []
+for line in f.readlines():
+	chosen_units.append(int(line))
+chosen_units = np.array(chosen_units)
+
 # Open up hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
@@ -59,8 +69,8 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 exec('spikes = hf5.root.spike_trains.dig_in_%i.spike_array[:]' % taste)
 
 # Slice out the required portion of the spike array, and bin it
-spikes = spikes[:, :, pre_stim - pre_stim_hmm:pre_stim + post_stim_hmm]
-binned_spikes = np.zeros((spikes.shape[0], (pre_stim_hmm + post_stim_hmm)/bin_size))
+spikes = spikes[:, chosen_units, pre_stim - pre_stim_hmm:pre_stim + post_stim_hmm]
+binned_spikes = np.zeros((spikes.shape[0], int((pre_stim_hmm + post_stim_hmm)/bin_size)))
 time = []
 for i in range(spikes.shape[0]):
 	time = []
@@ -71,7 +81,7 @@ for i in range(spikes.shape[0]):
 			n_firing_units = n_firing_units + 1 
 		else:
 			n_firing_units = [0]
-		binned_spikes[i, k/bin_size] = np.random.choice(n_firing_units) 
+		binned_spikes[i, int(k/bin_size)] = np.random.choice(n_firing_units) 
 
 # Implement a Multinomial HMM for no. of states defined by min_states and max_states - run all the trials through the HMM
 hmm_results = []
@@ -131,11 +141,24 @@ for result in hmm_results:
 	time_vect = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'time', time)
 	hf5.flush()
 
-	# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
+	# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities with the unit rasters
+	# First make a dictionary of colors for the rasters
+	raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
 	for i in range(binned_spikes.shape[0]):
 		fig = plt.figure()
 		for j in range(posterior_proba.shape[2]):
-			plt.plot(time, posterior_proba[i, :, j])
+			plt.plot(time, len(chosen_units)*posterior_proba[i, :, j])
+		for unit in range(len(chosen_units)):
+			# Determine the type of unit we are looking at - the color of the raster will depend on that
+			if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
+				unit_type = 'regular_spiking'
+			elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
+				unit_type = 'fast_spiking'
+			else:
+				unit_type = 'multi_unit'
+			for j in range(spikes.shape[2]):
+				if spikes[i, unit, j] > 0:
+					plt.vlines(j - pre_stim_hmm, unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 		plt.xlabel('Time post stimulus (ms)')
 		plt.ylabel('Probability of HMM states')
 		plt.title('Trial %i' % (i+1))
@@ -208,7 +231,9 @@ if len(laser_exists) > 0:
 		time_vect = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'time', time)
 		hf5.flush()
 
-		# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities
+		# Go through the trials in binned_spikes and plot the trial-wise posterior probabilities and raster plots
+		# First make a dictionary of colors for the rasters
+		raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
 		for i in range(binned_spikes.shape[0]):
 			if i in on_trials:
 				label = 'laser_on_'
@@ -216,10 +241,21 @@ if len(laser_exists) > 0:
 				label = 'laser_off_'
 			fig = plt.figure()
 			for j in range(posterior_proba.shape[2]):
-				plt.plot(time, posterior_proba[i, :, j])
+				plt.plot(time, len(chosen_units)*posterior_proba[i, :, j])
+			for unit in range(len(chosen_units)):
+				# Determine the type of unit we are looking at - the color of the raster will depend on that
+				if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
+					unit_type = 'regular_spiking'
+				elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
+					unit_type = 'fast_spiking'
+				else:
+					unit_type = 'multi_unit'
+				for j in range(spikes.shape[2]):
+					if spikes[i, unit, j] > 0:
+						plt.vlines(j - pre_stim_hmm, unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 			plt.xlabel('Time post stimulus (ms)')
 			plt.ylabel('Probability of HMM states')
-			plt.title('Trial %i' % (i+1))
+			plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]) + '\n' + 'RSU: red, FS: blue, Multi: black')
 			fig.savefig('HMM_plots/dig_in_%i/Multinomial/laser/states_%i/%sTrial_%i.png' % (taste, result[0], label, (i+1)))
 			plt.close("all")
 		
