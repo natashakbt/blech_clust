@@ -53,9 +53,9 @@ sig_trials = np.load('sig_trials.npy')
 sig_trials = np.reshape(sig_trials, (sig_trials.shape[0]*sig_trials.shape[1]))
 
 # Now arrange these arrays by laser condition X taste X time
-final_gapes = np.empty((len(trials), num_tastes, num_trials/len(trials),  gapes.shape[1]), dtype = float)
-final_ltps = np.empty((len(trials), num_tastes, num_trials/len(trials), ltps.shape[1]), dtype = float)
-final_sig_trials = np.empty((len(trials), num_tastes, num_trials/len(trials)), dtype = float)
+final_gapes = np.empty((len(trials), num_tastes, int(num_trials/len(trials)),  gapes.shape[1]), dtype = float)
+final_ltps = np.empty((len(trials), num_tastes, int(num_trials/len(trials)), ltps.shape[1]), dtype = float)
+final_sig_trials = np.empty((len(trials), num_tastes, int(num_trials/len(trials))), dtype = float)
 
 # Fill up these arrays
 for i in range(len(trials)):

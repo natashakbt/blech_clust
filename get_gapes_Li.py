@@ -52,8 +52,8 @@ env = np.vstack(tuple(env[i, :, :] for i in range(env.shape[0])))
 sig_trials = np.reshape(sig_trials, (sig_trials.shape[0]*sig_trials.shape[1]))
 
 # Now arrange these arrays by laser condition X taste X time
-env_final = np.empty((len(trials), num_tastes, num_trials/len(trials), env.shape[1]), dtype = float)
-sig_trials_final = np.empty((len(trials), num_tastes, num_trials/len(trials)), dtype = int)
+env_final = np.empty((len(trials), num_tastes, int(num_trials/len(trials)), env.shape[1]), dtype = float)
+sig_trials_final = np.empty((len(trials), num_tastes, int(num_trials/len(trials))), dtype = int)
 
 # Fill up these arrays
 for i in range(len(trials)):
