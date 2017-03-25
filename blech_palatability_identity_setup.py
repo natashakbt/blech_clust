@@ -124,6 +124,8 @@ hf5.flush()
 
 # First pull out the unique laser(duration,lag) combinations - these are the same irrespective of the unit and time
 unique_lasers = np.vstack({tuple(row) for row in laser[0, 0, :, :]})
+unique_lasers = unique_lasers[unique_lasers[:, 0].argsort(), :]
+unique_lasers = unique_lasers[unique_lasers[:, 1].argsort(), :]
 # Now get the sets of trials with these unique duration and lag combinations
 trials = []
 for i in range(len(unique_lasers)):
@@ -139,7 +141,7 @@ hf5.flush()
 #---------Taste similarity calculation (use cosine similarity)----------------------------------------------------
 # Also calculate Euclidean/Mahalanobis distance between each pair of tastes in each laser condition
 # Also restructure the scaled neural response array by # laser conditions X time X # tastes X # units X trials. Save this array to file as well
-neural_response_laser = np.empty((unique_lasers.shape[0], int((time - params[0])/params[1]) + 1, num_tastes, num_units, num_trials/unique_lasers.shape[0]), dtype = np.dtype('float64'))
+neural_response_laser = np.empty((unique_lasers.shape[0], int((time - params[0])/params[1]) + 1, num_tastes, num_units, int(num_trials/unique_lasers.shape[0])), dtype = np.dtype('float64'))
 for i in range(unique_lasers.shape[0]):
 	for j in range(int((time - params[0])/params[1]) + 1):
 		for k in range(num_tastes):
