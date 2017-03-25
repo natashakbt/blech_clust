@@ -100,7 +100,7 @@ except:
 
 # Then create the poisson_hmm_results group, and save the identities of the chosen units to this group
 hf5.create_group('/spike_trains/dig_in_%i/' % taste, '%s_poisson_hmm_results' % hmm_type)
-hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/' % (taste, hmm_type), 'chosen_units', chosen_units)
+# hf5.create_array('/spike_trains/dig_in_%i/%s_poisson_hmm_results/' % (taste, hmm_type), 'chosen_units', chosen_units)
 hf5.flush()
 
 # Delete the Poisson folder within HMM_plots if it exists for this taste
