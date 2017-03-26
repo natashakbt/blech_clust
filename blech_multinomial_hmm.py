@@ -161,7 +161,7 @@ for result in hmm_results:
 					plt.vlines(j - pre_stim_hmm, unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 		plt.xlabel('Time post stimulus (ms)')
 		plt.ylabel('Probability of HMM states')
-		plt.title('Trial %i' % (i+1))
+		plt.title('Trial %i' % (i+1) + '\n' + 'RSU: red, FS: blue, Multi: black')
 		fig.savefig('HMM_plots/dig_in_%i/Multinomial/states_%i/Trial_%i.png' % (taste, result[0], (i+1)))
 		plt.close("all")
 
