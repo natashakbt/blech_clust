@@ -87,6 +87,9 @@ for dig_in in trains_dig_in:
 					# And the posterior probability to plot
 					posterior_proba = laser_node.posterior_proba[:]
 
+					# Make an array of posterior probabilities arranged by laser conditions
+					final_proba = np.zeros((lasers.shape[0], int(posterior_proba.shape[0]/lasers.shape[0]), posterior_proba.shape[1], posterior_proba.shape[2]))
+
 					# Get the limits of plotting
 					start = 100*(int(time[0]/100))
 					end = 100*(int(time[-1]/100) + 1)
@@ -104,14 +107,18 @@ for dig_in in trains_dig_in:
 						laser_condition = int(np.where(trials == posterior_proba.shape[0]*taste_num + i)[0][0])
 						this_taste_trials = np.where((trials[laser_condition] >= posterior_proba.shape[0]*taste_num) * (trials[laser_condition] <= posterior_proba.shape[0]*(taste_num + 1)))
 						this_trial = int(np.where(trials[laser_condition, this_taste_trials][0] == posterior_proba.shape[0]*taste_num + i)[0])
+
+						# Fill up the final_proba array
+						final_proba[laser_condition, this_trial, :, :] = posterior_proba[i, :, :]
 						
 						# Plot the gapes, gapes_Li and posterior_proba
 						fig = plt.figure()
+						for j in range(posterior_proba.shape[2]):
+							plt.plot(time, posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
 							plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
 							plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
-						for j in range(posterior_proba.shape[2]):
-							plt.plot(time, posterior_proba[i, :, j])
+
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
@@ -120,15 +127,49 @@ for dig_in in trains_dig_in:
 
 						# Plot the ltps, and posterior_proba
 						fig = plt.figure()
-						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 						for j in range(posterior_proba.shape[2]):
 							plt.plot(time, posterior_proba[i, :, j])
+						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
+							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
+
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
 						fig.savefig('./ltps/Dur%i,Lag%i/Trial_%i.png' % (int(lasers[laser_condition, 0]), int(lasers[laser_condition, 1]), i+1))
 						plt.close("all")
+
+					# Plot the trial-averaged HMM posterior probabilities
+					mean_proba = np.mean(final_proba, axis = 1)
+					for i in range(mean_proba.shape[0]):
+						fig = plt.figure()
+						for j in range(mean_proba.shape[2]):
+							plt.plot(time, mean_proba[i, :, j])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial averaged probabilities' + '\n' + 'of HMM states')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./gapes/Dur%i,Lag%i/Average_HMM.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./ltps/Dur%i,Lag%i/Average_HMM.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
+
+					# Plot the trial-averaged gape and ltp frequencies
+					mean_gapes = np.mean(gapes[:, :, :, :], axis = 2)
+					mean_ltps = np.mean(ltps[:, :, :, :], axis = 2)
+					for i in range(mean_gapes.shape[0]):
+						fig = plt.figure()
+						plt.plot(np.arange(end), mean_gapes[i, taste_num, :end])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 4-6Hz range')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./gapes/Dur%i,Lag%i/Average_gapes.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
+
+						fig = plt.figure()
+						plt.plot(np.arange(end), mean_ltps[i, taste_num, :end])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 6-10Hz range')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./ltps/Dur%i,Lag%i/Average_ltps.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
 
 					# Go back to the data directory
 					os.chdir(dir_name)
@@ -142,6 +183,9 @@ for dig_in in trains_dig_in:
 				time = node.time[:]
 				# And the posterior probability to plot
 				posterior_proba = node.posterior_proba[:]
+
+				# Make an array of posterior probabilities arranged by laser conditions
+				final_proba = np.zeros((lasers.shape[0], int(posterior_proba.shape[0]/lasers.shape[0]), posterior_proba.shape[1], posterior_proba.shape[2]))
 
 				# Get the limits of plotting
 				start = 100*(int(time[0]/100))
@@ -157,13 +201,16 @@ for dig_in in trains_dig_in:
 					this_taste_trials = np.where((trials[laser_condition] >= posterior_proba.shape[0]*taste_num) * (trials[laser_condition] <= posterior_proba.shape[0]*(taste_num + 1)))
 					this_trial = int(np.where(trials[laser_condition, this_taste_trials][0] == posterior_proba.shape[0]*taste_num + i)[0])
 					
+					# Fill up the final_proba array
+					final_proba[laser_condition, this_trial, :, :] = posterior_proba[i, :, :]
+
 					# Plot the gapes, gapes_Li and posterior_proba
 					fig = plt.figure()
+					for j in range(posterior_proba.shape[2]):
+						plt.plot(time, posterior_proba[i, :, j])
 					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
 						plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
 						plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
-					for j in range(posterior_proba.shape[2]):
-						plt.plot(time, posterior_proba[i, :, j])
 					plt.xlabel('Time post stimulus (ms)')
 					plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
 					plt.title('Trial %i' % (i+1))
@@ -172,15 +219,46 @@ for dig_in in trains_dig_in:
 
 					# Plot the ltps, and posterior_proba
 					fig = plt.figure()
-					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-						plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 					for j in range(posterior_proba.shape[2]):
 						plt.plot(time, posterior_proba[i, :, j])
+					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
+						plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 					plt.xlabel('Time post stimulus (ms)')
 					plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 					plt.title('Trial %i' % (i+1))
 					fig.savefig('./ltps/Trial_%i.png' % (i+1))
 					plt.close("all")
+
+				# Plot the trial-averaged HMM posterior probabilities
+				mean_proba = np.mean(final_proba, axis = (0, 1))
+				fig = plt.figure()
+				for j in range(mean_proba.shape[1]):
+					plt.plot(time, mean_proba[:, j])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial averaged probabilities' + '\n' + 'of HMM states')
+				plt.title('Trial-averaged HMM')
+				fig.savefig('./gapes/Average_HMM.png')
+				fig.savefig('./ltps/Average_HMM.png')
+				plt.close('all')
+
+				# Plot the trial-averaged gape and ltp frequencies
+				mean_gapes = np.mean(gapes[:, :, :, :], axis = (0, 2))
+				mean_ltps = np.mean(ltps[:, :, :, :], axis = (0, 2))
+				fig = plt.figure()
+				plt.plot(np.arange(end), mean_gapes[taste_num, :end])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 4-6Hz range')
+				plt.title('Trial-averaged power in gaping range')
+				fig.savefig('./gapes/Average_gapes.png')
+				plt.close('all')
+
+				fig = plt.figure()
+				plt.plot(np.arange(end), mean_ltps[taste_num, :end])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 6-10Hz range')
+				plt.title('Trial-averaged power in LTP range')
+				fig.savefig('./ltps/Average_ltps.png')
+				plt.close('all')
 
 				# Go back to the data directory
 				os.chdir(dir_name)
@@ -213,6 +291,9 @@ for dig_in in trains_dig_in:
 					# And the posterior probability to plot
 					posterior_proba = laser_node.posterior_proba[:]
 
+					# Make an array of posterior probabilities arranged by laser conditions
+					final_proba = np.zeros((lasers.shape[0], int(posterior_proba.shape[0]/lasers.shape[0]), posterior_proba.shape[1], posterior_proba.shape[2]))
+
 					# Get the limits of plotting
 					start = 100*(int(time[0]/100))
 					end = 100*(int(time[-1]/100) + 1)
@@ -230,14 +311,18 @@ for dig_in in trains_dig_in:
 						laser_condition = int(np.where(trials == posterior_proba.shape[0]*taste_num + i)[0][0])
 						this_taste_trials = np.where((trials[laser_condition] >= posterior_proba.shape[0]*taste_num) * (trials[laser_condition] <= posterior_proba.shape[0]*(taste_num + 1)))
 						this_trial = int(np.where(trials[laser_condition, this_taste_trials][0] == posterior_proba.shape[0]*taste_num + i)[0])
+
+						# Fill up the final_proba array
+						final_proba[laser_condition, this_trial, :, :] = posterior_proba[i, :, :]
 						
 						# Plot the gapes, gapes_Li and posterior_proba
 						fig = plt.figure()
+						for j in range(posterior_proba.shape[2]):
+							plt.plot(time, posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
 							plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
 							plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
-						for j in range(posterior_proba.shape[2]):
-							plt.plot(time, posterior_proba[i, :, j])
+
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
@@ -246,15 +331,49 @@ for dig_in in trains_dig_in:
 
 						# Plot the ltps, and posterior_proba
 						fig = plt.figure()
-						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 						for j in range(posterior_proba.shape[2]):
 							plt.plot(time, posterior_proba[i, :, j])
+						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
+							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
+
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
 						fig.savefig('./ltps/Dur%i,Lag%i/Trial_%i.png' % (int(lasers[laser_condition, 0]), int(lasers[laser_condition, 1]), i+1))
 						plt.close("all")
+
+					# Plot the trial-averaged HMM posterior probabilities
+					mean_proba = np.mean(final_proba, axis = 1)
+					for i in range(mean_proba.shape[0]):
+						fig = plt.figure()
+						for j in range(mean_proba.shape[2]):
+							plt.plot(time, mean_proba[i, :, j])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial averaged probabilities' + '\n' + 'of HMM states')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./gapes/Dur%i,Lag%i/Average_HMM.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./ltps/Dur%i,Lag%i/Average_HMM.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
+
+					# Plot the trial-averaged gape and ltp frequencies
+					mean_gapes = np.mean(gapes[:, :, :, :], axis = 2)
+					mean_ltps = np.mean(ltps[:, :, :, :], axis = 2)
+					for i in range(mean_gapes.shape[0]):
+						fig = plt.figure()
+						plt.plot(np.arange(end), mean_gapes[i, taste_num, :end])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 4-6Hz range')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./gapes/Dur%i,Lag%i/Average_gapes.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
+
+						fig = plt.figure()
+						plt.plot(np.arange(end), mean_ltps[i, taste_num, :end])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 6-10Hz range')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./ltps/Dur%i,Lag%i/Average_ltps.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
 
 					# Go back to the data directory
 					os.chdir(dir_name)
@@ -268,6 +387,9 @@ for dig_in in trains_dig_in:
 				time = node.time[:]
 				# And the posterior probability to plot
 				posterior_proba = node.posterior_proba[:]
+
+				# Make an array of posterior probabilities arranged by laser conditions
+				final_proba = np.zeros((lasers.shape[0], int(posterior_proba.shape[0]/lasers.shape[0]), posterior_proba.shape[1], posterior_proba.shape[2]))
 
 				# Get the limits of plotting
 				start = 100*(int(time[0]/100))
@@ -283,13 +405,16 @@ for dig_in in trains_dig_in:
 					this_taste_trials = np.where((trials[laser_condition] >= posterior_proba.shape[0]*taste_num) * (trials[laser_condition] <= posterior_proba.shape[0]*(taste_num + 1)))
 					this_trial = int(np.where(trials[laser_condition, this_taste_trials][0] == posterior_proba.shape[0]*taste_num + i)[0])
 					
+					# Fill up the final_proba array
+					final_proba[laser_condition, this_trial, :, :] = posterior_proba[i, :, :]
+
 					# Plot the gapes, gapes_Li and posterior_proba
 					fig = plt.figure()
+					for j in range(posterior_proba.shape[2]):
+						plt.plot(time, posterior_proba[i, :, j])
 					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
 						plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
 						plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
-					for j in range(posterior_proba.shape[2]):
-						plt.plot(time, posterior_proba[i, :, j])
 					plt.xlabel('Time post stimulus (ms)')
 					plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
 					plt.title('Trial %i' % (i+1))
@@ -298,15 +423,46 @@ for dig_in in trains_dig_in:
 
 					# Plot the ltps, and posterior_proba
 					fig = plt.figure()
-					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-						plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 					for j in range(posterior_proba.shape[2]):
 						plt.plot(time, posterior_proba[i, :, j])
+					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
+						plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 					plt.xlabel('Time post stimulus (ms)')
 					plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 					plt.title('Trial %i' % (i+1))
 					fig.savefig('./ltps/Trial_%i.png' % (i+1))
 					plt.close("all")
+
+				# Plot the trial-averaged HMM posterior probabilities
+				mean_proba = np.mean(final_proba, axis = (0, 1))
+				fig = plt.figure()
+				for j in range(mean_proba.shape[1]):
+					plt.plot(time, mean_proba[:, j])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial averaged probabilities' + '\n' + 'of HMM states')
+				plt.title('Trial-averaged HMM')
+				fig.savefig('./gapes/Average_HMM.png')
+				fig.savefig('./ltps/Average_HMM.png')
+				plt.close('all')
+
+				# Plot the trial-averaged gape and ltp frequencies
+				mean_gapes = np.mean(gapes[:, :, :, :], axis = (0, 2))
+				mean_ltps = np.mean(ltps[:, :, :, :], axis = (0, 2))
+				fig = plt.figure()
+				plt.plot(np.arange(end), mean_gapes[taste_num, :end])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 4-6Hz range')
+				plt.title('Trial-averaged power in gaping range')
+				fig.savefig('./gapes/Average_gapes.png')
+				plt.close('all')
+
+				fig = plt.figure()
+				plt.plot(np.arange(end), mean_ltps[taste_num, :end])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 6-10Hz range')
+				plt.title('Trial-averaged power in LTP range')
+				fig.savefig('./ltps/Average_ltps.png')
+				plt.close('all')
 
 				# Go back to the data directory
 				os.chdir(dir_name)
@@ -339,6 +495,9 @@ for dig_in in trains_dig_in:
 					# And the posterior probability to plot
 					posterior_proba = laser_node.posterior_proba[:]
 
+					# Make an array of posterior probabilities arranged by laser conditions
+					final_proba = np.zeros((lasers.shape[0], int(posterior_proba.shape[0]/lasers.shape[0]), posterior_proba.shape[1], posterior_proba.shape[2]))
+
 					# Get the limits of plotting
 					start = 100*(int(time[0]/100))
 					end = 100*(int(time[-1]/100) + 1)
@@ -356,14 +515,18 @@ for dig_in in trains_dig_in:
 						laser_condition = int(np.where(trials == posterior_proba.shape[0]*taste_num + i)[0][0])
 						this_taste_trials = np.where((trials[laser_condition] >= posterior_proba.shape[0]*taste_num) * (trials[laser_condition] <= posterior_proba.shape[0]*(taste_num + 1)))
 						this_trial = int(np.where(trials[laser_condition, this_taste_trials][0] == posterior_proba.shape[0]*taste_num + i)[0])
+
+						# Fill up the final_proba array
+						final_proba[laser_condition, this_trial, :, :] = posterior_proba[i, :, :]
 						
 						# Plot the gapes, gapes_Li and posterior_proba
 						fig = plt.figure()
+						for j in range(posterior_proba.shape[2]):
+							plt.plot(time, posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
 							plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
 							plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
-						for j in range(posterior_proba.shape[2]):
-							plt.plot(time, posterior_proba[i, :, j])
+
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
@@ -372,15 +535,49 @@ for dig_in in trains_dig_in:
 
 						# Plot the ltps, and posterior_proba
 						fig = plt.figure()
-						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 						for j in range(posterior_proba.shape[2]):
 							plt.plot(time, posterior_proba[i, :, j])
+						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
+							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
+
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
 						fig.savefig('./ltps/Dur%i,Lag%i/Trial_%i.png' % (int(lasers[laser_condition, 0]), int(lasers[laser_condition, 1]), i+1))
 						plt.close("all")
+
+					# Plot the trial-averaged HMM posterior probabilities
+					mean_proba = np.mean(final_proba, axis = 1)
+					for i in range(mean_proba.shape[0]):
+						fig = plt.figure()
+						for j in range(mean_proba.shape[2]):
+							plt.plot(time, mean_proba[i, :, j])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial averaged probabilities' + '\n' + 'of HMM states')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./gapes/Dur%i,Lag%i/Average_HMM.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./ltps/Dur%i,Lag%i/Average_HMM.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
+
+					# Plot the trial-averaged gape and ltp frequencies
+					mean_gapes = np.mean(gapes[:, :, :, :], axis = 2)
+					mean_ltps = np.mean(ltps[:, :, :, :], axis = 2)
+					for i in range(mean_gapes.shape[0]):
+						fig = plt.figure()
+						plt.plot(np.arange(end), mean_gapes[i, taste_num, :end])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 4-6Hz range')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./gapes/Dur%i,Lag%i/Average_gapes.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
+
+						fig = plt.figure()
+						plt.plot(np.arange(end), mean_ltps[i, taste_num, :end])
+						plt.xlabel('Time post stimulus (ms)')
+						plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 6-10Hz range')
+						plt.title('Dur: %ims, Lag:%ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						fig.savefig('./ltps/Dur%i,Lag%i/Average_ltps.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
+						plt.close('all')
 
 					# Go back to the data directory
 					os.chdir(dir_name)
@@ -394,6 +591,9 @@ for dig_in in trains_dig_in:
 				time = node.time[:]
 				# And the posterior probability to plot
 				posterior_proba = node.posterior_proba[:]
+
+				# Make an array of posterior probabilities arranged by laser conditions
+				final_proba = np.zeros((lasers.shape[0], int(posterior_proba.shape[0]/lasers.shape[0]), posterior_proba.shape[1], posterior_proba.shape[2]))
 
 				# Get the limits of plotting
 				start = 100*(int(time[0]/100))
@@ -409,13 +609,16 @@ for dig_in in trains_dig_in:
 					this_taste_trials = np.where((trials[laser_condition] >= posterior_proba.shape[0]*taste_num) * (trials[laser_condition] <= posterior_proba.shape[0]*(taste_num + 1)))
 					this_trial = int(np.where(trials[laser_condition, this_taste_trials][0] == posterior_proba.shape[0]*taste_num + i)[0])
 					
+					# Fill up the final_proba array
+					final_proba[laser_condition, this_trial, :, :] = posterior_proba[i, :, :]
+
 					# Plot the gapes, gapes_Li and posterior_proba
 					fig = plt.figure()
+					for j in range(posterior_proba.shape[2]):
+						plt.plot(time, posterior_proba[i, :, j])
 					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
 						plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
 						plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
-					for j in range(posterior_proba.shape[2]):
-						plt.plot(time, posterior_proba[i, :, j])
 					plt.xlabel('Time post stimulus (ms)')
 					plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
 					plt.title('Trial %i' % (i+1))
@@ -424,22 +627,76 @@ for dig_in in trains_dig_in:
 
 					# Plot the ltps, and posterior_proba
 					fig = plt.figure()
-					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-						plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 					for j in range(posterior_proba.shape[2]):
 						plt.plot(time, posterior_proba[i, :, j])
+					if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
+						plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
 					plt.xlabel('Time post stimulus (ms)')
 					plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 					plt.title('Trial %i' % (i+1))
 					fig.savefig('./ltps/Trial_%i.png' % (i+1))
 					plt.close("all")
 
+				# Plot the trial-averaged HMM posterior probabilities
+				mean_proba = np.mean(final_proba, axis = (0, 1))
+				fig = plt.figure()
+				for j in range(mean_proba.shape[1]):
+					plt.plot(time, mean_proba[:, j])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial averaged probabilities' + '\n' + 'of HMM states')
+				plt.title('Trial-averaged HMM')
+				fig.savefig('./gapes/Average_HMM.png')
+				fig.savefig('./ltps/Average_HMM.png')
+				plt.close('all')
+
+				# Plot the trial-averaged gape and ltp frequencies
+				mean_gapes = np.mean(gapes[:, :, :, :], axis = (0, 2))
+				mean_ltps = np.mean(ltps[:, :, :, :], axis = (0, 2))
+				fig = plt.figure()
+				plt.plot(np.arange(end), mean_gapes[taste_num, :end])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 4-6Hz range')
+				plt.title('Trial-averaged power in gaping range')
+				fig.savefig('./gapes/Average_gapes.png')
+				plt.close('all')
+
+				fig = plt.figure()
+				plt.plot(np.arange(end), mean_ltps[taste_num, :end])
+				plt.xlabel('Time post stimulus (ms)')
+				plt.ylabel('Trial-averaged fraction of' + '\n' + 'power in the 6-10Hz range')
+				plt.title('Trial-averaged power in LTP range')
+				fig.savefig('./ltps/Average_ltps.png')
+				plt.close('all')
+
 				# Go back to the data directory
 				os.chdir(dir_name)
+	
+# Finally plot out the trial-averaged gaping and ltp power by laser conditions
+# Ask the user for the post-stimulus time to plot
+post_stim = easygui.multenterbox(msg = 'Fill in the post-stimulus period you want to plot for the average gapes and ltps', fields = ['Post-stimulus time (ms)'])
+post_stim = int(post_stim[0])
 
-
-
-
+# Now run through the laser conditions 
+for i in range(lasers.shape[0]):
+	# And plot all the tastes on the same graph
+	fig_gape = plt.figure()
+	ax_gape = fig_gape.add_subplot(1, 1, 1)
+	fig_ltp = plt.figure()
+	ax_ltp = fig_ltp.add_subplot(1, 1, 1)
+	for j in range(len(trains_dig_in)):
+		ax_gape.plot(np.arange(post_stim), np.mean(gapes[i, j, :, :post_stim], axis = 0), label = 'Taste %i' % (j + 1))
+		ax_ltp.plot(np.arange(post_stim), np.mean(ltps[i, j, :, :post_stim], axis = 0), label = 'Taste %i' % (j + 1))
+		ax_gape.legend()
+		ax_ltp.legend()
+		ax_gape.set_xlabel('Time post stimlus (ms)')
+		ax_ltp.set_xlabel('Time post stimlus (ms)')
+		ax_gape.set_ylabel('Trial averaged power in 4.15-5.95 Hz')		
+		ax_ltp.set_ylabel('Trial averaged power in 5.95-8.65 Hz')		
+		ax_gape.set_title('Dur: %ims, Lag: %ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+		ax_ltp.set_title('Dur: %ims, Lag: %ims' % (int(lasers[i, 0]), int(lasers[i, 1])))
+		fig_gape.savefig('./HMM_EMG_plots/average_gape_Dur%i_Lag%i.png' % (int(lasers[i, 0]), int(lasers[i, 1])), bbox_inches = 'tight')
+		fig_ltp.savefig('./HMM_EMG_plots/average_ltp_Dur%i_Lag%i.png' % (int(lasers[i, 0]), int(lasers[i, 1])), bbox_inches = 'tight')
+		plt.close('all')
 
 hf5.close()
 				
