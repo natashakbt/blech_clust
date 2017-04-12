@@ -10,6 +10,17 @@ import os
 from blech_hmm import *
 import pylab as plt
 
+# The output models from pomegranate are in JSON format - pytables however doesn't allow strings to be saved to file. So we will map the string to bytes and save that to the file. Here are a couple of convenience functions for that
+def recordStringInHDF5(hf5, group, nodename, s):
+	'''creates an Array object in an HDF5 file that represents a unicode string'''
+	bytes = np.fromstring(s.encode('utf-8'), np.uint8)
+	atom = tables.UInt8Atom()
+	array = hf5.create_array(group, nodename, atom = atom, obj = bytes, shape=(len(bytes),))
+	return array
+
+def retrieveStringFromHDF5(node):
+	return str(node.read(), 'utf-8')
+
 # Read blech.dir, and cd to that directory
 f = open('blech.dir', 'r')
 dir_name = []
@@ -133,6 +144,7 @@ for result in hmm_results:
 
 	# Also write the json model string to file
 	#model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
+	model_json = recordStringInHDF5(hf5, '/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'model_json', result[1][0])
 
 	# Write the log-likelihood, AIC/BIC score, and time vector to the hdf5 file too
 	log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
@@ -223,6 +235,7 @@ if len(laser_exists) > 0:
 
 		# Also write the json model string to file
 		#model_json = hf5.create_array('/spike_trains/dig_in_%i/poisson_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
+		model_json = recordStringInHDF5(hf5, '/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'model_json', result[1][0])
 
 		# Write the log-likelihood and AIC/BIC score to the hdf5 file too
 		log_prob = hf5.create_array('/spike_trains/dig_in_%i/multinomial_hmm_results/laser/states_%i' % (taste, result[0]), 'log_likelihood', np.array(result[1][1]))
