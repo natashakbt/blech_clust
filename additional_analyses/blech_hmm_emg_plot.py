@@ -16,9 +16,19 @@ os.chdir(dir_name)
 # Look for the hdf5 file in the directory
 file_list = os.listdir('./')
 hdf5_name = ''
+units_file = ''
 for files in file_list:
 	if files[-2:] == 'h5':
 		hdf5_name = files
+	if files[-9:] == 'hmm_units':
+		units_file = files
+
+# Read the chosen units
+f = open(units_file, 'r')
+chosen_units = []
+for line in f.readlines():
+	chosen_units.append(int(line))
+chosen_units = np.array(chosen_units)
 
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
@@ -55,7 +65,12 @@ for dig_in in trains_dig_in:
 
 	# Get the taste number
 	taste_num = int(str.split(dig_in._v_pathname, '/')[-1][-1])
-	
+
+	# Get the spike array from the required taste/input
+	spikes = dig_in.spike_array[:]
+	# Take only the units that were chosen while fitting the HMM
+	spikes = spikes[:, chosen_units, :]	
+
 	# Make a directory for this digital input
 	os.mkdir('./HMM_EMG_plots/dig_in_{:d}'.format(taste_num))
 
@@ -94,6 +109,9 @@ for dig_in in trains_dig_in:
 					start = 100*(int(time[0]/100))
 					end = 100*(int(time[-1]/100) + 1)
 
+					# Slice out the required length of the array of spikes
+					spikes_current = spikes[:, :, pre_stim - np.abs(start) : pre_stim + np.abs(end)]
+
 					# Make directories for the plots
 					os.mkdir('./gapes')
 					os.mkdir('./ltps')
@@ -114,10 +132,23 @@ for dig_in in trains_dig_in:
 						# Plot the gapes, gapes_Li and posterior_proba
 						fig = plt.figure()
 						for j in range(posterior_proba.shape[2]):
-							plt.plot(time, posterior_proba[i, :, j])
+							plt.plot(time, len(chosen_units)*posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
-							plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
+							plt.plot(np.arange(end), len(chosen_units)*gapes[laser_condition, taste_num, this_trial, :end])
+							plt.plot(np.arange(end), len(chosen_units)*gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
+						# First make a dictionary of colors for the rasters
+						raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
+						for unit in range(len(chosen_units)):
+							# Determine the type of unit we are looking at - the color of the raster will depend on that
+							if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
+								unit_type = 'regular_spiking'
+							elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
+								unit_type = 'fast_spiking'
+							else:
+								unit_type = 'multi_unit'
+							for j in range(spikes_current.shape[2]):
+								if spikes_current[i, unit, j] > 0:
+									plt.vlines(j - np.abs(start), unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
@@ -130,13 +161,27 @@ for dig_in in trains_dig_in:
 						for j in range(posterior_proba.shape[2]):
 							plt.plot(time, posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
+							plt.plot(np.arange(end), len(chosen_units)*ltps[laser_condition, taste_num, this_trial, :end])
 
+						# First make a dictionary of colors for the rasters
+						raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
+						for unit in range(len(chosen_units)):
+							# Determine the type of unit we are looking at - the color of the raster will depend on that
+							if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
+								unit_type = 'regular_spiking'
+							elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
+								unit_type = 'fast_spiking'
+							else:
+								unit_type = 'multi_unit'
+							for j in range(spikes_current.shape[2]):
+								if spikes_current[i, unit, j] > 0:
+									plt.vlines(j - np.abs(start), unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
 						plt.title('Trial %i, Dur: %ims, Lag:%ims' % (i+1, dig_in.laser_durations[i], dig_in.laser_onset_lag[i]))
 						fig.savefig('./ltps/Dur%i,Lag%i/Trial_%i.png' % (int(lasers[laser_condition, 0]), int(lasers[laser_condition, 1]), i+1))
 						plt.close("all")
+
 
 					# Plot the trial-averaged HMM posterior probabilities
 					mean_proba = np.mean(final_proba, axis = 1)
@@ -298,6 +343,9 @@ for dig_in in trains_dig_in:
 					start = 100*(int(time[0]/100))
 					end = 100*(int(time[-1]/100) + 1)
 
+					# Slice out the required length of the array of spikes
+					spikes_current = spikes[:, :, pre_stim - np.abs(start) : pre_stim + np.abs(end)]
+
 					# Make directories for the plots
 					os.mkdir('./gapes')
 					os.mkdir('./ltps')
@@ -320,8 +368,21 @@ for dig_in in trains_dig_in:
 						for j in range(posterior_proba.shape[2]):
 							plt.plot(time, posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), gapes[laser_condition, taste_num, this_trial, :end])
-							plt.plot(np.arange(end), gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
+							plt.plot(np.arange(end), len(chosen_units)*gapes[laser_condition, taste_num, this_trial, :end])
+							plt.plot(np.arange(end), len(chosen_units)*gapes_Li[laser_condition, taste_num, this_trial, pre_stim : pre_stim + end], linewidth = 2.0, color = 'black')
+						# First make a dictionary of colors for the rasters
+						raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
+						for unit in range(len(chosen_units)):
+							# Determine the type of unit we are looking at - the color of the raster will depend on that
+							if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
+								unit_type = 'regular_spiking'
+							elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
+								unit_type = 'fast_spiking'
+							else:
+								unit_type = 'multi_unit'
+							for j in range(spikes_current.shape[2]):
+								if spikes_current[i, unit, j] > 0:
+									plt.vlines(j - np.abs(start), unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power < 4.6Hz, Gapes from Li et al')
@@ -334,7 +395,20 @@ for dig_in in trains_dig_in:
 						for j in range(posterior_proba.shape[2]):
 							plt.plot(time, posterior_proba[i, :, j])
 						if sig_trials[laser_condition, taste_num, this_trial] > 0.0:
-							plt.plot(np.arange(end), ltps[laser_condition, taste_num, this_trial, :end])
+							plt.plot(np.arange(end), len(chosen_units)*ltps[laser_condition, taste_num, this_trial, :end])
+						# First make a dictionary of colors for the rasters
+						raster_colors = {'regular_spiking': 'red', 'fast_spiking': 'blue', 'multi_unit': 'black'}
+						for unit in range(len(chosen_units)):
+							# Determine the type of unit we are looking at - the color of the raster will depend on that
+							if hf5.root.unit_descriptor[chosen_units[unit]]['regular_spiking'] == 1:
+								unit_type = 'regular_spiking'
+							elif hf5.root.unit_descriptor[chosen_units[unit]]['fast_spiking'] == 1:
+								unit_type = 'fast_spiking'
+							else:
+								unit_type = 'multi_unit'
+							for j in range(spikes_current.shape[2]):
+								if spikes_current[i, unit, j] > 0:
+									plt.vlines(j - np.abs(start), unit, unit + 0.5, color = raster_colors[unit_type], linewidth = 0.5)
 
 						plt.xlabel('Time post stimulus (ms)')
 						plt.ylabel('Probability of HMM states' + '\n' + '% Power in 5.95-8.6Hz')
