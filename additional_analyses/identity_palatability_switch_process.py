@@ -35,6 +35,9 @@ hf5 = tables.open_file(hdf5_name, 'r')
 # Read in the array of spikes
 spikes_cat = hf5.root.MCMC_switch.categorical_spikes[:]
 
+# Get the number of emissions in the data (number of unique neurons + 1) (+1 for the case when none of the neurons spike)
+num_emissions = len(np.unique(spikes_cat))
+
 # Get the laser condition and taste and trial number for this thread (indexed by trial_num above)
 laser_condition = int(trial_num/(spikes_cat.shape[1]*spikes_cat.shape[2]))
 taste_num = int((trial_num - laser_condition*spikes_cat.shape[1]*spikes_cat.shape[2])/spikes_cat.shape[2])
@@ -46,12 +49,11 @@ os.chdir('MCMC_switch/Laser{:d}/Taste{:d}'.format(laser_condition, taste_num))
 # Choose the switch function according to the laser condition being used
 switch_functions = {'0': fn.laser_off_trials, '1': fn.laser_early_trials, '2': fn.laser_middle_trials, '3': fn.laser_late_trials}
 
-# Choose the name of the HDF5 backend for the model trace
-db = 'trial{:d}.hf5'.format(trial)
-#db = pm.backends.SQLite('trial{:d}.SQLite'.format(trial))
+# Choose the name of the SQLite backend for the model trace
+db = 'trial{:d}.SQLite'.format(trial)
 
 # Get the model and trace after fitting the switching model with MCMC
-model, tr = switch_functions[str(laser_condition)](spikes_cat[laser_condition, taste_num, trial, :], db)
+model, tr = switch_functions[str(laser_condition)](spikes_cat[laser_condition, taste_num, trial, :], db, num_emissions)
 
 # Set up things to plot the traceplot for this trial
 fig, axarr = plt.subplots(4, 2)

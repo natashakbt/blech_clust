@@ -7,11 +7,8 @@ import os
 import pymc3 as pm
 import theano.tensor as tt
 
-def laser_off_trials(data, db):
+def laser_off_trials(data, db, num_emissions):
 	
-	# Count the number of emissions in the dataset
-	num_emissions = len(np.unique(data))	
-
 	# Make the pymc3 model
 	with pm.Model() as model:
 		# Dirichlet prior on the emission/spiking probabilities - 4 states
@@ -33,7 +30,7 @@ def laser_off_trials(data, db):
 		# Get the actual state numbers based on the switch times
 		states1 = tt.switch(tt.and_(t1 <= np.arange(250), t2 >= np.arange(250)), 1, 0)
 		states2 = tt.switch(tt.and_(t2 <= np.arange(250), t3 >= np.arange(250)), 2, 0)
-		states3 = tt.switch(t3 <= np.arange(250), 0, 3)
+		states3 = tt.switch(t3 >= np.arange(250), 0, 3)
 		states = states1 + states2 + states3
 
 		# Categorical observations
@@ -41,16 +38,13 @@ def laser_off_trials(data, db):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.HDF5(db)
+		database = pm.backends.SQLite(db)
 		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
 
 	# Return the inference!
 	return model, tr
 
-def laser_early_trials(data, db):
-	
-	# Count the number of emissions in the dataset
-	num_emissions = len(np.unique(data))	
+def laser_early_trials(data, db, num_emissions):
 
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -73,7 +67,7 @@ def laser_early_trials(data, db):
 		# Get the actual state numbers based on the switch times
 		states1 = tt.switch(tt.and_(t1 <= np.arange(200), t2 >= np.arange(200)), 1, 0)
 		states2 = tt.switch(tt.and_(t2 <= np.arange(200), t3 >= np.arange(200)), 2, 0)
-		states3 = tt.switch(t3 <= np.arange(200), 0, 3)
+		states3 = tt.switch(t3 >= np.arange(200), 0, 3)
 		states = states1 + states2 + states3
 
 		# Categorical observations
@@ -81,16 +75,13 @@ def laser_early_trials(data, db):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.HDF5(db)
+		database = pm.backends.SQLite(db)
 		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
 
 	# Return the inference!
 	return model, tr	
 
-def laser_middle_trials(data, db):
-	
-	# Count the number of emissions in the dataset
-	num_emissions = len(np.unique(data))	
+def laser_middle_trials(data, db, num_emissions):
 
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -113,7 +104,7 @@ def laser_middle_trials(data, db):
 		# Get the actual state numbers based on the switch times
 		states1 = tt.switch(tt.and_(t1 <= np.arange(200), t2 >= np.arange(200)), 1, 0)
 		states2 = tt.switch(tt.and_(t2 <= np.arange(200), t3 >= np.arange(200)), 2, 0)
-		states3 = tt.switch(t3 <= np.arange(200), 0, 3)
+		states3 = tt.switch(t3 >= np.arange(200), 0, 3)
 		states = states1 + states2 + states3
 
 		# Categorical observations
@@ -121,16 +112,13 @@ def laser_middle_trials(data, db):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.HDF5(db)
+		database = pm.backends.SQLite(db)
 		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 60, 't3': 110}, trace = database)
 
 	# Return the inference!
 	return model, tr	
 
-def laser_late_trials(data, db):
-	
-	# Count the number of emissions in the dataset
-	num_emissions = len(np.unique(data))	
+def laser_late_trials(data, db, num_emissions):
 
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -153,7 +141,7 @@ def laser_late_trials(data, db):
 		# Get the actual state numbers based on the switch times
 		states1 = tt.switch(tt.and_(t1 <= np.arange(200), t2 >= np.arange(200)), 1, 0)
 		states2 = tt.switch(tt.and_(t2 <= np.arange(200), t3 >= np.arange(200)), 2, 0)
-		states3 = tt.switch(t3 <= np.arange(200), 0, 3)
+		states3 = tt.switch(t3 >= np.arange(200), 0, 3)
 		states = states1 + states2 + states3
 
 		# Categorical observations
@@ -161,7 +149,7 @@ def laser_late_trials(data, db):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.HDF5(db)
+		database = pm.backends.SQLite(db)
 		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
 
 	# Return the inference!
