@@ -216,6 +216,10 @@ for dig_in in trains_dig_in:
 						fig.savefig('./ltps/Dur%i,Lag%i/Average_ltps.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
 						plt.close('all')
 
+					# Save the final_proba array to the hdf5 file
+					hf5.create_array(laser_node, 'final_proba', final_proba)
+					hf5.flush()
+
 					# Go back to the data directory
 					os.chdir(dir_name)
 
@@ -304,6 +308,10 @@ for dig_in in trains_dig_in:
 				plt.title('Trial-averaged power in LTP range')
 				fig.savefig('./ltps/Average_ltps.png')
 				plt.close('all')
+
+				# Save the final_proba array to the hdf5 file
+				hf5.create_array(node, 'final_proba', final_proba)
+				hf5.flush()
 
 				# Go back to the data directory
 				os.chdir(dir_name)
@@ -449,6 +457,10 @@ for dig_in in trains_dig_in:
 						fig.savefig('./ltps/Dur%i,Lag%i/Average_ltps.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
 						plt.close('all')
 
+					# Save the final_proba array to the hdf5 file
+					hf5.create_array(laser_node, 'final_proba', final_proba)
+					hf5.flush()
+
 					# Go back to the data directory
 					os.chdir(dir_name)
 
@@ -537,6 +549,10 @@ for dig_in in trains_dig_in:
 				plt.title('Trial-averaged power in LTP range')
 				fig.savefig('./ltps/Average_ltps.png')
 				plt.close('all')
+
+				# Save the final_proba array to the hdf5 file
+				hf5.create_array(node, 'final_proba', final_proba)
+				hf5.flush()
 
 				# Go back to the data directory
 				os.chdir(dir_name)
@@ -653,6 +669,10 @@ for dig_in in trains_dig_in:
 						fig.savefig('./ltps/Dur%i,Lag%i/Average_ltps.png' % (int(lasers[i, 0]), int(lasers[i, 1])))
 						plt.close('all')
 
+					# Save the final_proba array to the hdf5 file
+					hf5.create_array(laser_node, 'final_proba', final_proba)
+					hf5.flush()
+
 					# Go back to the data directory
 					os.chdir(dir_name)
 
@@ -741,6 +761,10 @@ for dig_in in trains_dig_in:
 				plt.title('Trial-averaged power in LTP range')
 				fig.savefig('./ltps/Average_ltps.png')
 				plt.close('all')
+
+				# Save the final_proba array to the hdf5 file
+				hf5.create_array(node, 'final_proba', final_proba)
+				hf5.flush()
 
 				# Go back to the data directory
 				os.chdir(dir_name)
