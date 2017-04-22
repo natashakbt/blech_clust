@@ -7,7 +7,7 @@ import os
 import pymc3 as pm
 import theano.tensor as tt
 
-def laser_off_trials(data, db, num_emissions):
+def laser_off_trials(data, num_emissions):
 	
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -38,13 +38,12 @@ def laser_off_trials(data, db, num_emissions):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.SQLite(db)
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120})
 
 	# Return the inference!
-	return model, tr
+	return model, tr[250000:]
 
-def laser_early_trials(data, db, num_emissions):
+def laser_early_trials(data, num_emissions):
 
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -75,13 +74,12 @@ def laser_early_trials(data, db, num_emissions):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.SQLite(db)
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120})
 
 	# Return the inference!
-	return model, tr	
+	return model, tr[250000:]	
 
-def laser_middle_trials(data, db, num_emissions):
+def laser_middle_trials(data, num_emissions):
 
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -112,13 +110,12 @@ def laser_middle_trials(data, db, num_emissions):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.SQLite(db)
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 60, 't3': 110}, trace = database)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 60, 't3': 110})
 
 	# Return the inference!
-	return model, tr	
+	return model, tr[250000:]	
 
-def laser_late_trials(data, db, num_emissions):
+def laser_late_trials(data, num_emissions):
 
 	# Make the pymc3 model
 	with pm.Model() as model:
@@ -149,8 +146,7 @@ def laser_late_trials(data, db, num_emissions):
 
 	# Inference button :D
 	with model:
-		database = pm.backends.SQLite(db)
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120})
 
 	# Return the inference!
-	return model, tr	
+	return model, tr[250000:]	

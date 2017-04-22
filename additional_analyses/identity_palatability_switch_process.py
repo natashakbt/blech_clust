@@ -9,6 +9,7 @@ import sys
 import os
 import pymc3 as pm
 import theano.tensor as tt
+import pickle
 import identity_palatability_switch_functions as fn
 
 # Read the blech_MCMC.dir file and change to the data directory
@@ -49,17 +50,22 @@ os.chdir('MCMC_switch/Laser{:d}/Taste{:d}'.format(laser_condition, taste_num))
 # Choose the switch function according to the laser condition being used
 switch_functions = {'0': fn.laser_off_trials, '1': fn.laser_early_trials, '2': fn.laser_middle_trials, '3': fn.laser_late_trials}
 
-# Choose the name of the SQLite backend for the model trace
-db = 'trial{:d}.SQLite'.format(trial)
-
 # Get the model and trace after fitting the switching model with MCMC
-model, tr = switch_functions[str(laser_condition)](spikes_cat[laser_condition, taste_num, trial, :], db, num_emissions)
+model, tr = switch_functions[str(laser_condition)](spikes_cat[laser_condition, taste_num, trial, :], num_emissions)
 
 # Set up things to plot the traceplot for this trial
 fig, axarr = plt.subplots(4, 2)
-axarr = pm.traceplot(tr[250000:], ax = axarr)
-fig.savefig("trial{:d}.png".format(trial))
+axarr = pm.traceplot(tr, ax = axarr)
+fig.savefig("Trial{:d}.png".format(trial + 1))
 plt.close('all')
+
+# Save the trace for this trial
+with open('Trial{:d}_trace.pickle'.format(trial + 1), 'wb') as handle:
+	pickle.dump(tr, handle, protocol = pickle.HIGHEST_PROTOCOL)
+
+# Save the Gelam-Rubin convergence statistics for this trial
+with open('Trial{:d}_Gelman_Rubin.pickle'.format(trial + 1), 'wb') as handle:
+	pickle.dump(pm.gelman_rubin(tr), handle, protocol = pickle.HIGHEST_PROTOCOL)
 
 hf5.close()
 
