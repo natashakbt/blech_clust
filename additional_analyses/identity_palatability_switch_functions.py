@@ -41,7 +41,8 @@ def laser_off_trials(data, db):
 
 	# Inference button :D
 	with model:
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = db)
+		database = pm.backends.HDF5(db)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
 
 	# Return the inference!
 	return model, tr
@@ -80,7 +81,8 @@ def laser_early_trials(data, db):
 
 	# Inference button :D
 	with model:
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = db)
+		database = pm.backends.HDF5(db)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
 
 	# Return the inference!
 	return model, tr	
@@ -119,7 +121,8 @@ def laser_middle_trials(data, db):
 
 	# Inference button :D
 	with model:
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 60, 't3': 110}, trace = db)
+		database = pm.backends.HDF5(db)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 60, 't3': 110}, trace = database)
 
 	# Return the inference!
 	return model, tr	
@@ -158,7 +161,8 @@ def laser_late_trials(data, db):
 
 	# Inference button :D
 	with model:
-		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = db)
+		database = pm.backends.HDF5(db)
+		tr = pm.sample(300000, init = None, step = pm.Metropolis(), njobs = 2, start = {'t1': 20, 't2': 70, 't3': 120}, trace = database)
 
 	# Return the inference!
 	return model, tr	
