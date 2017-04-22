@@ -51,7 +51,7 @@ db = 'trial{:d}.hf5'.format(trial)
 #db = pm.backends.SQLite('trial{:d}.SQLite'.format(trial))
 
 # Get the model and trace after fitting the switching model with MCMC
-model, tr = switch_functions[str(laser_condition)](data[laser_condition, taste_num, trial, :], db)
+model, tr = switch_functions[str(laser_condition)](spikes_cat[laser_condition, taste_num, trial, :], db)
 
 # Set up things to plot the traceplot for this trial
 fig, axarr = plt.subplots(4, 2)
