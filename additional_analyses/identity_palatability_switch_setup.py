@@ -146,7 +146,14 @@ for i in range(spikes_cat.shape[0]):
 	os.chdir(dir_name)
 
 # Reshape the categorical spikes to # laser conditions x # of tastes x # of trials x time
+# Reshape the spikes and bernoulli spikes too
 spikes_cat = spikes_cat.reshape((spikes_cat.shape[0], num_tastes, int(spikes_cat.shape[1]/num_tastes), spikes_cat.shape[2]))
+spikes = spikes.reshape((spikes.shape[0], num_tastes, int(spikes.shape[1]/num_tastes), spikes.shape[2], spikes.shape[3]))
+spikes_bernoulli = spikes_bernoulli.reshape((spikes_bernoulli.shape[0], num_tastes, int(spikes_bernoulli.shape[1]/num_tastes), spikes_bernoulli.shape[2], spikes_bernoulli.shape[3]))
+
+# Reshape the identity and palatability arrays too
+identity = identity.reshape((identity.shape[0], num_tastes, int(identity.shape[1]/num_tastes)))
+palatability = palatability.reshape((palatability.shape[0], num_tastes, int(palatability.shape[1]/num_tastes)))
 
 # Make a node to store the results of switching analysis in the hdf5 file
 try:
@@ -157,7 +164,18 @@ hf5.create_group('/', 'MCMC_switch')
 
 # Save the reshaped categorical spikes to this node
 hf5.create_array('/MCMC_switch', 'categorical_spikes', spikes_cat)
+hf5.create_array('/MCMC_switch', 'spikes', spikes)
+hf5.create_array('/MCMC_switch', 'bernoulli_spikes', spikes_bernoulli)
+hf5.create_array('/MCMC_switch', 'identity', identity)
+hf5.create_array('/MCMC_switch', 'palatability', palatability)
 hf5.flush()
+
+# Also save the unique laser conditions if they exist
+try:
+	hf5.create_array('/MCMC_switch', 'unique_lasers', unique_lasers)
+	hf5.flush()
+except:
+	pass
 
 # Also drop a .dir file in the user's blech_clust/additional_analyses folder on the Desktop (the process code will use this to know what directory to use data from)
 # Grab Brandeis/Jetstream/personal computer unet username
