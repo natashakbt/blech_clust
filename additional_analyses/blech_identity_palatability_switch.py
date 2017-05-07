@@ -276,8 +276,8 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000:100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000:100]['t2'][:, i]))
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[1, i])
@@ -337,8 +337,8 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000:100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000:100]['t2'][:, i]))
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[2, i])
@@ -398,8 +398,8 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000:100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000:100]['t2'][:, i]))
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[3, i])
@@ -415,11 +415,19 @@ print("Laser late trials done")
 print("==========================================")
 
 # Save all these lists to the HDF5 file
+# Inactivated spikes is a homogeneously sized list, so it can be saved to the HDF5 file on its own
 hf5.create_array('/MCMC_switch', 'inactivated_spikes', inactivated_spikes)
-hf5.create_array('/MCMC_switch', 'converged_trial_nums', converged_trial_nums)
-hf5.create_array('/MCMC_switch', 'switchpoints', switchpoints)
-hf5.create_array('/MCMC_switch', 'converged_trial_palatability', pal)
-hf5.create_array('/MCMC_switch', 'converged_trial_firing', firing)
+# All the other need to be saved on a laser condition-by-condition basis
+hf5.create_group('/MCMC_switch', 'converged_trial_nums')
+hf5.create_group('/MCMC_switch', 'switchpoints')
+hf5.create_group('/MCMC_switch', 'converged_trial_palatability')
+hf5.create_group('/MCMC_switch', 'converged_trial_firing')
+# Now run through the laser conditions and save the arrays for that condition to file
+for laser in range(len(inactivated_spikes)):
+	hf5.create_array('/MCMC_switch/converged_trial_nums', 'laser_condition_{:d}'.format(laser), converged_trial_nums[laser])
+	hf5.create_array('/MCMC_switch/switchpoints', 'laser_condition_{:d}'.format(laser), switchpoints[laser])
+	hf5.create_array('/MCMC_switch/converged_trial_palatability', 'laser_condition_{:d}'.format(laser), pal[laser])
+	hf5.create_array('/MCMC_switch/converged_trial_firing', 'laser_condition_{:d}'.format(laser), firing[laser])
 hf5.flush()
 
 # ---------------------------Palatability correlation calculation---------------------------------------------------
