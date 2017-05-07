@@ -37,6 +37,7 @@ pairwise_NB_identity = []
 p_discriminability = []
 pre_stim = []
 params = []
+id_pal_regress = []
 num_units = 0
 for dir_name in dirs:
 	# Change to the directory
@@ -65,6 +66,7 @@ for dir_name in dirs:
 	#taste_mahalanobis_distance.append(hf5.root.ancillary_analysis.taste_mahalanobis_distance[:])
 	pairwise_NB_identity.append(hf5.root.ancillary_analysis.pairwise_NB_identity[:])
 	p_discriminability.append(hf5.root.ancillary_analysis.p_discriminability[:])
+	id_pal_regress.append(hf5.root.ancillary_analysis.id_pal_regress[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
 	params.append(hf5.root.ancillary_analysis.params[:])
@@ -111,12 +113,14 @@ if len(laser_order) == 1:
 	#taste_mahalanobis_distance = taste_mahalanobis_distance[0]
 	pairwise_NB_identity = pairwise_NB_identity[0]
 	p_discriminability = p_discriminability[0]
+	id_pal_regress = id_pal_regress[0]
 else:
 	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
 	r_spearman = np.concatenate(tuple(r_spearman[i][laser_order[i], :, :] for i in range(len(r_spearman))), axis = 2)
 	p_pearson = np.concatenate(tuple(p_pearson[i][laser_order[i], :, :] for i in range(len(p_pearson))), axis = 2)
 	p_spearman = np.concatenate(tuple(p_spearman[i][laser_order[i], :, :] for i in range(len(p_spearman))), axis = 2)
 	p_identity = np.concatenate(tuple(p_identity[i][laser_order[i], :, :] for i in range(len(p_identity))), axis = 2)
+	id_pal_regress = np.concatenate(tuple(id_pal_regress[i][laser_order[i], :, :] for i in range(len(id_pal_regress))), axis = 2)
 	lda_palatability = np.stack(tuple(lda_palatability[i][laser_order[i], :] for i in range(len(lda_palatability))), axis = -1)
 	lda_identity = np.stack(tuple(lda_identity[i][laser_order[i], :] for i in range(len(lda_identity))), axis = -1)
 	taste_cosine_similarity = np.stack(tuple(taste_cosine_similarity[i][laser_order[i], :] for i in range(len(taste_cosine_similarity))), axis = -1)
@@ -208,6 +212,56 @@ for i in range(r_spearman.shape[0]):
 	plt.legend(loc = 'upper left', fontsize = 15)
 	plt.tight_layout()
 	fig.savefig('Spearman correlation-palatability,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
+	plt.close('all')
+
+# Now plot the absolute values of the coefficients from the multiple regression of palatability and identity
+# First identity together for the different laser conditions
+# Plot identity first
+fig = plt.figure()
+for i in range(id_pal_regress.shape[0]):
+	plt.plot(x[plot_indices], np.mean(np.abs(id_pal_regress[i, plot_indices, :, 0]), axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+plt.title('Identity coeff from multiple regression' + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
+plt.xlabel('Time from stimulus (ms)')
+plt.ylabel('Average Identity coefficient')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
+fig.savefig('Multiple regression-identity.png', bbox_inches = 'tight')
+plt.close('all')
+
+# And then palatability
+fig = plt.figure()
+for i in range(id_pal_regress.shape[0]):
+	plt.plot(x[plot_indices], np.mean(np.abs(id_pal_regress[i, plot_indices, :, 1]), axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+plt.title('Palatability coeff from multiple regression' + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
+plt.xlabel('Time from stimulus (ms)')
+plt.ylabel('Average Palatability coefficient')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
+fig.savefig('Multiple regression-palatability.png', bbox_inches = 'tight')
+plt.close('all')
+
+# Now plot the multiple regression coefficients separately for the different laser conditions
+# Identity first
+for i in range(id_pal_regress.shape[0]):
+	fig = plt.figure()
+	plt.errorbar(x[plot_indices], np.mean(np.abs(id_pal_regress[i, plot_indices, :, 0]), axis = 1), yerr = np.std(np.abs(id_pal_regress[i, plot_indices, :, 0]), axis = 1)/np.sqrt(id_pal_regress.shape[2]), linewidth = 3.0, elinewidth = 0.8, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+	plt.title('Multiple regression identity, laser condition %i' % (i+1) + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))	
+	plt.xlabel('Time from stimulus (ms)')
+	plt.ylabel('Average Identity coefficient')
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
+	fig.savefig('Multiple regression-identity,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
+	plt.close('all')
+# Then palatability
+for i in range(id_pal_regress.shape[0]):
+	fig = plt.figure()
+	plt.errorbar(x[plot_indices], np.mean(np.abs(id_pal_regress[i, plot_indices, :, 1]), axis = 1), yerr = np.std(np.abs(id_pal_regress[i, plot_indices, :, 0]), axis = 1)/np.sqrt(id_pal_regress.shape[2]), linewidth = 3.0, elinewidth = 0.8, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+	plt.title('Multiple regression palatability, laser condition %i' % (i+1) + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))	
+	plt.xlabel('Time from stimulus (ms)')
+	plt.ylabel('Average Palatability coefficient')
+	plt.legend(loc = 'upper left', fontsize = 15)
+	plt.tight_layout()
+	fig.savefig('Multiple regression-palatability,laser_condition%i.png' % (i+1), bbox_inches = 'tight')
 	plt.close('all')
 
 # Now plot the p values together using the significance criterion specified by the user

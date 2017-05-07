@@ -18,6 +18,8 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LinearRegression
+from sklearn import preprocessing
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -105,7 +107,7 @@ for j in range(unscaled_response.shape[1]):
 		# Remember to add 1 in the denominator - the max can be 0 sometimes
 		response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k]))
 		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.sum(unscaled_response[:, :, k], axis = 1)) 
-		#response[:, j, k] = 1000.0*unscaled_response[:, j, k]
+		#response[:, j, k] = unscaled_response[:, j, k]
 
 # Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
 try:
@@ -340,6 +342,25 @@ hf5.create_array('/ancillary_analysis', 'lda_palatability', lda_palatability)
 hf5.flush()
 
 # --------End palatability calculation----------------------------------------------------------------------------
+
+#---------Multiple regression of firing rate against palatability and identity------------------------------------
+# Set up an array to store the results of multiple regression using both identity and palatability - on the last axis, first element is the identity coeff and the second is the palatability coeff
+id_pal_regress = np.zeros((unique_lasers.shape[0], identity.shape[0], identity.shape[1], 2))
+for i in range(unique_lasers.shape[0]):
+	for j in range(identity.shape[0]):
+		for k in range(identity.shape[1]):
+			model = LinearRegression()
+			# Standardize the identity and palatability arrays for this time bin
+			this_id = preprocessing.scale(identity[j, k, trials[i]])
+			this_pal = preprocessing.scale(palatability[j, k, trials[i]])
+			model.fit(np.concatenate((this_id[:, None], this_pal[:, None]), axis = 1), preprocessing.scale(response[j, k, trials[i]]))
+			id_pal_regress[i, j, k, :] = model.coef_
+
+# Save this array to file
+hf5.create_array('/ancillary_analysis', 'id_pal_regress', id_pal_regress)
+hf5.flush()
+
+#---------End multiple regression---------------------------------------------------------------------------------
 
 #---------Identity calculation - one way ANOVA between responses to the unique tastes and linear discriminant analysis (LDA)-----------------------------
 f_identity = np.zeros((unique_lasers.shape[0], identity.shape[0], identity.shape[1]))
