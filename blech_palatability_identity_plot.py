@@ -255,7 +255,7 @@ for i in range(id_pal_regress.shape[0]):
 # Then palatability
 for i in range(id_pal_regress.shape[0]):
 	fig = plt.figure()
-	plt.errorbar(x[plot_indices], np.mean(np.abs(id_pal_regress[i, plot_indices, :, 1]), axis = 1), yerr = np.std(np.abs(id_pal_regress[i, plot_indices, :, 0]), axis = 1)/np.sqrt(id_pal_regress.shape[2]), linewidth = 3.0, elinewidth = 0.8, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+	plt.errorbar(x[plot_indices], np.mean(id_pal_regress[i, plot_indices, :, 1]**2, axis = 1), yerr = np.std(np.abs(id_pal_regress[i, plot_indices, :, 0]), axis = 1)/np.sqrt(id_pal_regress.shape[2]), linewidth = 3.0, elinewidth = 0.8, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 	plt.title('Multiple regression palatability, laser condition %i' % (i+1) + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))	
 	plt.xlabel('Time from stimulus (ms)')
 	plt.ylabel('Average Palatability coefficient')
