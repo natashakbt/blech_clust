@@ -356,7 +356,7 @@ for i in range(unique_lasers.shape[0]):
 			this_id = np.zeros((len(trials[i]), len(unique_tastes)))
 			for taste in range(len(unique_tastes)):
 				this_id[:, taste] = np.where(identity[j, k, trials[i]] == unique_tastes[taste], 1, 0)
-			this_pal = palatability[j, k, trials[i]]
+			this_pal = preprocessing.scale(palatability[j, k, trials[i]])
 			# But leave out 1 of the identity dummies to take care of multi-collinearity
 			model.fit(np.concatenate((this_id[:, :-1].reshape((this_id.shape[0], this_id.shape[1] - 1)), this_pal[:, None]), axis = 1), preprocessing.scale(response[j, k, trials[i]]))
 			id_pal_regress[i, j, k, :] = model.coef_
