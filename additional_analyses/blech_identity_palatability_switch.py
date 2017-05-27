@@ -8,6 +8,7 @@ import pymc3 as pm
 import theano.tensor as tt
 import multiprocessing
 from scipy.stats import pearsonr
+from collections import Counter
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -215,8 +216,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+		#start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		#end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+		start = int(Counter(tr[-100000::100]['t1'][:, i]).most_common()[0][0])
+		end = int(Counter(tr[-100000::100]['t2'][:, i]).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[0, i])
@@ -240,7 +243,7 @@ with pm.Model() as model:
 
 	# Uniform switch times
 	# Switch to identity firing
-	t1 = pm.Uniform('t1', lower = 20, upper = 60, shape = num_trials)
+	t1 = pm.Uniform('t1', lower = 10, upper = 60, shape = num_trials)
 	# Switch from identity to palatability firing
 	t2 = pm.Uniform('t2', lower = t1 + 20, upper = 130, shape = num_trials)
 
@@ -276,8 +279,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+#		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+#		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+		start = int(Counter(tr[-100000::100]['t1'][:, i]).most_common()[0][0])
+		end = int(Counter(tr[-100000::100]['t2'][:, i]).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[1, i])
@@ -337,8 +342,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+#		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+#		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+		start = int(Counter(tr[-100000::100]['t1'][:, i]).most_common()[0][0])
+		end = int(Counter(tr[-100000::100]['t2'][:, i]).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[2, i])
@@ -398,8 +405,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+#		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+#		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+		start = int(Counter(tr[-100000::100]['t1'][:, i]).most_common()[0][0])
+		end = int(Counter(tr[-100000::100]['t2'][:, i]).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[3, i])
