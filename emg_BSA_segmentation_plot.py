@@ -29,6 +29,7 @@ sig_trials = []
 pre_stim = []
 gapes_Li = []
 gape_trials_Li = []
+first_gape_Li = []
 num_trials = 0
 for dir_name in dirs:
 	# Change to the directory
@@ -50,6 +51,7 @@ for dir_name in dirs:
 	sig_trials.append(hf5.root.ancillary_analysis.sig_trials[:])
 	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:])
 	gape_trials_Li.append(hf5.root.ancillary_analysis.gape_trials_Li[:])
+	first_gape_Li.append(hf5.root.ancillary_analysis.first_gape_Li[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
 	# Also maintain a counter of the number of trials in the analysis
@@ -91,6 +93,7 @@ if len(laser_order) == 1:
 	sig_trials = sig_trials[0]
 	gapes_Li = gapes_Li[0][:, :, :, int(pre_stim[0]):]
 	gape_trials_Li = gape_trials_Li[0]
+	first_gape_Li = first_gape_Li[0]
 	
 else:
 	trials = [sig_trials[i].shape[2] for i in range(len(sig_trials))]
@@ -99,6 +102,7 @@ else:
 	sig_trials = np.concatenate(tuple(sig_trials[i][laser_order[i], :, :] for i in range(len(sig_trials))), axis = 2)
 	gapes_Li = np.concatenate(tuple(gapes_Li[i][laser_order[i], :, :, int(pre_stim[0]):] for i in range(len(gapes_Li))), axis = 2)
 	gape_trials_Li = np.concatenate(tuple(gape_trials_Li[i][laser_order[i], :, :] for i in range(len(gape_trials_Li))), axis = 2)
+	first_gape_Li = np.concatenate(tuple(first_gape_Li[i][laser_order[i], :, :] for i in range(len(first_gape_Li))), axis = 2)
 	
 
 # Ask the user for the directory to save plots etc in
@@ -117,7 +121,7 @@ for i in range(gapes.shape[0]):
 	for j in range(gapes.shape[1]):
 		plt.plot(np.mean(gapes[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Taste:%i' % (j+1))
 	plt.xlabel('Time post stimulus (ms)')
-	plt.ylabel('Trial averaged fraction of power < 4.6 Hz')
+	plt.ylabel('Trial averaged fraction of power in 3.65-5.95 Hz')
 	plt.title('Gapes, Duration:%i ms, Lag:%i ms' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 	plt.legend(loc = 'upper left', fontsize = 10)
 	fig.savefig('Gapes, laser condition%i.png' %(i+1), bbox_inches = 'tight')	
@@ -129,7 +133,7 @@ for i in range(ltps.shape[0]):
 	for j in range(ltps.shape[1]):
 		plt.plot(np.mean(ltps[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Taste:%i' % (j+1))
 	plt.xlabel('Time post stimulus (ms)')
-	plt.ylabel('Trial averaged fraction of power in 5.95-8.65 Hz')
+	plt.ylabel('Trial averaged fraction of power in 5.95-10 Hz')
 	plt.title('LTPs, Duration:%i ms, Lag:%i ms' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
 	plt.legend(loc = 'upper left', fontsize = 10)
 	fig.savefig('LTPs, laser condition%i.png' %(i+1), bbox_inches = 'tight')
@@ -145,7 +149,7 @@ for i in range(gapes.shape[1]):
 	for j in range(gapes.shape[0]):
 		plt.plot(np.mean(gapes[j, i, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Duration:%i, Lag:%i' % (unique_lasers[0][j, 0], unique_lasers[0][j, 1]))
 	plt.xlabel('Time post stimulus (ms)')
-	plt.ylabel('Trial averaged fraction of power < 4.6 Hz')
+	plt.ylabel('Trial averaged fraction of power in 3.65-5.95 Hz')
 	plt.title('Gapes, Taste:%i' % (i+1))
 	plt.legend(loc = 'upper left', fontsize = 10)
 	fig.savefig('Gapes, taste%i.png' %(i+1), bbox_inches = 'tight')	
@@ -157,7 +161,7 @@ for i in range(ltps.shape[1]):
 	for j in range(ltps.shape[0]):
 		plt.plot(np.mean(ltps[j, i, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Duration:%i, Lag:%i' % (unique_lasers[0][j, 0], unique_lasers[0][j, 1]))
 	plt.xlabel('Time post stimulus (ms)')
-	plt.ylabel('Trial averaged fraction of power in 5.95-8.65 Hz')
+	plt.ylabel('Trial averaged fraction of power in in 5.95-10 Hz')
 	plt.title('LTPs, Taste:%i' % (i+1))
 	plt.legend(loc = 'upper left', fontsize = 10)
 	fig.savefig('LTPs, taste%i.png' %(i+1), bbox_inches = 'tight')	
@@ -170,6 +174,31 @@ np.save('gapes.npy', gapes)
 np.save('ltps.npy', ltps)
 np.save('gapes_Li.npy', gapes_Li)
 np.save('gape_trials_Li.npy', gape_trials_Li)
+np.save('first_gape_Li.npy', first_gape_Li)
+
+#.................................
+# Plot the gaping results from the analysis in Li et al., 2016
+# Plots by taste
+for i in range(gape_trials_Li.shape[1]):
+	# Plot gape probabilities first
+	fig = plt.figure()
+	plt.bar(np.arange(gape_trials_Li.shape[0]) + 1, np.mean(gape_trials_Li[:, i, :], axis = -1), 0.35)
+	plt.xticks(np.arange(gape_trials_Li.shape[0]) + 1, [unique_lasers[0][j] for j in range(len(unique_lasers[0]))])
+	plt.ylabel('Fraction of trials with gapes' + '\n' + 'according to Li et al., 2016')
+	plt.title('Taste: %i, Trials: %i' % (i+1, gape_trials_Li.shape[2]))
+	fig.savefig('Gape_probabilities_Li, taste%i.png' %(i+1), bbox_inches = 'tight')
+	plt.close('all')
+
+	# Plot time of first gape next
+	fig = plt.figure()
+	plt.bar(np.arange(first_gape_Li.shape[0]) + 1, np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).mean(axis = -1)), 0.35, yerr = np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).std(axis = -1))/np.sqrt(np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).sum(axis = -1)))) 
+	plt.xticks(np.arange(first_gape_Li.shape[0]) + 1, [unique_lasers[0][j] for j in range(len(unique_lasers[0]))])
+	plt.ylabel('Mean length of gape bouts across trials (ms)' + '\n' + 'according to Li et al., 2016')
+	plt.title('Taste: %i, Trials: %i' % (i+1, first_gape_Li.shape[2]))
+	fig.savefig('Gape_durations_Li, taste%i.png' %(i+1), bbox_inches = 'tight')
+	plt.close('all')
+	
+#.................................
 
 # Ask the user for the parameters to use for emg segmentation
 params = easygui.multenterbox(msg = 'Enter the parameters for EMG segmentation', fields = ['Minimum onset lag for gapes and ltps (ms) - usually 500', 'Minimum length of acceptable gape bout (ms) - usually 300', 'Minimum length of acceptable ltp bout (ms) - usually 150', 'Maximum length of broken gape bout (ms) - usually 100', 'Maximum length of broken ltp bout (ms) - usually 50'])

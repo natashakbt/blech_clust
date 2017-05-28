@@ -55,6 +55,9 @@ sig_trials = np.reshape(sig_trials, (sig_trials.shape[0]*sig_trials.shape[1]))
 env_final = np.empty((len(trials), num_tastes, int(num_trials/len(trials)), env.shape[1]), dtype = float)
 sig_trials_final = np.empty((len(trials), num_tastes, int(num_trials/len(trials))), dtype = int)
 
+# Also make an array to store the time of first gape on every trial
+first_gape = np.empty((len(trials), num_tastes, int(num_trials/len(trials))), dtype = int)
+
 # Fill up these arrays
 for i in range(len(trials)):
 	for j in range(num_tastes):
@@ -126,13 +129,23 @@ for i in range(sig_trials_final.shape[0]):
 					if gape and peak_ind[peak+1] - pre_stim <= post_stim:
 						gapes_Li[i, j, k, peak_ind[peak+1]] = 1.0
 
-				# If there are no gapes on a trial, mark these as 0 on sig_trials_final
+				# If there are no gapes on a trial, mark these as 0 on sig_trials_final and 0 on first_gape. Else put the time of the first gape in first_gape
 				if np.sum(gapes_Li[i, j, k, :]) == 0.0:
 					sig_trials_final[i, j, k] = 0
+					first_gape[i, j, k] = 0
+				else:
+					first_gape[i, j, k] = np.where(gapes_Li[i, j, k, :] > 0.0)[0][0]
 
 # Save these results to the hdf5 file
+try:
+	hf5.remove_node('/ancillary_analysis/gapes_Li')
+	hf5.remove_node('/ancillary_analysis/gape_trials_Li')
+	hf5.remove_node('/ancillary_analysis/first_gape_Li')
+except:
+	pass
 hf5.create_array('/ancillary_analysis', 'gapes_Li', gapes_Li)
 hf5.create_array('/ancillary_analysis', 'gape_trials_Li', sig_trials_final)
+hf5.create_array('/ancillary_analysis', 'first_gape_Li', first_gape)
 hf5.flush()
 
 hf5.close()
