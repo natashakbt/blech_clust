@@ -216,10 +216,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-		#start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-		#end = int(np.mean(tr[-100000::100]['t2'][:, i]))
-		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
-		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+		#start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
+		#end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[0, i])
@@ -279,10 +279,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-#		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-#		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
-		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
-		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+#		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
+#		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[1, i])
@@ -342,10 +342,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-#		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-#		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
-		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
-		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+#		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
+#		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[2, i])
@@ -405,10 +405,10 @@ for i in range(num_trials):
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
-#		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
-#		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
-		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
-		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
+		start = int(np.mean(tr[-100000::100]['t1'][:, i]))
+		end = int(np.mean(tr[-100000::100]['t2'][:, i]))
+#		start = int(Counter(tr[-100000::100]['t1'][:, i].astype('int')).most_common()[0][0])
+#		end = int(Counter(tr[-100000::100]['t2'][:, i].astype('int')).most_common()[0][0])
 		this_switchpoints.append([start, end])
 		# 3.) Palatability rank
 		this_pal.append(palatability[3, i])
