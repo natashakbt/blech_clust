@@ -349,17 +349,41 @@ id_pal_regress = np.zeros((unique_lasers.shape[0], identity.shape[0], identity.s
 for i in range(unique_lasers.shape[0]):
 	for j in range(identity.shape[0]):
 		for k in range(identity.shape[1]):
-			model = LinearRegression()
+			#model = LinearRegression()
 			# Standardize the identity and palatability arrays for this time bin
 			#this_id = preprocessing.scale(identity[j, k, trials[i]])
-			unique_tastes = np.unique(identity[j, k, trials[i]])
-			this_id = np.zeros((len(trials[i]), len(unique_tastes)))
-			for taste in range(len(unique_tastes)):
-				this_id[:, taste] = np.where(identity[j, k, trials[i]] == unique_tastes[taste], 1, 0)
-			this_pal = preprocessing.scale(palatability[j, k, trials[i]])
+			#unique_tastes = np.unique(identity[j, k, trials[i]])
+			#this_id = np.zeros((len(trials[i]), len(unique_tastes)))
+			#for taste in range(len(unique_tastes)):
+			#	this_id[:, taste] = np.where(identity[j, k, trials[i]] == unique_tastes[taste], 1, 0)
+			#this_pal = preprocessing.scale(palatability[j, k, trials[i]])
 			# But leave out 1 of the identity dummies to take care of multi-collinearity
-			model.fit(np.concatenate((this_id[:, :-1].reshape((this_id.shape[0], this_id.shape[1] - 1)), this_pal[:, None]), axis = 1), preprocessing.scale(response[j, k, trials[i]]))
-			id_pal_regress[i, j, k, :] = model.coef_
+			#model.fit(np.concatenate((this_id[:, :-1].reshape((this_id.shape[0], this_id.shape[1] - 1)), this_pal[:, None]), axis = 1), preprocessing.scale(response[j, k, trials[i]]))
+			#id_pal_regress[i, j, k, :] = model.coef_
+			# Regress palatability on identity
+			model_pi = LinearRegression()
+			model_pi.fit(identity[j, k, trials[i]].reshape(-1, 1), palatability[j, k, trials[i]].reshape(-1, 1))
+			pi_residuals = palatability[j, k, trials[i]].reshape(-1, 1) - model_pi.predict(identity[j, k, trials[i]].reshape(-1, 1))
+			# Regress identity on palatability
+			model_ip = LinearRegression()
+			model_ip.fit(palatability[j, k, trials[i]].reshape(-1, 1), identity[j, k, trials[i]].reshape(-1, 1))
+			ip_residuals = identity[j, k, trials[i]].reshape(-1, 1) - model_ip.predict(palatability[j, k, trials[i]].reshape(-1, 1))
+			# Regress firing response on identity
+			model_fi = LinearRegression()
+			model_fi.fit(identity[j, k, trials[i]].reshape(-1, 1), response[j, k, trials[i]].reshape(-1, 1))
+			fi_residuals = response[j, k, trials[i]].reshape(-1, 1) - model_fi.predict(identity[j, k, trials[i]].reshape(-1, 1))
+			# Regress firing response on palatability
+			model_fp = LinearRegression()
+			model_fp.fit(palatability[j, k, trials[i]].reshape(-1, 1), response[j, k, trials[i]].reshape(-1, 1))
+			fp_residuals = response[j, k, trials[i]].reshape(-1, 1) - model_fp.predict(palatability[j, k, trials[i]].reshape(-1, 1))
+
+			# Now get the partial correlation coefficient of response with identity
+			id_pal_regress[i, j, k, 0], p = pearsonr(fp_residuals, ip_residuals)
+			if np.isnan(id_pal_regress[i, j, k, 0]):
+				id_pal_regress[i, j, k, 0] = 0.0			 
+			id_pal_regress[i, j, k, 1], p = pearsonr(fi_residuals, pi_residuals)
+			if np.isnan(id_pal_regress[i, j, k, 1]):
+				id_pal_regress[i, j, k, 1] = 0.0			
 
 # Save this array to file
 hf5.create_array('/ancillary_analysis', 'id_pal_regress', id_pal_regress)
