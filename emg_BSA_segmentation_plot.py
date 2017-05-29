@@ -113,13 +113,16 @@ os.chdir(dir_name)
 post_stim = easygui.multenterbox(msg = 'Enter the post-stimulus time to be used in the plots', fields = ['Post stim (ms)'])
 post_stim = int(post_stim[0])
 
+# Ask the user for the names of the tastes in the dataset
+tastes = easygui.multenterbox(msg = 'Enter the names of the tastes used in the experiments', fields = ['Taste{:d}'.format(i+1) for i in range(gapes.shape[1])])
+
 #.................................
 # Plots by laser condition
 # Gapes
 for i in range(gapes.shape[0]):
 	fig = plt.figure()
 	for j in range(gapes.shape[1]):
-		plt.plot(np.mean(gapes[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Taste:%i' % (j+1))
+		plt.plot(np.mean(gapes[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = tastes[j])
 	plt.xlabel('Time post stimulus (ms)')
 	plt.ylabel('Trial averaged fraction of power in 3.65-5.95 Hz')
 	plt.title('Gapes, Duration:%i ms, Lag:%i ms' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
@@ -131,7 +134,7 @@ for i in range(gapes.shape[0]):
 for i in range(ltps.shape[0]):
 	fig = plt.figure()
 	for j in range(ltps.shape[1]):
-		plt.plot(np.mean(ltps[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Taste:%i' % (j+1))
+		plt.plot(np.mean(ltps[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = tastes[j])
 	plt.xlabel('Time post stimulus (ms)')
 	plt.ylabel('Trial averaged fraction of power in 5.95-10 Hz')
 	plt.title('LTPs, Duration:%i ms, Lag:%i ms' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))

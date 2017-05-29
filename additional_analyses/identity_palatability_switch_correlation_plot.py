@@ -104,11 +104,14 @@ else:
 dir_name = easygui.diropenbox(msg = 'Choose the output directory for identity-palatability switch analysis')
 os.chdir(dir_name)
 
+# Ask the user for the names of the tastes in the dataset
+tastes = easygui.multenterbox(msg = 'Enter the names of the tastes used in the experiments', fields = ['Taste{:d}'.format(i+1) for i in range(num_tastes)])
+
 # Plot a histogram of palatability correlation in the 2 epochs, for each laser condition
 for laser in range(num_lasers):
 	fig = plt.figure()
-	plt.hist(r_pearson[laser, 0, :]**2, bins = 20, alpha = 0.4, label = "Epoch 1" + "\n" + "mean $r^2$ = {:01.3f}".format(np.mean(r_pearson[laser, 0, :]**2)))
-	plt.hist(r_pearson[laser, 1, :]**2, bins = 20, alpha = 0.4, label = "Epoch 2" + "\n" + "mean $r^2$ = {:01.3f}".format(np.mean(r_pearson[laser, 1, :]**2)))
+	plt.hist(r_pearson[laser, 0, :]**2, bins = 20, alpha = 0.4, label = "Epoch 1" + "\n" + "mean $r^2$ = {:01.3f} $\pm$ {:01.2f}".format(np.mean(r_pearson[laser, 0, :]**2), np.std(r_pearson[laser, 0, :]**2)/np.sqrt(r_pearson.shape[-1])))
+	plt.hist(r_pearson[laser, 1, :]**2, bins = 20, alpha = 0.4, label = "Epoch 2" + "\n" + "mean $r^2$ = {:01.3f} $\pm$ {:01.2f}".format(np.mean(r_pearson[laser, 1, :]**2), np.std(r_pearson[laser, 0, :]**2)/np.sqrt(r_pearson.shape[-1])))
 	plt.title("Dur: {:d}ms, Lag: {:d}ms".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])))
 	plt.xlabel("Palatability $r^2$")
 	plt.ylabel("Number of neurons (Total = {:d})".format(r_pearson.shape[-1]))
@@ -163,7 +166,7 @@ for split in plot_switch:
 		# Gaping on trials with switchpoint before split
 		fig = plt.figure()
 		for i in range(num_tastes):
-			plt.plot(np.mean(gapes_before[i][:, :post_stim], axis = 0), label = "Taste{:d}".format(i+1))
+			plt.plot(np.mean(gapes_before[i][:, :post_stim], axis = 0), label = tastes[i])
 		plt.legend()
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -173,7 +176,7 @@ for split in plot_switch:
 		# Gaping on trials with switchpoint after split
 		fig = plt.figure()
 		for i in range(num_tastes):
-			plt.plot(np.mean(gapes_after[i][:, :post_stim], axis = 0), label = "Taste{:d}".format(i+1))
+			plt.plot(np.mean(gapes_after[i][:, :post_stim], axis = 0), label = tastes[i])
 		plt.legend()
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -185,10 +188,10 @@ for split in plot_switch:
 		# Now plot only dil and concentrated quinine, with errorbars for comparisons
 		# Gaping on trials with switchpoint before split
 		fig = plt.figure()
-		plt.plot(np.mean(gapes_before[2][:, :post_stim], axis = 0), label = "Taste{:d}".format(3))
+		plt.plot(np.mean(gapes_before[2][:, :post_stim], axis = 0), label = tastes[2])
 		std_error = np.std(gapes_before[2][:, :post_stim], axis = 0)/np.sqrt(gapes_before[2].shape[0])
 		plt.fill_between(np.arange(post_stim), np.mean(gapes_before[2][:, :post_stim], axis = 0) - std_error, np.mean(gapes_before[2][:, :post_stim], axis = 0) + std_error, alpha = 0.3)		
-		plt.plot(np.mean(gapes_before[i][3, :post_stim], axis = 0), label = "Taste{:d}".format(4))
+		plt.plot(np.mean(gapes_before[i][3, :post_stim], axis = 0), label = tastes[3])
 		std_error = np.std(gapes_before[3][:, :post_stim], axis = 0)/np.sqrt(gapes_before[3].shape[0])
 		plt.fill_between(np.arange(post_stim), np.mean(gapes_before[3][:, :post_stim], axis = 0) - std_error, np.mean(gapes_before[3][:, :post_stim], axis = 0) + std_error, alpha = 0.3)
 		plt.legend()		
@@ -199,10 +202,10 @@ for split in plot_switch:
 		fig.savefig("Before_{:d}_Dur{:d}_Lag{:d}_Quinine.png".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
 		# Gaping on trials with switchpoint after split
 		fig = plt.figure()
-		plt.plot(np.mean(gapes_after[2][:, :post_stim], axis = 0), label = "Taste{:d}".format(3))
+		plt.plot(np.mean(gapes_after[2][:, :post_stim], axis = 0), label = tastes[2])
 		std_error = np.std(gapes_after[2][:, :post_stim], axis = 0)/np.sqrt(gapes_after[2].shape[0])
 		plt.fill_between(np.arange(post_stim), np.mean(gapes_after[2][:, :post_stim], axis = 0) - std_error, np.mean(gapes_after[2][:, :post_stim], axis = 0) + std_error, alpha = 0.3)		
-		plt.plot(np.mean(gapes_after[i][3, :post_stim], axis = 0), label = "Taste{:d}".format(4))
+		plt.plot(np.mean(gapes_after[i][3, :post_stim], axis = 0), label = tastes[3])
 		std_error = np.std(gapes_after[3][:, :post_stim], axis = 0)/np.sqrt(gapes_after[3].shape[0])
 		plt.fill_between(np.arange(post_stim), np.mean(gapes_after[3][:, :post_stim], axis = 0) - std_error, np.mean(gapes_after[3][:, :post_stim], axis = 0) + std_error, alpha = 0.3)
 		plt.legend()		
