@@ -110,8 +110,8 @@ tastes = easygui.multenterbox(msg = 'Enter the names of the tastes used in the e
 # Plot a histogram of palatability correlation in the 2 epochs, for each laser condition
 for laser in range(num_lasers):
 	fig = plt.figure()
-	plt.hist(r_pearson[laser, 0, :]**2, bins = 20, alpha = 0.4, label = "Epoch 1" + "\n" + "mean $r^2$ = {:01.3f} $\pm$ {:01.2f}".format(np.mean(r_pearson[laser, 0, :]**2), np.std(r_pearson[laser, 0, :]**2)/np.sqrt(r_pearson.shape[-1])))
-	plt.hist(r_pearson[laser, 1, :]**2, bins = 20, alpha = 0.4, label = "Epoch 2" + "\n" + "mean $r^2$ = {:01.3f} $\pm$ {:01.2f}".format(np.mean(r_pearson[laser, 1, :]**2), np.std(r_pearson[laser, 0, :]**2)/np.sqrt(r_pearson.shape[-1])))
+	plt.hist(r_pearson[laser, 0, :]**2, bins = 20, alpha = 0.4, label = "Epoch 1" + "\n" + "mean $r^2$ = {:01.3f} $\pm$ {:01.3f}".format(np.mean(r_pearson[laser, 0, :]**2), np.std(r_pearson[laser, 0, :]**2)/np.sqrt(r_pearson.shape[-1])))
+	plt.hist(r_pearson[laser, 1, :]**2, bins = 20, alpha = 0.4, label = "Epoch 2" + "\n" + "mean $r^2$ = {:01.3f} $\pm$ {:01.3f}".format(np.mean(r_pearson[laser, 1, :]**2), np.std(r_pearson[laser, 0, :]**2)/np.sqrt(r_pearson.shape[-1])))
 	plt.title("Dur: {:d}ms, Lag: {:d}ms".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])))
 	plt.xlabel("Palatability $r^2$")
 	plt.ylabel("Number of neurons (Total = {:d})".format(r_pearson.shape[-1]))
