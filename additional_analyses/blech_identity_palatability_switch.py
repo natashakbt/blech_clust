@@ -197,7 +197,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': spikes_cat[0, :, :150]})
 
 	# Inference button :D
-	tr = pm.sample(700000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -212,7 +212,7 @@ converged = pm.gelman_rubin(tr)
 # Run through the trials in this condition
 for i in range(num_trials):
 	# Check if this trial converged
-	if np.abs(1.0 - converged['t1'][i]) < 0.1 and np.abs(1.0 - converged['t2'][i]) < 0.1:
+	if converged['t1'][i] < 1.1 and converged['t2'][i] < 1.1:
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
@@ -260,7 +260,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': spikes_cat[1, :, 50:200]})
 
 	# Inference button :D
-	tr = pm.sample(700000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -275,7 +275,7 @@ converged = pm.gelman_rubin(tr)
 # Run through the trials in this condition
 for i in range(num_trials):
 	# Check if this trial converged
-	if np.abs(1.0 - converged['t1'][i]) < 0.1 and np.abs(1.0 - converged['t2'][i]) < 0.1:
+	if converged['t1'][i] < 1.1 and converged['t2'][i] < 1.1:
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
@@ -323,7 +323,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': np.concatenate((spikes_cat[2, :, :70], spikes_cat[2, :, 120:200]), axis = 1)})
 
 	# Inference button :D
-	tr = pm.sample(700000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 90.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 90.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -338,7 +338,7 @@ converged = pm.gelman_rubin(tr)
 # Run through the trials in this condition
 for i in range(num_trials):
 	# Check if this trial converged
-	if np.abs(1.0 - converged['t1'][i]) < 0.1 and np.abs(1.0 - converged['t2'][i]) < 0.1:
+	if converged['t1'][i] < 1.1 and converged['t2'][i] < 1.1:
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
@@ -386,7 +386,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': np.concatenate((spikes_cat[3, :, :140], spikes_cat[3, :, 190:200]), axis = 1)})
 
 	# Inference button :D
-	tr = pm.sample(700000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -401,7 +401,7 @@ converged = pm.gelman_rubin(tr)
 # Run through the trials in this condition
 for i in range(num_trials):
 	# Check if this trial converged
-	if np.abs(1.0 - converged['t1'][i]) < 0.1 and np.abs(1.0 - converged['t2'][i]) < 0.1:
+	if converged['t1'][i] < 1.1 and converged['t2'][i] < 1.1:
 		# Save 1.) Trial number
 		this_converged_trial_nums.append(i)
 		# 2.) Switchpoints (averaged over the last 100k samples, skipping 100 samples at a time)
