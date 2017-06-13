@@ -31,10 +31,12 @@ num_lasers = int(num_lasers[0])
 r_pearson = []
 p_pearson = []
 gapes = []
+ltps = []
 switchpoints = []
 converged_trials = []
 unique_lasers = []
 num_trials = []
+gapes_Li = []
 
 for dir_name in dirs:
 	# Change to the directory
@@ -54,6 +56,8 @@ for dir_name in dirs:
 	r_pearson.append(hf5.root.MCMC_switch.r_pearson[:])
 	p_pearson.append(hf5.root.MCMC_switch.p_pearson[:])
 	gapes.append(hf5.root.ancillary_analysis.gapes[:])
+	ltps.append(hf5.root.ancillary_analysis.ltps[:])
+	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:])
 	num_trials.append(np.array(hf5.root.MCMC_switch.inactivated_spikes[:]).shape[1] / num_tastes)
 	# Make lists to pull the switchpoints and converged_trials for this dataset
 	this_switchpoints = []
@@ -120,7 +124,7 @@ for laser in range(num_lasers):
 	fig.savefig('Pearson_correlation_palatability_Dur{:d}_Lag{:d}ms.png'.format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = 'tight')
 	plt.close('all')
 
-#----------------------------Plotting EMG data by switchpoints--------------------------------------------------
+#----------------------------Splitting EMG data by switchpoints--------------------------------------------------
 # Now set things up to plot the EMG data by the switchpoints found in the neural data
 
 # First ask the user how many splits they want to do for their plots
@@ -216,7 +220,87 @@ for split in plot_switch:
 		fig.savefig("After_{:d}_Dur{:d}_Lag{:d}_Quinine.png".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
 		plt.close("all")
 
-#----------------------------Plotting EMG data by switchpoints done--------------------------------------------------
+#----------------------------Splitting EMG data by switchpoints done--------------------------------------------------
+
+
+
+#----------------------------Plotting EMG data lined up by switchpoints-----------------------------------------------
+# Plot the EMG data, averaged across trials, lined up by the switchpoints
+# First ask the user of the pre and post-switchpoint time they want to use in the plots
+pre_switch = easygui.multenterbox(msg = 'Enter the time pre-switchpoint that you want to plot', fields = ['Time pre switchpoint (ms)'])
+pre_switch = int(pre_switch[0])
+post_switch = easygui.multenterbox(msg = 'Enter the time post-switchpoint that you want to plot', fields = ['Time post switchpoint (ms)'])
+post_switch = int(post_switch[0])
+
+# Make a list of lists to store the EMG data (gapes and ltps) for every laser condition - make two such lists, one for each switchpoint
+gapes_plot1 = [[[] for j in range(num_tastes)] for i in range(num_lasers)]
+gapes_plot2 = [[[] for j in range(num_tastes)] for i in range(num_lasers)]
+ltps_plot1 = [[[] for j in range(num_tastes)] for i in range(num_lasers)]
+ltps_plot2 = [[[] for j in range(num_tastes)] for i in range(num_lasers)]
+
+# Now run through the datasets
+for dataset in range(len(converged_trials)):
+	# And run through the laser conditions in each dataset
+	for laser in range(num_lasers):
+		# Run through the converged trials in this dataset for this laser condition
+		for trial in range(converged_trials[dataset][laser].shape[0]):
+			# Check if switchpoint1 happens after laser inactivation starts
+			if switchpoints[dataset][laser][trial, 0]*10 > unique_lasers[0][laser, 1]:
+				# Append the EMG data for this trial to the respective lists - correct the switchpoint by adding the laser duration
+				gapes_plot1[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(gapes[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 0]*10 + int(unique_lasers[0][laser, 0]) : switchpoints[dataset][laser][trial, 0]*10 + int(unique_lasers[0][laser, 0]) + post_switch])
+				ltps_plot1[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(ltps[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 0]*10 + int(unique_lasers[0][laser, 0]) : switchpoints[dataset][laser][trial, 0]*10 + int(unique_lasers[0][laser, 0]) + post_switch])
+			# Do not correct the switchpoint if it happened before the laser inactivation starts
+			else:
+				gapes_plot1[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(gapes[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 0]*10 : switchpoints[dataset][laser][trial, 0]*10 + post_switch])
+				ltps_plot1[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(ltps[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 0]*10 : switchpoints[dataset][laser][trial, 0]*10 + post_switch])
+
+			# Now check if switchpoint2 happens after laser inactivation starts
+			if switchpoints[dataset][laser][trial, 1]*10 > unique_lasers[0][laser, 1]:
+				# Append the EMG data for this trial to the respective lists - correct the switchpoint by adding the laser duration
+				gapes_plot2[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(gapes[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 1]*10 + int(unique_lasers[0][laser, 0]) - pre_switch : switchpoints[dataset][laser][trial, 1]*10 + int(unique_lasers[0][laser, 0]) + post_switch])
+				ltps_plot2[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(ltps[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 1]*10 + int(unique_lasers[0][laser, 0]) - pre_switch : switchpoints[dataset][laser][trial, 1]*10 + int(unique_lasers[0][laser, 0]) + post_switch])
+			# Do not correct the switchpoint if it happened before the laser inactivation starts
+			else:
+				gapes_plot2[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(gapes[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 1]*10 - pre_switch : switchpoints[dataset][laser][trial, 1]*10 + post_switch])
+				ltps_plot2[laser][int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(ltps[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), switchpoints[dataset][laser][trial, 1]*10 - pre_switch : switchpoints[dataset][laser][trial, 1]*10 + post_switch])				
+
+# Convert these lists into numpy arrays to help in averaging across trials while plotting
+for i in range(num_lasers):
+	gapes_plot1[i] = [np.array(gapes_plot1[i][j]) for j in range(num_tastes)]		
+	gapes_plot2[i] = [np.array(gapes_plot2[i][j]) for j in range(num_tastes)]		
+	ltps_plot1[i] = [np.array(ltps_plot1[i][j]) for j in range(num_tastes)]		
+	ltps_plot2[i] = [np.array(ltps_plot2[i][j]) for j in range(num_tastes)]
+
+# Now plot the results by laser conditions
+for laser in range(num_lasers):
+	# Make 4 separate figures - 2 each for gapes and ltps
+	fig_gapes1, ax_gapes1 = plt.subplots() 		
+	fig_gapes2, ax_gapes2 = plt.subplots() 		
+	fig_ltps1, ax_ltps1 = plt.subplots() 		
+	fig_ltps2, ax_ltps2 = plt.subplots()
+
+	# Now run through the tastes
+	for taste in range(num_tastes):
+		# And plot to the respective set of axes
+		ax_gapes1.plot(np.arange(post_switch), np.mean(gapes_plot1[laser][taste], axis = 0), label = tastes[taste])
+		ax_gapes2.plot(np.arange(pre_switch + post_switch) - pre_switch, np.mean(gapes_plot2[laser][taste], axis = 0), label = tastes[taste])
+		ax_ltps1.plot(np.arange(post_switch), np.mean(ltps_plot1[laser][taste], axis = 0), label = tastes[taste])
+		ax_ltps2.plot(np.arange(pre_switch + post_switch) - pre_switch, np.mean(ltps_plot2[laser][taste], axis = 0), label = tastes[taste])
+
+	# Add legends to all the figures
+	ax_gapes1.legend()
+	ax_gapes2.legend()
+	ax_ltps1.legend()
+	ax_ltps2.legend()
+
+	# Save the figures and close the plots
+	fig_gapes1.savefig("Gapes_Switchpoint1_Dur{:d}_Lag{:d}.png".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
+	fig_gapes2.savefig("Gapes_Switchpoint2_Dur{:d}_Lag{:d}.png".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
+	fig_ltps1.savefig("LTP_Switchpoint1_Dur{:d}_Lag{:d}.png".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
+	fig_ltps2.savefig("LTP_Switchpoint2_Dur{:d}_Lag{:d}.png".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
+	plt.close("all")		
+
+#----------------------------Plotting EMG data lined up by switchpoints done------------------------------------------
 
 
 
