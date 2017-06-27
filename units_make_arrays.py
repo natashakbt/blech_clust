@@ -128,20 +128,25 @@ for i in range(len(dig_in_channels)):
 	if laser_nums:
 		cond_array = np.zeros(len(end_points[dig_in_channel_nums[i]]))
 		laser_start = np.zeros(len(end_points[dig_in_channel_nums[i]]))
+		# Also make an array to note down the firing of the lasers one by one - for experiments where only 1 laser was fired at a time. This has 3 sorts of laser on conditions - each laser on alone, and then both on together
+		laser_single = np.zeros((len(end_points[dig_in_channel_nums[i]]), 2))
 		for j in range(len(end_points[dig_in_channel_nums[i]])):
 			# Skip the trial if the headstage fell off before it - mark these trials by -1
 			if end_points[dig_in_channel_nums[i]][j] >= expt_end_time:
 				cond_array[j] = -1
 			# Else run through the lasers and check if the lasers went off within 5 secs of the stimulus delivery time
-			for laser in laser_nums:
-				on_trial = np.where(np.abs(end_points[laser] - end_points[dig_in_channel_nums[i]][j]) <= 5*30000)[0]
+			for laser in range(len(laser_nums)):
+				on_trial = np.where(np.abs(end_points[laser_nums[laser]] - end_points[dig_in_channel_nums[i]][j]) <= 5*30000)[0]
 				if len(on_trial) > 0:
+					# Mark this laser appropriately in the laser_single array
+					laser_single[j, laser] = 1.0
 					# If the lasers did go off around stimulus delivery, get the duration and start time in ms (from end of taste delivery) of the laser trial (as a multiple of 10 - so 53 gets rounded off to 50)
-					cond_array[j] = 10*int((end_points[laser][on_trial][0] - start_points[laser][on_trial][0])/300)
-					laser_start[j] = 10*int((start_points[laser][on_trial][0] - end_points[dig_in_channel_nums[i]][j])/300)
+					cond_array[j] = 10*int((end_points[laser_nums[laser]][on_trial][0] - start_points[laser_nums[laser]][on_trial][0])/300)
+					laser_start[j] = 10*int((start_points[laser_nums[laser]][on_trial][0] - end_points[dig_in_channel_nums[i]][j])/300)
 		# Write the conditional stimulus duration array to the hdf5 file
 		laser_durations = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_durations', cond_array)
 		laser_onset_lag = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'laser_onset_lag', laser_start)
+		on_laser = hf5.create_array('/spike_trains/%s' % str.split(dig_in_channels[i], '/')[-1], 'on_laser', laser_single)
 		hf5.flush() 
 
 hf5.close()
