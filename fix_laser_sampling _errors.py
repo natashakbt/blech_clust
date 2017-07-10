@@ -1,4 +1,9 @@
-#How to change value in hf5 File due to Laser sampling error (high sampling rate)
+#
+# Since the digital inputs are being sampled at 30kHz, sometimes the laser durations (or onsets)
+# are recorded for a few ms more or less than the intended length of the pulse. 
+# We scale the length of the pulse by factors of 10 - so 
+# sometimes a 2500ms pulse can become 2510 or 2490ms. This gives errors in later steps.
+
 
 import tables
 import numpy as np
@@ -25,10 +30,10 @@ trains_dig_in = hf5.list_nodes('/spike_trains')
 num_durations = easygui.multenterbox(msg = 'how many laser durations were used in this experiment?', fields = ['Number of Laser durations'])
 num_durations = int(num_durations[0])
 
-durations = easygui.multenterbox(msg = 'What are the laser durations used in this experiment?', fields = ["Duration" for num in range(num_durations)])
+durations = easygui.multenterbox(msg = 'What are the laser durations used in this experiment?', fields = ["Duration{}".format(num + 1) for num in range(num_durations)])
 for i in range(len(durations)):
     durations[i] = int(durations[i])
-    durations.append(0)
+durations.append(0)
 
  
 
@@ -36,10 +41,10 @@ for i in range(len(durations)):
 num_latencies = easygui.multenterbox(msg = 'how many latencies were used in this experiment?', fields = ['Number of Laser onset latencies'])
 num_latencies = int(num_latencies[0])
 
-latencies = easygui.multenterbox(msg = 'What are the latencies of laser onset used for this experiment?', fields = ["Latency" for num in range(num_latencies)])
+latencies = easygui.multenterbox(msg = 'What are the latencies of laser onset used for this experiment?', fields = ["Latency{}".format(num + 1) for num in range(num_latencies)])
 for i in range(len(latencies)):
     latencies[i] = int(latencies[i])
-    latencies.append(0)
+latencies.append(0)
 
     
 
@@ -62,14 +67,3 @@ hf5.flush()
 
 hf5.close()
 
-
-#==============================================================================
-# ##########
-# >>> import numpy as np
-# >>> states = [False, False, False, False, True, True, False, True, False, False, False, False, False, False, False, False]
-# >>> np.where(states)
-# (array([4, 5, 7]),)
-# 
-# Note that this returns a tuple which requires np.where(states)[0] to actually use the results
-# 
-#==============================================================================
