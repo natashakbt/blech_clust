@@ -27,10 +27,10 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 trains_dig_in = hf5.list_nodes('/spike_trains')
 
 # Ask the user for the correct laser duration and convert to integers
-num_durations = easygui.multenterbox(msg = 'how many laser durations were used in this experiment?', fields = ['Number of Laser durations'])
+num_durations = easygui.multenterbox(msg = "How many laser durations were used in this experiment?", fields = ["Number of Laser durations"])
 num_durations = int(num_durations[0])
 
-durations = easygui.multenterbox(msg = 'What are the laser durations used in this experiment?', fields = ["Duration{}".format(num + 1) for num in range(num_durations)])
+durations = easygui.multenterbox(msg = "What are the laser durations used in this experiment (control duration [i.e., 0 ms] added automatically)?", fields = ["Duration{}".format(num + 1) for num in range(num_durations)])
 for i in range(len(durations)):
     durations[i] = int(durations[i])
 durations.append(0)
@@ -38,10 +38,10 @@ durations.append(0)
  
 
 # Ask for the correct laser onset latencies
-num_latencies = easygui.multenterbox(msg = 'how many latencies were used in this experiment?', fields = ['Number of Laser onset latencies'])
+num_latencies = easygui.multenterbox(msg = "How many latencies were used in this experiment?", fields = ["Number of Laser onset latencies"])
 num_latencies = int(num_latencies[0])
 
-latencies = easygui.multenterbox(msg = 'What are the latencies of laser onset used for this experiment?', fields = ["Latency{}".format(num + 1) for num in range(num_latencies)])
+latencies = easygui.multenterbox(msg = "What are the latencies of laser onset used for this experiment?", fields = ["Latency{}".format(num + 1) for num in range(num_latencies)])
 for i in range(len(latencies)):
     latencies[i] = int(latencies[i])
 latencies.append(0)
