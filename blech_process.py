@@ -73,6 +73,8 @@ max_breach_rate = float(params[5])
 max_secs_above_cutoff = int(params[6])
 max_mean_breach_rate_persec = float(params[7])
 wf_amplitude_sd_cutoff = int(params[8])
+bandpass_lower_cutoff = float(params[9])
+bandpass_upper_cutoff = float(params[10])
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
@@ -80,7 +82,7 @@ exec("raw_el = hf5.root.raw.electrode"+str(electrode_num)+"[:]")
 hf5.close()
 
 # High bandpass filter the raw electrode recordings
-filt_el = get_filtered_electrode(raw_el)
+filt_el = get_filtered_electrode(raw_el, freq = [bandpass_lower_cutoff, bandpass_upper_cutoff])
 
 # Delete raw electrode recording from memory
 del raw_el
