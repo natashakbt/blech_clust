@@ -250,7 +250,7 @@ for i in range(max_clusters-1):
 		#		plot_wf[time] = slices_dejittered[point, time*10]
 		#	plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
 		#	plt.hold(True)
-		plt.plot(x-15, slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
+		plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
 		plt.xlabel('Time ({:d} samples per ms)'.format(int(sampling_rate/1000)))
 		plt.ylabel('Voltage (microvolts)')
 		plt.title('Cluster%i' % cluster)
