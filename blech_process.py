@@ -75,6 +75,9 @@ max_mean_breach_rate_persec = float(params[7])
 wf_amplitude_sd_cutoff = int(params[8])
 bandpass_lower_cutoff = float(params[9])
 bandpass_upper_cutoff = float(params[10])
+spike_snapshot_before = float(params[11])
+spike_snapshot_after = float(params[12])
+sampling_rate = float(params[13])
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
@@ -82,14 +85,14 @@ exec("raw_el = hf5.root.raw.electrode"+str(electrode_num)+"[:]")
 hf5.close()
 
 # High bandpass filter the raw electrode recordings
-filt_el = get_filtered_electrode(raw_el, freq = [bandpass_lower_cutoff, bandpass_upper_cutoff])
+filt_el = get_filtered_electrode(raw_el, freq = [bandpass_lower_cutoff, bandpass_upper_cutoff], sampling_rate = sampling_rate)
 
 # Delete raw electrode recording from memory
 del raw_el
 
 # Calculate the 3 voltage parameters
-breach_rate = float(len(np.where(filt_el>voltage_cutoff)[0])*30000)/len(filt_el)
-test_el = np.reshape(filt_el[:30000*int(len(filt_el)/30000)], (-1, 30000))
+breach_rate = float(len(np.where(filt_el>voltage_cutoff)[0])*int(sampling_rate))/len(filt_el)
+test_el = np.reshape(filt_el[:int(sampling_rate)*int(len(filt_el)/sampling_rate)], (-1, int(sampling_rate)))
 breaches_per_sec = [len(np.where(test_el[i] > voltage_cutoff)[0]) for i in range(len(test_el))]
 breaches_per_sec = np.array(breaches_per_sec)
 secs_above_cutoff = len(np.where(breaches_per_sec > 0)[0])
@@ -99,7 +102,7 @@ else:
 	mean_breach_rate_persec = np.mean(breaches_per_sec[np.where(breaches_per_sec > 0)[0]])
 
 # And if they all exceed the cutoffs, assume that the headstage fell off mid-experiment
-recording_cutoff = int(len(filt_el)/30000)
+recording_cutoff = int(len(filt_el)/sampling_rate)
 if breach_rate >= max_breach_rate and secs_above_cutoff >= max_secs_above_cutoff and mean_breach_rate_persec >= max_mean_breach_rate_persec:
 	# Find the first 1 second epoch where the number of cutoff breaches is higher than the maximum allowed mean breach rate 
 	recording_cutoff = np.where(breaches_per_sec > max_mean_breach_rate_persec)[0][0]
@@ -115,16 +118,16 @@ fig.savefig('./Plots/%i/Plots/cutoff_time.png' % electrode_num, bbox_inches='tig
 plt.close("all")
 
 # Then cut the recording accordingly
-filt_el = filt_el[:recording_cutoff*30000]	
+filt_el = filt_el[:recording_cutoff*int(sampling_rate)]	
 
 # Slice waveforms out of the filtered electrode recordings
-slices, spike_times = extract_waveforms(filt_el)
+slices, spike_times = extract_waveforms(filt_el, sampling_rate = sampling_rate)
 
 # Delete filtered electrode from memory
 del filt_el, test_el
 
 # Dejitter these spike waveforms, and get their maximum amplitudes
-slices_dejittered, times_dejittered = dejitter(slices, spike_times)
+slices_dejittered, times_dejittered = dejitter(slices, spike_times, spike_snapshot = [spike_snapshot_before, spike_snapshot_after], sampling_rate = sampling_rate)
 amplitudes = np.min(slices_dejittered, axis = 1)
 
 # Delete the original slices and times now that dejittering is complete
@@ -248,7 +251,7 @@ for i in range(max_clusters-1):
 		#	plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
 		#	plt.hold(True)
 		plt.plot(x-15, slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
-		plt.xlabel('Time (30 samples per ms)')
+		plt.xlabel('Time ({:d} samples per ms)'.format(sampling_rate/1000))
 		plt.ylabel('Voltage (microvolts)')
 		plt.title('Cluster%i' % cluster)
 		fig.savefig('./Plots/%i/Plots/%i_clusters_waveforms_ISIs/Cluster%i_waveforms' % (electrode_num, i+2, cluster))

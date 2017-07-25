@@ -12,7 +12,7 @@ def get_filtered_electrode(data, freq = [300.0, 3000.0], sampling_rate = 30000.0
 	filt_el = filtfilt(m, n, el)
 	return filt_el
 
-def extract_waveforms(filt_el):
+def extract_waveforms(filt_el, sampling_rate = 30000.0):
 	m = np.mean(filt_el)
 	th = 5.0*np.median(np.abs(filt_el)/0.6745)
 	pos = np.where(filt_el <= m-th)[0]
@@ -27,26 +27,34 @@ def extract_waveforms(filt_el):
 	for i in range(len(changes) - 1):
 		minimum = np.where(filt_el[pos[changes[i]:changes[i+1]]] == np.min(filt_el[pos[changes[i]:changes[i+1]]]))[0]
 		#print minimum, len(slices), len(changes), len(filt_el)
-		# try slicing out the putative waveform, only do this if there are 150 data points (waveform is not too close to the start or end of the recording)
-		if pos[minimum[0]+changes[i]]-60 > 0 and pos[minimum[0]+changes[i]]+90 < len(filt_el):
-			slices.append(filt_el[pos[minimum[0]+changes[i]]-60:pos[minimum[0]+changes[i]]+90])
+		# try slicing out the putative waveform, only do this if there are 10ms of data points (waveform is not too close to the start or end of the recording)
+		if pos[minimum[0]+changes[i]] - int(5*(sampling_rate/1000.0)) > 0 and pos[minimum[0]+changes[i]] + int(5*(sampling_rate/1000.0)) < len(filt_el):
+			slices.append(filt_el[pos[minimum[0]+changes[i]] - int(5*(sampling_rate/1000.0)) : pos[minimum[0]+changes[i]] + int(5*(sampling_rate/1000.0))])
 			spike_times.append(pos[minimum[0]+changes[i]])
 
 	return np.array(slices), spike_times
 
-def dejitter(slices, spike_times):
+def dejitter(slices, spike_times, spike_snapshot = [0.5, 1.0], sampling_rate = 30000.0):
 	x = np.arange(0,len(slices[0]),1)
 	xnew = np.arange(0,len(slices[0])-1,0.1)
+
+	# Calculate the number of samples to be sliced out around each spike's minimum
+	before = int((sampling_rate/1000.0)*(spike_snapshot[0]))
+	after = int((sampling_rate/1000.0)*(spike_snapshot[1]))
 	
 	#slices_dejittered = np.zeros((len(slices)-1,300))
 	slices_dejittered = []
 	spike_times_dejittered = []
 	for i in range(len(slices)):
 		f = interp1d(x, slices[i])
+		# 10-fold interpolated spike
 		ynew = f(xnew)
 		minimum = np.where(ynew == np.min(ynew))[0][0]
-		if np.abs(minimum - 600)<=30:
-			slices_dejittered.append(ynew[minimum-150:minimum+300])
+		# Only accept spikes if the interpolated minimum has shifted by less than 1/10th of a ms (3 samples for a 30kHz recording, 30 samples after interpolation)
+		# If minimum hasn't shifted at all, then minimum - 5ms should be equal to zero (because we sliced out 5 ms before the minimum in extract_waveforms())
+		# We use this property in the if statement below
+		if np.abs(minimum - int(5*(sampling_rate/100.0))) <= int(10.0*(sampling_rate/10000.0)):
+			slices_dejittered.append(ynew[minimum - before*10 : minimum + after*10])
 			spike_times_dejittered.append(spike_times[i])
 
 	return np.array(slices_dejittered), np.array(spike_times_dejittered)
