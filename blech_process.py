@@ -121,7 +121,7 @@ plt.close("all")
 filt_el = filt_el[:recording_cutoff*int(sampling_rate)]	
 
 # Slice waveforms out of the filtered electrode recordings
-slices, spike_times = extract_waveforms(filt_el, sampling_rate = sampling_rate)
+slices, spike_times = extract_waveforms(filt_el, spike_snapshot = [spike_snapshot_before, spike_snapshot_after], sampling_rate = sampling_rate)
 
 # Delete filtered electrode from memory
 del filt_el, test_el
