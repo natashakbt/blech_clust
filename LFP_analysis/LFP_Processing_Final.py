@@ -18,10 +18,10 @@ for files in file_list:
 #Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
-#Create vector of electodes
+#Create vector of electode numbers that have neurons on them (from unit_descriptor table)
 electrodegroup = hf5.root.unit_descriptor[:]['electrode_number']
 
-#Remove duplicates within array
+#Some electrodes may record from more than one neuron (shown as repeated number in unit_descriptor); Remove these duplicates within array
 electrodegroup = np.unique(electrodegroup)
 
 #Dictate whether EMG electrodes are present (based on experimental configuration) and allocate file names accordingly
@@ -38,7 +38,7 @@ else:							#If there are channels used, otherwise: create variable array for ch
 
 	fieldValues = easygui.multenterbox('Which Channels are these (i.e. EMG)?', 'Used Channels?', Fields) #Specify which channels are used for non-cell recording
 	
-	for i in range(len(Fields)):	#Check to make sure that user input as many non-cell channel numbers as they indicated were used
+	for i in range(len(Fields)):	#Check to make sure that user input has as many non-cell channel numbers as they indicated were used
 		if fieldValues[i-1].strip() == "":
 			errmsg = "You did not specify as many channels as you indicated you had!"
 			print(errmsg)
@@ -84,10 +84,10 @@ except:
 	pass
 hf5.create_group('/', 'raw_LFP')
 
-#Loop through each neuron-recording electrode, filter data, and create array in new LFP node
+#Loop through each neuron-recording electrode (from .dat files), filter data, and create array in new LFP node
 for i in range(len(Raw_Electrodefiles)):
 
-    #Filter data
+    #Read and filter data
     data = np.fromfile(Raw_Electrodefiles[i], dtype = np.dtype('int16'))
     filt_el = get_filtered_electrode(data)
     hf5.create_array('/raw_LFP','electrode%i' % electrodegroup[i], filt_el)
@@ -175,5 +175,6 @@ if rawLFPdelete == "Yes":
 	hf5.remove_node('/raw_LFP', recursive = True)
 hf5.flush()
 
+print("If you want to compress the file to release disk space, run 'blech_hdf5_repack.py' upon completion.")
 hf5.close()
 
