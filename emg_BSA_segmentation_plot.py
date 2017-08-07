@@ -30,6 +30,7 @@ pre_stim = []
 gapes_Li = []
 gape_trials_Li = []
 first_gape_Li = []
+emg_BSA_results = []
 num_trials = 0
 for dir_name in dirs:
 	# Change to the directory
@@ -52,6 +53,7 @@ for dir_name in dirs:
 	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:])
 	gape_trials_Li.append(hf5.root.ancillary_analysis.gape_trials_Li[:])
 	first_gape_Li.append(hf5.root.ancillary_analysis.first_gape_Li[:])
+	emg_BSA_results.append(hf5.root.ancillary_analysis.emg_BSA_results[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
 	# Also maintain a counter of the number of trials in the analysis
@@ -94,12 +96,14 @@ if len(laser_order) == 1:
 	gapes_Li = gapes_Li[0][:, :, :, int(pre_stim[0]):]
 	gape_trials_Li = gape_trials_Li[0]
 	first_gape_Li = first_gape_Li[0]
+	emg_BSA_results = emg_BSA_results[0]
 	
 else:
 	trials = [sig_trials[i].shape[2] for i in range(len(sig_trials))]
 	gapes = np.concatenate(tuple(gapes[i][laser_order[i], :, :, :] for i in range(len(gapes))), axis = 2)
 	ltps = np.concatenate(tuple(ltps[i][laser_order[i], :, :, :] for i in range(len(ltps))), axis = 2)
 	sig_trials = np.concatenate(tuple(sig_trials[i][laser_order[i], :, :] for i in range(len(sig_trials))), axis = 2)
+	emg_BSA_results = np.concatenate(tuple(emg_BSA_results[i][laser_order[i], :, :, :, :] for i in range(len(emg_BSA_results))), axis = 2)
 	gapes_Li = np.concatenate(tuple(gapes_Li[i][laser_order[i], :, :, int(pre_stim[0]):] for i in range(len(gapes_Li))), axis = 2)
 	gape_trials_Li = np.concatenate(tuple(gape_trials_Li[i][laser_order[i], :, :] for i in range(len(gape_trials_Li))), axis = 2)
 	first_gape_Li = np.concatenate(tuple(first_gape_Li[i][laser_order[i], :, :] for i in range(len(first_gape_Li))), axis = 2)
@@ -178,6 +182,7 @@ np.save('ltps.npy', ltps)
 np.save('gapes_Li.npy', gapes_Li)
 np.save('gape_trials_Li.npy', gape_trials_Li)
 np.save('first_gape_Li.npy', first_gape_Li)
+np.save('emg_BSA_results.npy', emg_BSA_results)
 
 #.................................
 # Plot the gaping results from the analysis in Li et al., 2016
