@@ -40,11 +40,9 @@ num_groups = int(num_groups[0])
 # Ask the user to choose the port number and electrodes for each of the groups
 group_ports = []
 average_electrodes = []
-group_electrodes = []
 for i in range(num_groups):
 	group_ports.append(easygui.multchoicebox(msg = 'Choose the port for common average reference group {:d}'.format(i+1), choices = tuple(ports)))
-	average_electrodes.append(easygui.multchoicebox(msg = 'Choose the electrodes to average across in the common average reference group {:d}. Remember to DESELECT the EMG electrodes'.format(i+1), choices = ([el for el in range(num_electrodes)])))
-	group_electrodes.append(easygui.multchoicebox(msg = 'Choose the electrodes that are in CAR group {:d}. Remember to DESELECT the EMG electrodes'.format(i+1), choices = ([el for el in range(num_electrodes)])))
+	average_electrodes.append(easygui.multchoicebox(msg = 'Choose the ELECTRODES TO AVERAGE ACROSS in the common average reference group {:d}. Remember to DESELECT the EMG electrodes'.format(i+1), choices = ([el for el in range(num_electrodes)])))
 
 # Get the emg electrode ports and channel numbers from the user
 # If only one amplifier port was used in the experiment, that's the emg_port. Else ask the user to specify
@@ -54,7 +52,7 @@ if len(ports) == 1:
 else:
 	emg_port = easygui.multchoicebox(msg = 'Which amplifier port were the EMG electrodes hooked up to? Just choose any amplifier port if you did not hook up an EMG at all.', choices = tuple(ports))
 # Now get the emg channel numbers, and convert them to integers
-emg_channels = easygui.multchoicebox(msg = 'Choose the channel numbers for the EMG electrodes. Click clear all and ok if you did not use an EMG electrode', choices = tuple([i for i in range(32)]))
+emg_channels = easygui.multchoicebox(msg = 'Choose the CHANNEL NUMBERS FOR THE EMG ELECTRODES. Click clear all and ok if you did not use an EMG electrode', choices = tuple([i for i in range(32)]))
 if emg_channels:
 	for i in range(len(emg_channels)):
 		emg_channels[i] = int(emg_channels[i])
@@ -79,21 +77,6 @@ for group in range(num_groups):
 				this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]) - len(emg_channels))
 	CAR_electrodes.append(this_group_electrodes)
 
-# Now convert the electrode numbers in each group to the same absolute scale as above
-# Run through the common average groups
-for group in range(num_groups):
-	# Now run through the electrodes and port chosen for that group, and convert to the absolute scale
-	this_group_electrodes = []
-	for electrode in group_electrodes[group]:
-		if len(emg_channels) == 0:
-			this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]))
-		else:
-			if group_ports[group] == emg_port and int(electrode) < emg_channels[0]:
-				this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]))
-			else:
-				this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]) - len(emg_channels))
-	group_electrodes[group] = this_group_electrodes
-
 # Pull out the raw electrode nodes of the HDF5 file
 raw_electrodes = hf5.list_nodes('/raw')
 
@@ -116,7 +99,7 @@ for electrode in raw_electrodes:
 	electrode_num = int(str.split(electrode._v_pathname, 'electrode')[-1])
 	# Get the common average group number that this electrode belongs to
 	# We assume that each electrode belongs to only 1 common average reference group - IMPORTANT!
-	group = int([i for i in range(num_groups) if electrode_num in group_electrodes[i]][0])
+	group = int([i for i in range(num_groups) if electrode_num in CAR_electrodes[i]][0])
 
 	# Subtract the common average reference for that group from the voltage data of the electrode
 	referenced_data = electrode[:] - common_average_reference[group]
