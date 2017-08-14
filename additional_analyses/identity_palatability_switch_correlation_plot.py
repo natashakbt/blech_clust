@@ -132,7 +132,7 @@ num_splits = easygui.multenterbox(msg = 'Enter the number of switchpoint splits 
 num_splits = int(num_splits[0])
 
 # Now get the switchpoint time for every split that the user wants to make
-plot_switch = easygui.multenterbox(msg = 'Enter the number of switchpoint times you want to split the data by', fields = ['Time {:d} (in ms)'.format(i+1) for i in range(num_splits)])
+plot_switch = easygui.multenterbox(msg = 'Enter the switchpoint times you want to split the data by', fields = ['Time {:d} (in ms)'.format(i+1) for i in range(num_splits)])
 # Convert the switchpoints for splitting the plots to the same scale as the neural analysis (10ms bins)
 for i in range(len(plot_switch)):
 	plot_switch[i] = int(float(plot_switch[i])/10)
@@ -145,7 +145,7 @@ post_stim = int(post_stim[0])
 for split in plot_switch:
 	# And run through the laser conditions
 	for laser in range(num_lasers):
-		# Make lists to pull out the gaping EMG data before and after the switchpoint
+		# Make lists to pull out the gaping EMG data from the trials that have switchpoints before and after this switchpoint split
 		gapes_before = [[] for i in range(num_tastes)]
 		gapes_after = [[] for i in range(num_tastes)]
 
@@ -153,7 +153,7 @@ for split in plot_switch:
 		for dataset in range(len(converged_trials)):
 			# Run through the converged trials in this dataset for this laser condition
 			for trial in range(converged_trials[dataset][laser].shape[0]):
-				# Check if the switchpoint on this trial is before the switchpoint split
+				# Check if the palatability (2nd) switchpoint on this trial is before the switchpoint split
 				if switchpoints[dataset][laser][trial, 1] < split:
 					# Append the data for this trial to the proper taste in gapes_before
 					gapes_before[int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(gapes[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), :])
@@ -227,7 +227,7 @@ for split in plot_switch:
 #----------------------------Plotting EMG data lined up by switchpoints-----------------------------------------------
 # Plot the EMG data, averaged across trials, lined up by the switchpoints
 # First ask the user of the pre and post-switchpoint time they want to use in the plots
-pre_switch = easygui.multenterbox(msg = 'Enter the time pre-switchpoint that you want to plot', fields = ['Time pre switchpoint (ms)'])
+pre_switch = easygui.multenterbox(msg = 'Enter the time pre-switchpoint that you want to plot (Choose a small enough number, will give errors if the window reaches the end of trial)', fields = ['Time pre switchpoint (ms)'])
 pre_switch = int(pre_switch[0])
 post_switch = easygui.multenterbox(msg = 'Enter the time post-switchpoint that you want to plot', fields = ['Time post switchpoint (ms)'])
 post_switch = int(post_switch[0])
@@ -283,9 +283,17 @@ for laser in range(num_lasers):
 	for taste in range(num_tastes):
 		# And plot to the respective set of axes
 		ax_gapes1.plot(np.arange(post_switch), np.mean(gapes_plot1[laser][taste], axis = 0), label = tastes[taste])
+		ax_gapes1.set_xlabel("Time post switchpoint1 (ms)")
+		ax_gapes1.set_ylabel("Average posterior probability of 3.5-6Hz EMG activity")
 		ax_gapes2.plot(np.arange(pre_switch + post_switch) - pre_switch, np.mean(gapes_plot2[laser][taste], axis = 0), label = tastes[taste])
+		ax_gapes2.set_xlabel("Time post switchpoint2 (ms)")
+		ax_gapes2.set_ylabel("Average posterior probability of 3.5-6Hz EMG activity")
 		ax_ltps1.plot(np.arange(post_switch), np.mean(ltps_plot1[laser][taste], axis = 0), label = tastes[taste])
+		ax_ltps1.set_xlabel("Time post switchpoint1 (ms)")
+		ax_ltps1.set_ylabel("Average posterior probability of 6-10Hz EMG activity")
 		ax_ltps2.plot(np.arange(pre_switch + post_switch) - pre_switch, np.mean(ltps_plot2[laser][taste], axis = 0), label = tastes[taste])
+		ax_ltps2.set_xlabel("Time post switchpoint2 (ms)")
+		ax_ltps2.set_ylabel("Average posterior probability of 6-10Hz EMG activity")
 
 	# Add legends to all the figures
 	ax_gapes1.legend()
