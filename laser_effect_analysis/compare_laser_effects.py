@@ -7,6 +7,7 @@ import os
 import matplotlib.pyplot as plt
 import pymc3 as pm
 import seaborn as sns
+import theano
 sns.set(context="poster")
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
@@ -55,16 +56,35 @@ lasers = lasers[lasers[:, 0].argsort(), :]
 lasers = lasers[lasers[:, 1].argsort(), :]
 
 # Ask the user for the number of MCMC samples wanted for estimation of firing rates
-num_samples = easygui.multenterbox(msg = 'Enter the number of MCMC samples you want to estimate firing rates (5000 is reasonable)', fields = ['Number of MCMC samples'])
+num_samples = easygui.multenterbox(msg = 'Enter the number of MCMC samples you want to estimate firing rates (10000 is reasonable)', fields = ['Number of MCMC samples'])
 num_samples = int(num_samples[0])
+
+# Ask the user to specify the significance level to use for finding laser effects
+# Sig level here corresponds to mass of posterior density overlapping zero
+sig_level = easygui.multenterbox(msg = "Enter the significance level you want to use to detect firing suppression/enhancement effects due to lasers", fields = ["Significance level"])
+sig_level = float(sig_level[0])
 
 # Make an array to store the results of the laser effect analysis of dimensions units X laser_conditions X tastes X MCMC samples X 2 (laser on/off)
 #results = np.zeros((len(chosen_units), len(lasers) - 1, len(trains_dig_in), num_samples, 2))
 results = []
 
-# Make a file to store the units that have significant taste-laser interaction effects
-f = open('taste_laser_interaction_units.txt', 'w') 
-print("Unit" + '\t' + "Taste" + '\t' + "Laser condition", file = f)
+# Make a file to store the eventual results for all units in this dataset
+# Reports the number of units under each column
+# f = open('laser_effects_results.txt', 'w') 
+# print("Taste" + '\t' + "Laser condition" + '\t' + "Decrease firing" + '\t' + "Increase firing" + '\t' + , file = f)
+
+# We will make 2 tables in the HDF5 file to store the results from this analysis
+# 1.) A table for each unit showing suppresion, enhancement or no effect of laser being on
+# 2.) A table adding all these results across units, showing number of units suppresed, enhanced or unchanged in every laser condition
+# Both these sets of tables can be made from the same class definition
+class laser_effects(tables.IsDescription):
+	laser = tables.Int32Col()	
+	taste = tables.Int32Col()
+	suppressed = tables.Int32Col()
+	enhanced = tables.Int32Col()
+	unchanged = tables.Int32Col()
+	# Add a column that is 1 if the control condition shows firing that is not different from zero - suppression effects of the laser cannot be observed in this case
+	control_zero = tables.Int32Col() 
 
 # Make a folder to store kdeplots for the units from the analysis
 try:
@@ -72,6 +92,20 @@ try:
 except:
 	pass
 os.mkdir('./laser_response_plots')
+
+# Store the results in the hdf5 file in /root/laser_effects_bayesian
+# Check if the node already exists, delete it if it does, and remake it
+try:
+	hf5.remove_node('/laser_effects_bayesian', recursive = True)
+except:
+	pass
+hf5.create_group('/', 'laser_effects_bayesian')
+# Make another node under /root/laser_effects_bayesian to save the tables for every unit's results
+hf5.create_group('/laser_effects_bayesian', 'unit_summaries')
+
+# Make an array to tally up these results across units - the number of rows = num of tastes x num of laser conditions and num of columns = 4 (suppressed, enhanced, unchanged, control_zero) - same 
+# as in the laser_effects class above 
+combined_units_effects = np.zeros(((lasers.shape[0] - 1) * len(trains_dig_in), 4))
 
 # Run through the chosen units
 # Include a progress counter
@@ -133,15 +167,15 @@ for unit in range(len(chosen_units)):
 
 	# Sample from the model - using 2 chains in parallel (minimum to compare traceplots and rhat values)
 	# Eventually variational inference with advi seems a better prospect - NUTS is too slow/finicky to sample
+	# The logic of using ADVI here follows from: https://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html
+	# And also from: https://pymc-devs.github.io/pymc3/notebooks/variational_api_quickstart.html
+	# Here we aren't scaling the variance of the gradient as it doesn't seem to give much improvement in simple models (look at the first link above)
 	with model:
-		try:
-			#trace = pm.sample(num_samples + 1000, tune = 1000)[1000:]
-			v_params = pm.variational.advi(n = 200000)
-			trace = pm.variational.sample_vp(v_params, draws=num_samples)
-		except:
-			continue
+		#trace = pm.sample(num_samples + 1000, tune = 1000)[1000:]
 		#v_params = pm.variational.advi(n = 200000)
 		#trace = pm.variational.sample_vp(v_params, draws=num_samples)
+		inference = pm.fit(n=200000, method = 'advi')
+		trace = inference.sample(num_samples)
 
 	# Print the Gelman-Rubin statistics for this model to file
 	#print('\n', file = f)
@@ -162,11 +196,15 @@ for unit in range(len(chosen_units)):
 	# Append everything to results
 	results.append(bayesian_results)
 
-	# Also check if this unit has significant taste-laser interaction (by checking if the b_t_l offsets are significantly different from zero). We will check if the HPD overlaps zero for them
-	for laser_status in range(lasers.shape[0] - 1):
-		for stimulus in range(len(trains_dig_in)):
-			if (pm.hpd(trace['b_t_l_offset'][:, stimulus, laser_status])[0])*(pm.hpd(trace['b_t_l_offset'][:, stimulus, laser_status])[1]) > 0:
-				print("{}".format(chosen_units[unit]) + '\t' + "{}".format(stimulus) + '\t' + "Dur:{}ms, Lag:{}ms".format(lasers[laser_status + 1, 0], lasers[laser_status + 1, 1]), file = f)
+	# We cannot simply subtract the interaction effect coefficients in the two conditions and conclude significance by comparing them to zero
+	# The interaction effects are calculated separately for every condition, we can compare them to each other, but cannot subtract them (esp because of the log link in the equation)
+	# So ignore the analysis below
+	# Also check if this unit has significant taste-laser interaction (by checking if the b_t_l offsets (for control minus condition) are significantly different from zero). We will check if the HPD overlaps zero for them
+#	for laser_status in range(lasers.shape[0] - 1):
+#		for stimulus in range(len(trains_dig_in)):
+#			interaction_diff = trace['b_t_l_offset'][:, stimulus, 2*laser_status + 1] - trace['b_t_l_offset'][:, stimulus, 2*laser_status]
+#			if pm.hpd(interaction_diff)[0] * pm.hpd(interaction_diff)[1] > 0:
+#				print("{}".format(chosen_units[unit]) + '\t' + "{}".format(stimulus) + '\t' + "Dur:{}ms, Lag:{}ms".format(lasers[laser_status + 1, 0], lasers[laser_status + 1, 1]), file = f)
 
 	# Make a directory for this unit under laser_response_plots, and save kdeplots there
 	os.mkdir('./laser_response_plots/Unit{:d}'.format(chosen_units[unit]))
@@ -203,26 +241,92 @@ for unit in range(len(chosen_units)):
 	#fig.savefig('laser_traceplots/Unit{}.png'.format(chosen_units[unit]), bbox_inches = 'tight')
 	#plt.close('all')
 
+	# Now use the array of differences plotted above to find if the laser had an effect on this unit's firing
+	# Save these findings in a table specific to this unit
+	unit_table = hf5.create_table('/laser_effects_bayesian/unit_summaries', 'unit{:d}'.format(chosen_units[unit]), description = laser_effects)
+
+	# Now run through the tastes and laser conditions
+	for laser in range(diff.shape[0]):
+		for taste in range(diff.shape[1]):	
+			# Get a new row for this taste and laser condition		
+			this_condition_results = unit_table.row
+
+			# Fill in the taste and laser conditions
+			this_condition_results['laser'] = laser + 1		
+			this_condition_results['taste'] = taste + 1
+		
+		
+			# First check if the control firing was close to zero for this taste/laser combo (comparing it to a sufficiently small number because the control firing rate is always > 0 by definition)
+			if pm.hpd(bayesian_results[laser, taste, :, 0], alpha = sig_level)[0] <= 1e-4:
+				this_condition_results['control_zero'] = 1.0
+			else:
+				this_condition_results['control_zero'] = 0.0
+			
+			# Then check if the laser condition has no effect on firing (the diff HPD will overlap zero)
+			diff_hpd = pm.hpd(diff[laser, taste, :], alpha = sig_level)
+			if diff_hpd[0] * diff_hpd[1] < 0:
+				this_condition_results['unchanged'] = 1.0
+				this_condition_results['enhanced'] = 0.0
+				this_condition_results['suppressed'] = 0.0
+			# Firing is enhanced if the diff (control-laser) lies consistently below zero
+			elif diff_hpd[0] < 0 and diff_hpd[1] < 0:
+				this_condition_results['unchanged'] = 0.0
+				this_condition_results['enhanced'] = 1.0
+				this_condition_results['suppressed'] = 0.0
+			# Firing is suppressed if the diff (control-laser) lies consistently above zero 
+			else:
+				this_condition_results['unchanged'] = 0.0
+				this_condition_results['enhanced'] = 0.0
+				this_condition_results['suppressed'] = 1.0
+
+			# Also add to the count of units showing the different effects on firing
+			combined_units_effects[diff.shape[1] * laser + taste, 0] += this_condition_results['suppressed']
+			combined_units_effects[diff.shape[1] * laser + taste, 1] += this_condition_results['enhanced']
+			combined_units_effects[diff.shape[1] * laser + taste, 2] += this_condition_results['unchanged']
+			combined_units_effects[diff.shape[1] * laser + taste, 3] += this_condition_results['control_zero'] 
+
+			# Append this row to the table
+			this_condition_results.append()
+			unit_table.flush()
+			hf5.flush()
+
 # Convert results to numpy array
 results = np.array(results)
 results.resize((len(chosen_units), len(lasers) - 1, len(trains_dig_in), num_samples, 2))
 
 # Close the file that stores the identities of units with significant interaction effects
-f.close()
+# f.close()
 
 print("Bayesian analysis of the effects of laser on firing rate of units finished")
 print("====================================")
 
-# Store the results in the hdf5 file in /root/laser_effects_bayesian
-# Check if the node already exists, delete it if it does, and remake it
-try:
-	hf5.remove_node('/laser_effects_bayesian', recursive = True)
-except:
-	pass
-hf5.create_group('/', 'laser_effects_bayesian')
 # Then save the data to the file
 hf5.create_array('/laser_effects_bayesian', 'laser_combination_d_l', lasers)
 hf5.create_array('/laser_effects_bayesian', 'mean_firing_rates', results)
+
+# Make a table to save the tally of units showing the different effects on firing
+combined_units_table = hf5.create_table('/laser_effects_bayesian', 'combined_units_tally', description = laser_effects)
+
+# Run through the laser and taste conditions
+for laser in range(diff.shape[0]):
+	for taste in range(diff.shape[1]):	
+		# Get a new row for this taste and laser condition		
+		this_condition_results = combined_units_table.row
+
+		# Fill in the taste and laser conditions
+		this_condition_results['laser'] = laser + 1		
+		this_condition_results['taste'] = taste + 1
+
+		# Fill up the data
+		this_condition_results['suppressed'] = combined_units_effects[diff.shape[1] * laser + taste, 0]
+		this_condition_results['enhanced'] = combined_units_effects[diff.shape[1] * laser + taste, 1]
+		this_condition_results['unchanged'] = combined_units_effects[diff.shape[1] * laser + taste, 2]
+		this_condition_results['control_zero'] = combined_units_effects[diff.shape[1] * laser + taste, 3]
+
+		# Append this row to the table
+		this_condition_results.append()
+		combined_units_table.flush()
+		hf5.flush()
 
 hf5.close()
 	
