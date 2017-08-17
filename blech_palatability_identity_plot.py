@@ -4,6 +4,7 @@ import tables
 import easygui
 import sys
 import os
+from scipy.ndimage.filters import gaussian_filter1d
 import matplotlib
 matplotlib.use('Agg')
 import pylab as plt
@@ -154,6 +155,10 @@ for i in range(len(time_limits)):
 	time_limits[i] = int(time_limits[i])
 plot_indices = np.where((x>=time_limits[0])*(x<=time_limits[1]))[0]
 
+# Ask the user for the standard deviation to be used in smoothing the palatability correlation curves using a Gaussian
+sigma = easygui.multenterbox(msg = "Enter the standard deviation to use while Gaussian smoothing the palatability correlation plots (5 is good for 250ms bins)", fields = ['sigma'])
+sigma = int(sigma[0])
+
 # Save all these arrays in the output directory
 np.save('r_pearson.npy', r_pearson)
 np.save('r_spearman.npy', r_spearman)
@@ -189,6 +194,29 @@ plt.ylabel('Average Spearman $rho^2$')
 plt.legend(loc = 'upper left', fontsize = 15)
 plt.tight_layout()
 fig.savefig('Spearman correlation-palatability.png', bbox_inches = 'tight')
+plt.close('all')
+
+# Plot a Gaussian-smoothed version of the r_squared values as well
+fig = plt.figure()
+for i in range(r_pearson.shape[0]):
+	plt.plot(x[plot_indices], gaussian_filter1d(np.mean(r_pearson[i, plot_indices, :]**2, axis = 1), sigma = sigma), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+plt.title('Pearson $r^2$ with palatability ranks, smoothing std:%1.1f' % sigma + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
+plt.xlabel('Time from stimulus (ms)')
+plt.ylabel('Average Pearson $r^2$')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
+fig.savefig('Pearson correlation-palatability-smoothed.png', bbox_inches = 'tight')
+plt.close('all')
+
+fig = plt.figure()
+for i in range(r_spearman.shape[0]):
+	plt.plot(x[plot_indices], gaussian_filter1d(np.mean(r_spearman[i, plot_indices, :]**2, axis = 1), sigma = sigma), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+plt.title('Spearman $rho^2$ with palatability ranks, smoothing std:%1.1f' % sigma + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
+plt.xlabel('Time from stimulus (ms)')
+plt.ylabel('Average Spearman $rho^2$')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
+fig.savefig('Spearman correlation-palatability-smoothed.png', bbox_inches = 'tight')
 plt.close('all')
 
 # Now plot the r_squared values separately for the different laser conditions
