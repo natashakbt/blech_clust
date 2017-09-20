@@ -227,7 +227,8 @@ while True:
 					unit_times = np.concatenate((unit_times, spike_times[np.where(predictions == int(cluster))[0]]))
 
 			# Show the merged cluster to the user, and ask if they still want to merge
-			plt.plot(np.arange(45) - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+			x = np.arange(len(unit_waveforms[0])/10)
+			plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
 			plt.xlabel('Time (30 samples per ms)')
 			plt.ylabel('Voltage (microvolts)')
 			plt.title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
