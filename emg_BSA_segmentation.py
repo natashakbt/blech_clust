@@ -54,6 +54,7 @@ sig_trials = np.load('sig_trials.npy')
 sig_trials = np.reshape(sig_trials, (sig_trials.shape[0]*sig_trials.shape[1]))
 
 # Now arrange these arrays by laser condition X taste X time
+final_emg_BSA_results = np.empty((len(trials), num_tastes, int(num_trials/len(trials)),  emg_BSA_results.shape[1], emg_BSA_results.shape[2]), dtype = float) 
 final_gapes = np.empty((len(trials), num_tastes, int(num_trials/len(trials)),  gapes.shape[1]), dtype = float)
 final_ltps = np.empty((len(trials), num_tastes, int(num_trials/len(trials)), ltps.shape[1]), dtype = float)
 final_sig_trials = np.empty((len(trials), num_tastes, int(num_trials/len(trials))), dtype = float)
@@ -61,6 +62,7 @@ final_sig_trials = np.empty((len(trials), num_tastes, int(num_trials/len(trials)
 # Fill up these arrays
 for i in range(len(trials)):
 	for j in range(num_tastes):
+		final_emg_BSA_results[i, j, :, :, :] = emg_BSA_results[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)], :, :]
 		final_gapes[i, j, :,  :] = gapes[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)], :]
 		final_ltps[i, j, :, :] = ltps[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)], :]
 		final_sig_trials[i, j, :] = sig_trials[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)]]
@@ -71,11 +73,14 @@ try:
 	hf5.remove_node('/ancillary_analysis/gapes')
 	hf5.remove_node('/ancillary_analysis/ltps')
 	hf5.remove_node('/ancillary_analysis/sig_trials')
+	hf5.remove_node('/ancillary_analysis/emg_BSA_results')
 except:
 	pass
 hf5.create_array('/ancillary_analysis', 'gapes', final_gapes)
 hf5.create_array('/ancillary_analysis', 'ltps', final_ltps)
 hf5.create_array('/ancillary_analysis', 'sig_trials', final_sig_trials)
+hf5.create_array('/ancillary_analysis', 'emg_BSA_results', final_emg_BSA_results)
+
 hf5.flush()
 
 hf5.close()

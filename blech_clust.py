@@ -96,6 +96,8 @@ clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for clust
 data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)', 'Intra-cluster waveform amplitude SD cutoff - larger waveforms will be thrown out (3 would be a good number)'])
 # Ask the user for the bandpass filter frequencies for pulling out spikes
 bandpass_params = easygui.multenterbox(msg = "Fill in the lower and upper frequencies for the bandpass filter for spike sorting", fields = ['Lower frequency cutoff (Hz)', 'Upper frequency cutoff (Hz)'])
+# Ask the user for the size of the spike snapshot to be used for sorting
+spike_snapshot = easygui.multenterbox(msg = "Fill in the size of the spike snapshot you want to use for sorting (use steps of 0.5ms - like 0.5, 1, 1.5, ..)", fields = ['Time before spike minimum (ms)', 'Time after spike minimum (ms)'])
 # And print them to a blech_params file
 f = open(hdf5_name[-1]+'.params', 'w')
 for i in clustering_params:
@@ -104,6 +106,9 @@ for i in data_params:
 	print(i, file=f)
 for i in bandpass_params:
 	print(i, file=f)
+for i in spike_snapshot:
+	print(i, file=f)
+print(sampling_rate, file=f)
 f.close()
 
 # Make a directory for dumping files talking about memory usage in blech_process.py
@@ -118,7 +123,7 @@ username = easygui.multenterbox(msg = 'Enter your Brandeis/Jetstream/personal co
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
 f = open('blech_clust.sh', 'w')
-print("module load PYTHON/ANACONDA-2.5.0", file=f)
+print("export OMP_NUM_THREADS=1", file = f)
 print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
 print("python blech_process.py", file=f)
 f.close()
