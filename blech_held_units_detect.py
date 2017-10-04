@@ -117,7 +117,7 @@ for unit1 in range(len(hf51.root.unit_descriptor[:])):
 		# Run through the units on day 2 and check if it was present (same electrode and unit type)
 		for unit2 in range(len(hf52.root.unit_descriptor[:])):
 			print(unit1, unit2, len(hf51.root.unit_descriptor[:]), len(hf52.root.unit_descriptor[:]))
- 			if hf52.root.unit_descriptor[unit2] == hf51.root.unit_descriptor[unit1]:
+			if hf52.root.unit_descriptor[unit2] == hf51.root.unit_descriptor[unit1]:
 				# Load up the waveforms for unit1 and unit2
 				exec("wf_day1 = hf51.root.sorted_units.unit%03d.waveforms[:]" % (unit1 + 1))
 				exec("wf_day2 = hf52.root.sorted_units.unit%03d.waveforms[:]" % (unit2 + 1))
