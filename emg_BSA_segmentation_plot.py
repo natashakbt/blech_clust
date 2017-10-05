@@ -113,9 +113,19 @@ else:
 dir_name = easygui.diropenbox(msg = 'Choose the output directory for EMG BSA analysis')
 os.chdir(dir_name)
 
-# Ask the user for the post stimulus time to plot the results upto
-post_stim = easygui.multenterbox(msg = 'Enter the post-stimulus time to be used in the plots', fields = ['Post stim (ms)'])
-post_stim = int(post_stim[0])
+# Get the pre stimulus time in the experiments
+pre_stim = int(pre_stim[0])
+
+# Ask the user for the time limits to plot the results upto
+time_limits = easygui.multenterbox(msg = 'Enter the time limits to be used in the plots', fields = ['Pre stim (ms)', 'Post stim (ms)'])
+for i in range(len(time_limits)):
+	time_limits[i] = int(time_limits[i])
+
+# Get an array of x values to plot the average probability of gaping or licking across time
+x = np.arange(gapes.shape[-1]) - pre_stim
+
+# Get the indices of x that need to be plotted based on the chosen time limits
+plot_indices = np.where((x >= time_limits[0])*(x <= time_limits[1]))[0]
 
 # Ask the user for the names of the tastes in the dataset
 tastes = easygui.multenterbox(msg = 'Enter the names of the tastes used in the experiments', fields = ['Taste{:d}'.format(i+1) for i in range(gapes.shape[1])])
@@ -126,7 +136,7 @@ tastes = easygui.multenterbox(msg = 'Enter the names of the tastes used in the e
 for i in range(gapes.shape[0]):
 	fig = plt.figure()
 	for j in range(gapes.shape[1]):
-		plt.plot(np.mean(gapes[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = tastes[j])
+		plt.plot(x[plot_indices], np.mean(gapes[i, j, :, plot_indices].T, axis = 0), linewidth = 2.0, label = tastes[j])
 	plt.xlabel('Time post stimulus (ms)')
 	plt.ylabel('Trial averaged fraction of power in 3.65-5.95 Hz')
 	plt.title('Gapes, Duration:%i ms, Lag:%i ms' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
@@ -138,7 +148,7 @@ for i in range(gapes.shape[0]):
 for i in range(ltps.shape[0]):
 	fig = plt.figure()
 	for j in range(ltps.shape[1]):
-		plt.plot(np.mean(ltps[i, j, :, :post_stim], axis = 0), linewidth = 2.0, label = tastes[j])
+		plt.plot(x[plot_indices], np.mean(ltps[i, j, :, plot_indices].T, axis = 0), linewidth = 2.0, label = tastes[j])
 	plt.xlabel('Time post stimulus (ms)')
 	plt.ylabel('Trial averaged fraction of power in 5.95-10 Hz')
 	plt.title('LTPs, Duration:%i ms, Lag:%i ms' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
@@ -154,7 +164,7 @@ for i in range(ltps.shape[0]):
 for i in range(gapes.shape[1]):
 	fig = plt.figure()
 	for j in range(gapes.shape[0]):
-		plt.plot(np.mean(gapes[j, i, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Duration:%i, Lag:%i' % (unique_lasers[0][j, 0], unique_lasers[0][j, 1]))
+		plt.plot(x[plot_indices], np.mean(gapes[j, i, :, plot_indices].T, axis = 0), linewidth = 2.0, label = 'Duration:%i, Lag:%i' % (unique_lasers[0][j, 0], unique_lasers[0][j, 1]))
 	plt.xlabel('Time post stimulus (ms)')
 	plt.ylabel('Trial averaged fraction of power in 3.65-5.95 Hz')
 	plt.title('Gapes, Taste:%i' % (i+1))
@@ -166,7 +176,7 @@ for i in range(gapes.shape[1]):
 for i in range(ltps.shape[1]):
 	fig = plt.figure()
 	for j in range(ltps.shape[0]):
-		plt.plot(np.mean(ltps[j, i, :, :post_stim], axis = 0), linewidth = 2.0, label = 'Duration:%i, Lag:%i' % (unique_lasers[0][j, 0], unique_lasers[0][j, 1]))
+		plt.plot(x[plot_indices], np.mean(ltps[j, i, :, plot_indices].T, axis = 0), linewidth = 2.0, label = 'Duration:%i, Lag:%i' % (unique_lasers[0][j, 0], unique_lasers[0][j, 1]))
 	plt.xlabel('Time post stimulus (ms)')
 	plt.ylabel('Trial averaged fraction of power in in 5.95-10 Hz')
 	plt.title('LTPs, Taste:%i' % (i+1))
@@ -218,7 +228,12 @@ max_broken_ltp = int(params[4])
 
 #.................................
 # Get 1.) Number of bouts, 2.) Start time of first bout, and 3.) Average length of bouts of gapes and LTPs on every trial
-# First convert the arrays of gapes and ltps to 0s and 1s - 1s if the power at that trial and time-point is > 0.5
+
+# First convert the gapes and ltps arrays to only the post-stimulus window so that emg segmentation doesn't look at the pre stim data
+gapes = gapes[:, :, :, pre_stim:]
+ltps = ltps[:, :, :, pre_stim:]
+
+# Then convert the arrays of gapes and ltps to 0s and 1s - 1s if the power at that trial and time-point is > 0.5
 gapes[gapes >= 0.5] = 1.0
 gapes[gapes < 0.5] = 0.0
 ltps[ltps >= 0.5] = 1.0
@@ -233,8 +248,8 @@ for i in range(gapes.shape[0]):
 		for k in range(gapes.shape[2]):
 			if sig_trials[i, j, k] > 0.0:
 				# Where does activity in the gape/LTP range happen on this trial
-				gape_places = np.where(gapes[i, j, k, :post_stim] > 0)[0] 
-				ltp_places = np.where(ltps[i, j, k, :post_stim] > 0)[0]
+				gape_places = np.where(gapes[i, j, k, :time_limits[1]] > 0)[0] 
+				ltp_places = np.where(ltps[i, j, k, :time_limits[1]] > 0)[0]
 
 				# Drop any activity that's below the minimum onset lag
 				# gape_places = gape_places[gape_places >= min_onset_lag]

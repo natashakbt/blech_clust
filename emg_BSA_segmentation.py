@@ -28,13 +28,14 @@ trials = hf5.root.ancillary_analysis.trials[:]
 unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
 
 # Ask the user for the pre-stimulus time used
-pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike trains', fields = ['Pre stim (ms)'])
-pre_stim = int(pre_stim[0])
+# pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike trains', fields = ['Pre stim (ms)'])
+# pre_stim = int(pre_stim[0])
+# Save the entire time window of BSA analysis instead
 
 # Now run through the tastes, and stack up the BSA results for the EMG responses by trials
-emg_BSA_results = hf5.root.emg_BSA_results.taste0_p[:, pre_stim:, :]
+emg_BSA_results = hf5.root.emg_BSA_results.taste0_p[:, :, :]
 for i in range(num_tastes - 1):
-	exec("emg_BSA_results = np.vstack((emg_BSA_results[:], hf5.root.emg_BSA_results.taste" + str(i+1) + "_p[:, pre_stim:, :]))")
+	exec("emg_BSA_results = np.vstack((emg_BSA_results[:], hf5.root.emg_BSA_results.taste" + str(i+1) + "_p[:, :, :]))")
 
 # Now run through the consolidated array of emg_BSA_results and check for activity in the gape/LTP range
 gapes = np.zeros((emg_BSA_results.shape[0], emg_BSA_results.shape[1]))
