@@ -5,6 +5,7 @@ import easygui
 import ast
 import pylab as plt
 from sklearn.mixture import GaussianMixture
+import blech_waveforms_datashader
 
 # Get directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -128,15 +129,16 @@ while True:
 		# Show the cluster plots if the solution converged
 		if g.converged_:
 			split_predictions = g.predict(data)
-			x = np.arange(len(spike_waveforms[0])/10)
+			x = np.arange(len(spike_waveforms[0])/10) + 1
 			for cluster in range(n_clusters):
 				split_points = np.where(split_predictions == cluster)[0]				
-				plt.figure(cluster)
-				slices_dejittered = spike_waveforms[this_cluster, ::10]
-				plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
-				plt.xlabel('Time')
-				plt.ylabel('Voltage (microvolts)')
-				plt.title('Split Cluster{:d}, Number of waveforms={:d}'.format(cluster, split_points.shape[0]))
+				# plt.figure(cluster)
+				slices_dejittered = spike_waveforms[this_cluster, :]
+				fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[split_points, :], x)
+				# plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
+				ax.set_xlabel('Sample (30 samples per ms)')
+				ax.set_ylabel('Voltage (microvolts)')
+				ax.set_title('Split Cluster{:d}, Number of waveforms={:d}'.format(cluster, split_points.shape[0]))
 		else:
 			print("Solution did not converge - try again with higher number of iterations or lower convergence criterion")
 			continue
@@ -227,11 +229,12 @@ while True:
 					unit_times = np.concatenate((unit_times, spike_times[np.where(predictions == int(cluster))[0]]))
 
 			# Show the merged cluster to the user, and ask if they still want to merge
-			x = np.arange(len(unit_waveforms[0])/10)
-			plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
-			plt.xlabel('Time (30 samples per ms)')
-			plt.ylabel('Voltage (microvolts)')
-			plt.title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
+			x = np.arange(len(unit_waveforms[0])/10) + 1
+			fig, ax = blech_waveforms_datashader.waveforms_datashader(unit_waveforms, x)
+			# plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+			ax.set_xlabel('Sample (30 samples per ms)')
+			ax.set_ylabel('Voltage (microvolts)')
+			ax.set_title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
 			plt.show()
  
 			# Warn the user about the frequency of ISI violations in the merged unit
