@@ -58,7 +58,7 @@ def waveforms_datashader(waveforms, x_values, dir_name = "datashader_temp"):
 	del df, waveforms, new_waveforms
 
 	# Also remove the directory with the temporary image files
-	shutil.rmtree("datashader_temp", ignore_errors = True)
+	shutil.rmtree(dir_name, ignore_errors = True)
 
 	# Return and figure and axis for adding axis labels, title and saving the file
 	return fig, ax
