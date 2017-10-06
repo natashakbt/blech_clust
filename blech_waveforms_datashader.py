@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.misc import imread
+import shutil
 
 # A function that accepts a numpy array of waveforms and creates a datashader image from them
-def waveforms_datashader(waveforms, x_values):
+def waveforms_datashader(waveforms, x_values, dir_name = "datashader_temp"):
 
 	# Make a pandas dataframe with two columns, x and y, holding all the data. The individual waveforms are separated by a row of NaNs
 
@@ -29,7 +30,7 @@ def waveforms_datashader(waveforms, x_values):
 	df = pd.DataFrame({'x': np.tile(x, new_waveforms.shape[0]), 'y': new_waveforms.flatten()})	
 
 	# Datashader function for exporting the temporary image with the waveforms
-	export = partial(export_image, background = "white", export_path="datashader_temp")
+	export = partial(export_image, background = "white", export_path=dir_name)
 
 	# Produce a datashader canvas
 	canvas = ds.Canvas(x_range = (np.min(x_values), np.max(x_values)), 
@@ -41,7 +42,7 @@ def waveforms_datashader(waveforms, x_values):
 	export(tf.shade(agg, how='eq_hist'),'tempfile')
 
 	# Read in the temporary image file
-	img = imread('datashader_temp/tempfile.png')
+	img = imread(dir_name + "/tempfile.png")
 	
 	# Figure sizes chosen so that the resolution is 100 dpi
 	fig,ax = plt.subplots(1, 1, figsize = (8,6), dpi = 200)
@@ -55,6 +56,9 @@ def waveforms_datashader(waveforms, x_values):
 
 	# Delete the dataframe
 	del df, waveforms, new_waveforms
+
+	# Also remove the directory with the temporary image files
+	shutil.rmtree("datashader_temp", ignore_errors = True)
 
 	# Return and figure and axis for adding axis labels, title and saving the file
 	return fig, ax

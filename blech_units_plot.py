@@ -45,8 +45,5 @@ for unit in range(len(units)):
 	plt.close("all")
 	print(mm.memory_usage_resource())
 
-# Finally delete the folder with the temporary image files created during plotting
-shutil.rmtree("datashader_temp", ignore_errors = True)
-
 hf5.close()
 

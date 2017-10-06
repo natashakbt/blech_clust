@@ -251,7 +251,7 @@ for i in range(max_clusters-1):
 		#	plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
 		#	plt.hold(True)
 		# plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
-		fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[cluster_points, :], x)
+		fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[cluster_points, :], x, dir_name = "datashader_temp_el" + str(electrode_num))
 		ax.set_xlabel('Sample ({:d} samples per ms)'.format(int(sampling_rate/1000)))
 		ax.set_ylabel('Voltage (microvolts)')
 		ax.set_title('Cluster%i' % cluster)
