@@ -12,16 +12,21 @@ from scipy.misc import imread
 def waveforms_datashader(waveforms, x_values):
 
 	# Make a pandas dataframe with two columns, x and y, holding all the data. The individual waveforms are separated by a row of NaNs
-	dfs = []
-	split = pd.DataFrame({'x': [np.nan]})
-	for i in range(waveforms.shape[0]):
-    		x = x_values
-    		y = waveforms[i, ::10] # Downsample the waveforms 10 times (to remove the effects of 10 times upsampling during de-jittering)
-    		df = pd.DataFrame({'x': x, 'y': y})
-    		dfs.append(df)
-    		dfs.append(split)
 
-	df = pd.concat(dfs, ignore_index=True)
+	# First downsample the waveforms 10 times (to remove the effects of 10 times upsampling during de-jittering)
+	waveforms = waveforms[:, ::10]
+	# Then make a new array of waveforms - the last element of each waveform is a NaN
+	new_waveforms = np.zeros((waveforms.shape[0], waveforms.shape[1] + 1))
+	new_waveforms[:, -1] = np.nan
+	new_waveforms[:, :-1] = waveforms
+
+	# Now make an array of x's - the last element is a NaN
+	x = np.zeros(x_values.shape[0] + 1)
+	x[-1] = np.nan
+	x[:-1] = x_values
+
+	# Now make the dataframe
+	df = pd.DataFrame({'x': np.tile(x, new_waveforms.shape[0]), 'y': new_waveforms.flatten()})	
 
 	# Datashader function for exporting the temporary image with the waveforms
 	export = partial(export_image, background = "white", export_path="datashader_temp")
@@ -49,7 +54,7 @@ def waveforms_datashader(waveforms, x_values):
 	ax.set_yticklabels(np.floor(np.linspace(df['y'].max() + 10, df['y'].min() - 10, 10)))
 
 	# Delete the dataframe
-	del df
+	del df, waveforms, new_waveforms
 
 	# Return and figure and axis for adding axis labels, title and saving the file
 	return fig, ax
