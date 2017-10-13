@@ -133,12 +133,17 @@ while True:
 			for cluster in range(n_clusters):
 				split_points = np.where(split_predictions == cluster)[0]				
 				# plt.figure(cluster)
-				slices_dejittered = spike_waveforms[this_cluster, :]
+				slices_dejittered = spike_waveforms[this_cluster, :]		# Waveforms and times from the chosen cluster
+				times_dejittered = spike_times[this_cluster]
+				times_dejittered = times_dejittered[split_points]		# Waveforms and times from the chosen split of the chosen cluster
+				ISIs = np.ediff1d(np.sort(times_dejittered))/30.0
+				violations1 = 100.0*float(np.sum(ISIs < 1.0)/split_points.shape[0])
+				violations2 = 100.0*float(np.sum(ISIs < 2.0)/split_points.shape[0])
 				fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[split_points, :], x)
 				# plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
 				ax.set_xlabel('Sample (30 samples per ms)')
 				ax.set_ylabel('Voltage (microvolts)')
-				ax.set_title('Split Cluster{:d}, Number of waveforms={:d}'.format(cluster, split_points.shape[0]))
+				ax.set_title("Split Cluster{:d}, 2ms ISI violations={:.1f} percent".format(cluster, violations2) + "\n" + "1ms ISI violations={:.1f}%, Number of waveforms={:d}".format(violations1, split_points.shape[0]))
 		else:
 			print("Solution did not converge - try again with higher number of iterations or lower convergence criterion")
 			continue
@@ -154,11 +159,11 @@ while True:
 	# Get list of existing nodes/groups under /sorted_units
 	node_list = hf5.list_nodes('/sorted_units')
 
-	# If node_list is empty, start naming units from 001
+	# If node_list is empty, start naming units from 000
 	unit_name = ''
 	max_unit = 0
 	if node_list == []:		
-		unit_name = 'unit%03d' % 1
+		unit_name = 'unit%03d' % 0
 	# Else name the new unit by incrementing the last unit by 1 
 	else:
 		unit_numbers = []
@@ -239,8 +244,9 @@ while True:
  
 			# Warn the user about the frequency of ISI violations in the merged unit
 			ISIs = np.ediff1d(np.sort(unit_times))/30.0
-			violations = np.where(ISIs < 2.0)[0]
-			proceed = easygui.multchoicebox(msg = 'My merged cluster has %f percent (%i/%i) ISI violations (<2ms). I want to still merge these clusters into one unit (True = Yes, False = No)' % ((float(len(violations))/float(len(unit_times)))*100.0, len(violations), len(unit_times)), choices = ('True', 'False'))
+			violations1 = np.where(ISIs < 1.0)[0]
+			violations2 = np.where(ISIs < 2.0)[0]
+			proceed = easygui.multchoicebox(msg = 'My merged cluster has %.1f percent (%i/%i) (<2ms) and %.1f percent (%i/%i) (<1ms) ISI violations. I want to still merge these clusters into one unit (True = Yes, False = No)' % ((float(len(violations2))/float(len(unit_times)))*100.0, len(violations2), len(unit_times)), (float(len(violations1))/float(len(unit_times)))*100.0, len(violations1), len(unit_times)), choices = ('True', 'False'))
 			proceed = ast.literal_eval(proceed[0])
 
 			# Create unit if the user agrees to proceed, else abort and go back to start of the loop 
