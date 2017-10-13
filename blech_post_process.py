@@ -244,9 +244,9 @@ while True:
  
 			# Warn the user about the frequency of ISI violations in the merged unit
 			ISIs = np.ediff1d(np.sort(unit_times))/30.0
-			violations1 = np.where(ISIs < 1.0)[0]
-			violations2 = np.where(ISIs < 2.0)[0]
-			proceed = easygui.multchoicebox(msg = 'My merged cluster has %.1f percent (%i/%i) (<2ms) and %.1f percent (%i/%i) (<1ms) ISI violations. I want to still merge these clusters into one unit (True = Yes, False = No)' % ((float(len(violations2))/float(len(unit_times)))*100.0, len(violations2), len(unit_times)), (float(len(violations1))/float(len(unit_times)))*100.0, len(violations1), len(unit_times)), choices = ('True', 'False'))
+			violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
+			violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
+			proceed = easygui.multchoicebox(msg = 'My merged cluster has %.1f percent (<2ms) and %.1f percent (<1ms) ISI violations out of %i total waveforms. I want to still merge these clusters into one unit (True = Yes, False = No)' % (violations2, violations1, len(unit_times)), choices = ('True', 'False'))
 			proceed = ast.literal_eval(proceed[0])
 
 			# Create unit if the user agrees to proceed, else abort and go back to start of the loop 
