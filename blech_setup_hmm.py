@@ -40,7 +40,7 @@ for i in range(len(tastes)):
 # Ask the user to choose the units to run the HMM on
 all_units = hf5.list_nodes('/sorted_units')
 all_units = np.array([int(str(unit).split('/')[-1][4:7]) for unit in all_units])
-single_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 1]) + 1
+single_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 1])
 chosen_units = []
 units_choose = easygui.multchoicebox(msg = 'How do you want to choose units for the HMM?', choices = ('All units', 'Single units', 'Random choice over all units', 'Random choice over single units', 'Custom choice'))
 if units_choose[0] == 'All units':
@@ -61,7 +61,7 @@ else:
 		chosen_units[i] = int(chosen_units[i])
 
 # Convert the chosen units into numpy array, and subtract 1 - this gives us the unit number to use in the spike arrays (because they run from 0 to n-1)
-chosen_units = np.array(chosen_units) - 1
+chosen_units = np.array(chosen_units)
 
 # Create the folder for storing the plots coming in from HMM analysis of the data - pass if it exists
 try:
