@@ -5,8 +5,8 @@ import sys
 import os
 
 from bokeh.plotting import Figure
-from bokeh.models import ColumnDataSource, HBox
-from bokeh.layouts import widgetbox
+from bokeh.models import ColumnDataSource
+from bokeh.layouts import row, widgetbox
 from bokeh.models.widgets import Slider, TextInput
 from bokeh.io import curdoc
 from bokeh.models.glyphs import MultiLine
@@ -56,7 +56,7 @@ source = ColumnDataSource(data=dict(xs=[x for i in range(50)], ys = [plot_data[N
 
 # Set up plot
 plot = Figure(plot_height=400, plot_width=400, title="Unit waveforms",
-              tools="crosshair,pan,reset,resize,save,wheel_zoom",
+              tools="crosshair,pan,reset,save,wheel_zoom",
               x_range=[0, 45], y_range=[-200, 200])
 
 plot.multi_line('xs', 'ys', source=source, line_width=1, line_alpha=1.0)
@@ -100,7 +100,7 @@ for w in [offset]:
 # Set up layouts and add to document
 inputs = widgetbox(children=[offset, electrode, clusters, cluster_num])
 
-curdoc().add_root(HBox(children=[inputs, plot], width=800))
+curdoc().add_root(row(children=[inputs, plot], width=800))
 	
 
 
