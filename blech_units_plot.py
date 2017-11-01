@@ -43,7 +43,16 @@ for unit in range(len(units)):
 	ax.set_title('Unit %i, total waveforms = %i' % (unit, waveforms.shape[0]) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
 	fig.savefig('./unit_waveforms_plots/Unit%i.png' % (unit))
 	plt.close("all")
-	print(mm.memory_usage_resource())
+	
+	# Also plot the mean and SEM for every unit - downsample the waveforms 10 times to remove effects of upsampling during de-jittering
+	fig = plt.figure()
+	plt.plot(x, np.mean(waveforms[:, ::10], axis = 0), linewidth = 4.0)
+	plt.fill_between(x, np.mean(waveforms[:, ::10], axis = 0) - np.std(waveforms[:, ::10], axis = 0), np.mean(waveforms[:, ::10], axis = 0) + np.std(waveforms[:, ::10], axis = 0), alpha = 0.4)
+	plt.xlabel('Sample (30 samples per ms)')
+	plt.ylabel('Voltage (microvolts)')
+	plt.title('Unit %i, total waveforms = %i' % (unit, waveforms.shape[0]) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
+	fig.savefig('./unit_waveforms_plots/Unit%i_mean_sd.png' % (unit))
+	plt.close("all")
 
 hf5.close()
 
