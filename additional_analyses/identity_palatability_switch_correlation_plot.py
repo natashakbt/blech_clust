@@ -165,6 +165,10 @@ for split in plot_switch:
 		gapes_before = [np.array(gapes_before[i]) for i in range(num_tastes)]
 		gapes_after = [np.array(gapes_after[i]) for i in range(num_tastes)]
 
+		# Save these lists in the plot directory
+		np.save("Gapes_before_{:d}_Dur{:d}_Lag{:d}.npy".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), gapes_before)
+		np.save("Gapes_after_{:d}_Dur{:d}_Lag{:d}.npy".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), gapes_after)
+
 		# Now make the EMG plots for this laser condition and switchpoint split
 		# First plot all the tastes together (without error bars)
 		# Gaping on trials with switchpoint before split
