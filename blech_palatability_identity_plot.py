@@ -26,6 +26,7 @@ while True:
 unique_lasers = []
 r_pearson = []
 r_spearman = []
+r_isotonic = []
 p_pearson = []
 p_spearman = []
 p_identity = []
@@ -57,6 +58,7 @@ for dir_name in dirs:
 	unique_lasers.append(hf5.root.ancillary_analysis.laser_combination_d_l[:])
 	r_pearson.append(hf5.root.ancillary_analysis.r_pearson[:])
 	r_spearman.append(hf5.root.ancillary_analysis.r_spearman[:])
+	r_isotonic.append(hf5.root.ancillary_analysis.r_isotonic[:])
 	p_pearson.append(hf5.root.ancillary_analysis.p_pearson[:])
 	p_spearman.append(hf5.root.ancillary_analysis.p_spearman[:])
 	p_identity.append(hf5.root.ancillary_analysis.p_identity[:])
@@ -104,6 +106,7 @@ for i in range(len(unique_lasers)):
 if len(laser_order) == 1:
 	r_pearson = r_pearson[0]
 	r_spearman = r_spearman[0]
+	r_isotonic = r_isotonic[0]
 	p_pearson = p_pearson[0]
 	p_spearman = p_spearman[0]
 	p_identity = p_identity[0]
@@ -118,6 +121,7 @@ if len(laser_order) == 1:
 else:
 	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
 	r_spearman = np.concatenate(tuple(r_spearman[i][laser_order[i], :, :] for i in range(len(r_spearman))), axis = 2)
+	r_isotonic = np.concatenate(tuple(r_isotonic[i][laser_order[i], :, :] for i in range(len(r_isotonic))), axis = 2)
 	p_pearson = np.concatenate(tuple(p_pearson[i][laser_order[i], :, :] for i in range(len(p_pearson))), axis = 2)
 	p_spearman = np.concatenate(tuple(p_spearman[i][laser_order[i], :, :] for i in range(len(p_spearman))), axis = 2)
 	p_identity = np.concatenate(tuple(p_identity[i][laser_order[i], :, :] for i in range(len(p_identity))), axis = 2)
@@ -162,6 +166,7 @@ sigma = int(sigma[0])
 # Save all these arrays in the output directory
 np.save('r_pearson.npy', r_pearson)
 np.save('r_spearman.npy', r_spearman)
+np.save('r_isotonic.npy', r_isotonic)
 np.save('p_pearson.npy', p_pearson)
 np.save('p_spearman.npy', p_spearman)
 np.save('p_identity.npy', p_identity)
@@ -194,6 +199,17 @@ plt.ylabel('Average Spearman $rho^2$')
 plt.legend(loc = 'upper left', fontsize = 15)
 plt.tight_layout()
 fig.savefig('Spearman correlation-palatability.png', bbox_inches = 'tight')
+plt.close('all')
+
+fig = plt.figure()
+for i in range(r_isotonic.shape[0]):
+	plt.plot(x[plot_indices], np.median(r_isotonic[i, plot_indices, :], axis = 1), linewidth = 3.0, label = 'Dur:%ims, Lag:%ims' % (unique_lasers[0][i, 0], unique_lasers[0][i, 1]))
+plt.title('Isotonic $R^2$ with palatability ranks' + '\n' + 'Units:%i, Window (ms):%i, Step (ms):%i' % (num_units, params[0][0], params[0][1]))
+plt.xlabel('Time from stimulus (ms)')
+plt.ylabel('Median Isotonic $R^2$')
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout()
+fig.savefig('Isotonic correlation-palatability.png', bbox_inches = 'tight')
 plt.close('all')
 
 # Plot a Gaussian-smoothed version of the r_squared values as well

@@ -19,6 +19,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
+from sklearn.isotonic import IsotonicRegression
 from sklearn import preprocessing
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
@@ -105,9 +106,9 @@ for i in range(0, time - params[0] + params[1], params[1]):
 for j in range(unscaled_response.shape[1]):
 	for k in range(unscaled_response.shape[2]):
 		# Remember to add 1 in the denominator - the max can be 0 sometimes
-		response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k]))
+		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k]))
 		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.sum(unscaled_response[:, :, k], axis = 1)) 
-		#response[:, j, k] = unscaled_response[:, j, k]
+		response[:, j, k] = unscaled_response[:, j, k]
 
 # Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
 try:
@@ -342,6 +343,22 @@ hf5.create_array('/ancillary_analysis', 'lda_palatability', lda_palatability)
 hf5.flush()
 
 # --------End palatability calculation----------------------------------------------------------------------------
+
+#---------Isotonic (ordinal) regression of firing against palatability--------------------------------------------
+r_isotonic = np.zeros((unique_lasers.shape[0], palatability.shape[0], palatability.shape[1]))
+
+for i in range(unique_lasers.shape[0]):
+	for j in range(palatability.shape[0]):
+		for k in range(palatability.shape[1]):
+			model = IsotonicRegression(increasing = "auto")
+			model.fit(palatability[j, k, trials[i]], response[j, k, trials[i]])
+			r_isotonic[i, j, k] = model.score(palatability[j, k, trials[i]], response[j, k, trials[i]])
+
+# Save this array to file
+hf5.create_array('/ancillary_analysis', 'r_isotonic', r_isotonic)
+hf5.flush() 
+
+#---------End Isotonic regression of firing against palatability--------------------------------------------------
 
 #---------Multiple regression of firing rate against palatability and identity------------------------------------
 # Set up an array to store the results of multiple regression using both identity and palatability - on the last axis, first element is the identity coeff and the second is the palatability coeff
