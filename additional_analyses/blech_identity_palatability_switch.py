@@ -197,7 +197,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': spikes_cat[0, :, :150]})
 
 	# Inference button :D
-	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': np.ones(num_trials)*25.0, 't2': np.ones(num_trials)*120.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -260,7 +260,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': spikes_cat[1, :, 50:200]})
 
 	# Inference button :D
-	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': np.ones(num_trials)*25.0, 't2': np.ones(num_trials)*120.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -323,7 +323,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': np.concatenate((spikes_cat[2, :, :70], spikes_cat[2, :, 120:200]), axis = 1)})
 
 	# Inference button :D
-	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 90.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': np.ones(num_trials)*25.0, 't2': np.ones(num_trials)*90.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -386,7 +386,7 @@ with pm.Model() as model:
 	obs = pm.DensityDist('obs', logp, observed = {'value': np.concatenate((spikes_cat[3, :, :140], spikes_cat[3, :, 190:200]), axis = 1)})
 
 	# Inference button :D
-	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': 25.0, 't2': 120.0})
+	tr = pm.sample(1000000, init = None, step = pm.Metropolis(), njobs = 2, trace = [t1, t2], start = {'t1': np.ones(num_trials)*25.0, 't2': np.ones(num_trials)*120.0})
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
