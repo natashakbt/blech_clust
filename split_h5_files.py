@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Sep 27 15:35:53 2017
@@ -44,6 +45,17 @@ for node in range(len(dig_in_nodes)):
     hf5.remove_node('/spike_trains/dig_in_%s' % str(node), recursive = True)
     hf5.create_group('/spike_trains', str.split('dig_in_%s' % str(node), '/')[-1])
     hf5.create_array('/spike_trains/dig_in_%s' % str(node), 'spike_array', np.array(full_array[0:trial_split[node],:,:]))
+
+spike_array_nodes_after = hf5.list_nodes('/spike_trains')
+
+# Ask if they want to delete the spare trials (the arrays created to account for uneven trials)
+msg   = "Do you want to delete the 'short' spike arrays (i.e. the leftover arrays from making equal trials per tastant)?"
+array_delete = easygui.buttonbox(msg,choices = ["Yes","No"])
+if array_delete == "Yes":
+    for array in range(len(trial_split)):
+        	#Delete data
+        	hf5.remove_node('/spike_trains/dig_in_%s' % str(array+add_node_number), recursive = True)
+
 hf5.flush()
 hf5.close()    
  
