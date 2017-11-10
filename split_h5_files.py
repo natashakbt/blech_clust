@@ -30,7 +30,7 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 # Grab the names of the arrays containing digital inputs, ask how many digital inputs to split file in to, and how many trials in each input
 dig_in_nodes = hf5.list_nodes('/digital_in')
 add_node_number = easygui.integerbox(msg='You have ' +str(len(dig_in_nodes)) + ' digital input channels, how many will you add?', default='4',lowerbound=0,upperbound=10)
-trial_split = easygui.multenterbox(msg = 'Put in the number of trials to parse from each of the original input channels (only integers)', fields = [node._v_name for node in dig_in_nodes], values = ['15' for node in dig_in_nodes])
+trial_split = easygui.multenterbox(msg = 'Put in the number of trials to parse from each of the original input channels (only integers)', fields = [node._v_name for node in dig_in_nodes[:add_node_number]], values = ['15' for node in dig_in_nodes[:add_node_number]])
 
 #Convert all values to integers
 trial_split = list(map(int,trial_split))
