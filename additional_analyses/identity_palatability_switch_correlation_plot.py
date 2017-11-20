@@ -55,9 +55,10 @@ for dir_name in dirs:
 	unique_lasers.append(hf5.root.MCMC_switch.unique_lasers[:])
 	r_pearson.append(hf5.root.MCMC_switch.r_pearson[:])
 	p_pearson.append(hf5.root.MCMC_switch.p_pearson[:])
-	gapes.append(hf5.root.ancillary_analysis.gapes[:])
-	ltps.append(hf5.root.ancillary_analysis.ltps[:])
-	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:])
+	# Read only the post-stim data for the gapes and LTPs
+	gapes.append(hf5.root.ancillary_analysis.gapes[:, :, :, int(hf5.root.ancillary_analysis.pre_stim.read()):])
+	ltps.append(hf5.root.ancillary_analysis.ltps[:, :, :, int(hf5.root.ancillary_analysis.pre_stim.read()):])
+	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:, :, :, int(hf5.root.ancillary_analysis.pre_stim.read()):])
 	num_trials.append(np.array(hf5.root.MCMC_switch.inactivated_spikes[:]).shape[1] / num_tastes)
 	# Make lists to pull the switchpoints and converged_trials for this dataset
 	this_switchpoints = []
