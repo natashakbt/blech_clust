@@ -12,6 +12,7 @@ import identity_palatability_switch_EM as IPEM
 # Ask for the directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
 os.chdir(dir_name)
+print(str.split(dir_name, '/')[-1])
 
 # Look for the hdf5 file in the directory
 file_list = os.listdir('./')
@@ -185,7 +186,7 @@ n_cpu = int(params[3])
 # Laser off trials
 print("===========================================")
 print("Running laser off trials")
-# First changepoint happens between 200 tp 600 ms post taste
+# First changepoint happens between 200 to 600 ms post taste
 switchlim1 = [20, 60]
 # Second changepoint happens between changepoint1+200 and 1300ms post taste
 switchlim2 = [20, 130]
@@ -350,9 +351,10 @@ print("Laser late trials done")
 print("==========================================")
 
 # Save all these lists to the HDF5 file
-# Inactivated spikes is a homogeneously sized list, so it can be saved to the HDF5 file on its own
+# Inactivated spikes is a homogeneously sized list, so it can be saved to the HDF5 file on its own, so can the firing probabilities
 # All the arrays are homogenously sized in the EM case - however, they weren't when MCMC was being used for inference. That's why the old pattern of saving arrays persists
-hf5.create_array('/EM_switch', 'inactivated_spikes', inactivated_spikes)
+hf5.create_array('/EM_switch', 'inactivated_spikes', np.array(inactivated_spikes))
+hf5.create_array('/EM_switch', 'firing_probabilities', np.array(probs))
 # All the other need to be saved on a laser condition-by-condition basis
 hf5.create_group('/EM_switch', 'converged_trial_nums')
 hf5.create_group('/EM_switch', 'switchpoints')
