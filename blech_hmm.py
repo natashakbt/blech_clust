@@ -42,6 +42,9 @@ def multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, 
 
 def poisson_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
 
+	# Seed the random number generator
+	np.random.seed(seed)
+
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
 	states = []
@@ -93,6 +96,9 @@ def poisson_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inert
 	return model_json, log_prob, 2*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, (np.log(len(off_trials)*binned_spikes.shape[1]))*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, state_emissions, state_transitions, posterior_proba
 
 def poisson_hmm_feedforward(n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+
+	# Seed the random number generator
+	np.random.seed(seed)
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
@@ -152,6 +158,9 @@ def poisson_hmm_feedforward(n_states, threshold, binned_spikes, seed, off_trials
 	return model_json, log_prob, 2*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, (np.log(len(off_trials)*binned_spikes.shape[1]))*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, state_emissions, state_transitions, posterior_proba
 	
 def multinomial_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+
+	# Seed the random number generator
+	np.random.seed(seed)
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
