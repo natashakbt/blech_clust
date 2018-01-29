@@ -183,6 +183,12 @@ for i in range(len(bin_params)):
 discrim_p = easygui.multenterbox(msg = 'Enter the significance level to use for taste discrimination/responsiveness ANOVA', fields = ['p value'])
 discrim_p = float(discrim_p[0])
 
+# Make an array to save the 1 or 0 if the taste responsiveness ANOVA is significant or not (for comparison to CTA data from Grossman et al., 2008)
+# Last axis of the array stores the time bin markers of the responsiveness ANOVA
+taste_responsiveness = np.zeros((bin_params[0], num_units, 2))
+# Fill in the time bin markers
+taste_responsiveness[:, :, 1] = np.tile(np.array([bin_params[1]*i for i in range(bin_params[0])]).reshape((bin_params[0], 1)), (1, num_units))
+
 # Run through the bins, and find the neurons that have significantly different firing than baseline (-2000ms to 0ms) for any of the tastes in any of these bins
 responsive_neurons = []
 for i in range(bin_params[0]):
@@ -196,8 +202,10 @@ for i in range(bin_params[0]):
 			f = 0.0
 			p = 1.0
 		# If the ANOVA gives a significant p value, append the unit number to discriminating neurons
+		# Also add 1 for that unit in the taste_responsiveness array
 		if p <= discrim_p and (chosen_units[j] not in responsive_neurons):
 			responsive_neurons.append(chosen_units[j])
+			taste_responsiveness[i, j, 0] = 1
 responsive_neurons = np.sort(responsive_neurons)
 
 # Run through the bins, and find the neurons that have significantly different firing for any of the tastes in any of these bins
@@ -226,9 +234,10 @@ for neuron in responsive_neurons:
 	print(neuron, file=f)
 f.close()
 
-# Save the taste discriminating/responsive neurons to the hdf5 file	
+# Save the taste discriminating/responsive neurons and responsiveness array to the hdf5 file	
 hf5.create_array('/ancillary_analysis', 'taste_discriminating_neurons', discriminating_neurons)	
 hf5.create_array('/ancillary_analysis', 'taste_responsive_neurons', responsive_neurons)
+hf5.create_array('/ancillary_analysis', 'taste_responsiveness', taste_responsiveness)
 hf5.flush()	
 
 #---------End taste discriminability calculation-------------------------------------------------------------------

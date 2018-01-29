@@ -40,6 +40,7 @@ p_discriminability = []
 pre_stim = []
 params = []
 id_pal_regress = []
+taste_responsiveness = []
 num_units = 0
 for dir_name in dirs:
 	# Change to the directory
@@ -70,6 +71,7 @@ for dir_name in dirs:
 	pairwise_NB_identity.append(hf5.root.ancillary_analysis.pairwise_NB_identity[:])
 	p_discriminability.append(hf5.root.ancillary_analysis.p_discriminability[:])
 	id_pal_regress.append(hf5.root.ancillary_analysis.id_pal_regress[:])
+	taste_responsiveness.append(hf5.root.ancillary_analysis.taste_responsiveness[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
 	params.append(hf5.root.ancillary_analysis.params[:])
@@ -118,6 +120,7 @@ if len(laser_order) == 1:
 	pairwise_NB_identity = pairwise_NB_identity[0]
 	p_discriminability = p_discriminability[0]
 	id_pal_regress = id_pal_regress[0]
+	taste_responsiveness = taste_responsiveness[0]
 else:
 	r_pearson = np.concatenate(tuple(r_pearson[i][laser_order[i], :, :] for i in range(len(r_pearson))), axis = 2)
 	r_spearman = np.concatenate(tuple(r_spearman[i][laser_order[i], :, :] for i in range(len(r_spearman))), axis = 2)
@@ -125,6 +128,7 @@ else:
 	p_pearson = np.concatenate(tuple(p_pearson[i][laser_order[i], :, :] for i in range(len(p_pearson))), axis = 2)
 	p_spearman = np.concatenate(tuple(p_spearman[i][laser_order[i], :, :] for i in range(len(p_spearman))), axis = 2)
 	p_identity = np.concatenate(tuple(p_identity[i][laser_order[i], :, :] for i in range(len(p_identity))), axis = 2)
+	taste_responsiveness = np.concatenate(tuple(taste_responsiveness[i][:, :, :] for i in range(len(taste_responsiveness))), axis = 1)
 	id_pal_regress = np.concatenate(tuple(id_pal_regress[i][laser_order[i], :, :] for i in range(len(id_pal_regress))), axis = 2)
 	lda_palatability = np.stack(tuple(lda_palatability[i][laser_order[i], :] for i in range(len(lda_palatability))), axis = -1)
 	lda_identity = np.stack(tuple(lda_identity[i][laser_order[i], :] for i in range(len(lda_identity))), axis = -1)
@@ -177,6 +181,7 @@ np.save('taste_cosine_similarity.npy', taste_cosine_similarity)
 np.save('taste_euclidean_distance.npy', taste_euclidean_distance)
 #np.save('taste_mahalanobis_distance.npy', taste_mahalanobis_distance)
 np.save('p_discriminability.npy', p_discriminability)
+np.save('taste_responsiveness.npy', taste_responsiveness)
 
 # Plot the r_squared values together first (for the different laser conditions)
 fig = plt.figure()
@@ -505,6 +510,17 @@ for i in range(pairwise_NB_identity.shape[0]):
 		plt.tight_layout()
 		fig.savefig('Taste %i Pairwise Identity NB-Dur%i,Lag%i.png' % (j+1, unique_lasers[0][i, 0], unique_lasers[0][i, 1]), bbox_inches = 'tight')
 		plt.close("all")
+
+# Plot the fraction of taste responsive neurons across time bins - this does not pay attention to laser conditions (to look at CTA data as in Grossman et al., 2008)
+fig = plt.figure()
+plt.plot(taste_responsiveness[:, 0, 1], np.mean(taste_responsiveness[:, :, 0], axis = 1), linewidth = 3.0)
+plt.title('Units:%i' % (num_units))
+plt.xlabel('Time bin marker (ms)')	
+plt.ylabel('Fraction of significant neurons')
+plt.tight_layout()
+fig.savefig('taste_responsiveness_p_values.png', bbox_inches = 'tight')
+plt.close('all') 
+
 
 '''
 for i in range(taste_mahalanobis_distance.shape[0]):
