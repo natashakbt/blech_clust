@@ -8,7 +8,7 @@ import easygui
 import os
 import multiprocessing
 
-# Change to the directory that has the emg data files (env.npy and sig_trials.npy). Make a directory for storing the BSA results and change to it
+# Change to the directory that has the emg data files (env.npy and sig_trials.npy). Make a directory for storing the BSA results
 dir_name = easygui.diropenbox()
 os.chdir(dir_name)
 os.makedirs('emg_BSA_results')
@@ -44,6 +44,10 @@ f.close()
 f = open('blech_emg_jetstream_parallel1.sh', 'w')
 print("export OMP_NUM_THREADS=1", file = f)
 print("python emg_local_BSA_execute.py $1", file = f)
+f.close()
+# Finally dump a file with the data directory's location (blech.dir)
+f = open('blech.dir', 'w')
+print(dir_name, file = f)
 f.close()
 
 print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q all.q -ckpt reloc blech_emg.sh")
