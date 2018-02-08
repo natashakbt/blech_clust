@@ -18,7 +18,7 @@ pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time included in e
 pre_stim = int(pre_stim[0])
 
 # Get coefficients for Butterworth filters
-m, n = butter(2, [2.0*300.0/1000.0, 2.0*500.0/1000.0], 'bandpass')
+m, n = butter(2, 2.0*300.0/1000.0, 'highpass')
 c, d = butter(2, 2.0*15.0/1000.0, 'lowpass')
 
 # Bandpass filter the emg signals, and store them in a numpy array. Low pass filter the bandpassed signals, and store them in another array
