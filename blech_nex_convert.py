@@ -142,7 +142,8 @@ if emg_array.any():
 			if emg_sampling_rate > 1000.0:
 				data = resample(data, durations[0] + durations[1])
 
-			emg_data[0, i, j, :] = data[:, 0]
+			# Sometimes the data ends up being 1 sample more than durations[0] + durations[1], so correct that
+			emg_data[0, i, j, :] = data[:durations[0] + durations[1], 0]
 
 # Save the emg_data
 np.save('emg_data.npy', emg_data) 		
