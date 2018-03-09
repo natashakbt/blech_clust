@@ -150,6 +150,10 @@ for split in plot_switch:
 		gapes_before = [[] for i in range(num_tastes)]
 		gapes_after = [[] for i in range(num_tastes)]
 
+		# Also make list of lists to store the actual switchpoint times as well
+		switchpoint1 = [[] for i in range(num_tastes)]
+		switchpoint2 = [[] for i in range(num_tastes)]
+
 		# Now run through the datasets
 		for dataset in range(len(converged_trials)):
 			# Run through the converged trials in this dataset for this laser condition
@@ -161,14 +165,32 @@ for split in plot_switch:
 				# If the switchpoint on this trial is after the switchpoint split, append the data to gapes_after
 				else:
 					gapes_after[int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(gapes[dataset][laser, int(converged_trials[dataset][laser][trial]/num_trials[dataset]), int(converged_trials[dataset][laser][trial] % num_trials[dataset]), :])
+				
+				# Append the actual switchpoint times to the respective lists
+				# Correct the switchpoint if it happened after the laser - add the laser duration to the switchpoint in this case
+				# First check switchpoint 1 (identity switchpoint)
+				if switchpoints[dataset][laser][trial, 0]*10 > unique_lasers[dataset][laser, 1]:
+					switchpoint1[int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(switchpoints[dataset][laser][trial, 0]*10 + unique_lasers[dataset][laser, 0])
+				else:
+					switchpoint1[int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(switchpoints[dataset][laser][trial, 0]*10)
+				# Now check if switchpoint 2 happened after the laser onset
+				if switchpoints[dataset][laser][trial, 1]*10 > unique_lasers[dataset][laser, 1]:
+					switchpoint2[int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(switchpoints[dataset][laser][trial, 1]*10 + unique_lasers[dataset][laser, 0])
+				else:
+					switchpoint2[int(converged_trials[dataset][laser][trial]/num_trials[dataset])].append(switchpoints[dataset][laser][trial, 1]*10)
 
 		# Convert the gapes_before and gapes_after lists to numpy arrays
 		gapes_before = [np.array(gapes_before[i]) for i in range(num_tastes)]
 		gapes_after = [np.array(gapes_after[i]) for i in range(num_tastes)]
+		# Convert the switchpoint lists to arrays as well
+		switchpoint1 = [np.array(switchpoint1[i]) for i in range(num_tastes)] 
+		switchpoint2 = [np.array(switchpoint2[i]) for i in range(num_tastes)] 
 
 		# Save these lists in the plot directory
 		np.save("Gapes_before_{:d}_Dur{:d}_Lag{:d}.npy".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), gapes_before)
 		np.save("Gapes_after_{:d}_Dur{:d}_Lag{:d}.npy".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), gapes_after)
+		np.save("Switchpoint1_Dur{:d}_Lag{:d}.npy".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), switchpoint1)
+		np.save("Switchpoint2_Dur{:d}_Lag{:d}.npy".format(int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), switchpoint2)
 
 		# Now make the EMG plots for this laser condition and switchpoint split
 		# First plot all the tastes together (without error bars)
