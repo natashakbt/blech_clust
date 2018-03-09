@@ -56,15 +56,16 @@ f.close()
 # Assign the params to variables
 min_states = int(params[0])
 max_states = int(params[1])
-threshold = float(params[2])
-seeds = int(params[3])
-edge_inertia = float(params[4])
-dist_inertia = float(params[5])
-taste = int(params[6])
-pre_stim = int(params[7])
-bin_size = int(params[8])
-pre_stim_hmm = int(params[9])
-post_stim_hmm = int(params[10])
+max_iterations = int(params[2])
+threshold = float(params[3])
+seeds = int(params[4])
+edge_inertia = float(params[5])
+dist_inertia = float(params[6])
+taste = int(params[7])
+pre_stim = int(params[8])
+bin_size = int(params[9])
+pre_stim_hmm = int(params[10])
+post_stim_hmm = int(params[11])
 
 # Read the chosen units
 f = open(units_file, 'r')
@@ -100,7 +101,7 @@ off_trials = np.arange(binned_spikes.shape[0])
 for n_states in range(min_states, max_states + 1):
 	# Run the Multinomial HMM - skip it if it doesn't converge
 	try:
-		result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia)
+		result = multinomial_hmm_implement(n_states, threshold, max_iterations, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia)
 		hmm_results.append((n_states, result))
 	except:
 		continue
@@ -194,7 +195,7 @@ if len(laser_exists) > 0:
 	for n_states in range(min_states, max_states + 1):
 		# Run Multinomial HMM - skip if it doesn't converge
 		try:
-			result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia)
+			result = multinomial_hmm_implement(n_states, threshold, max_iterations, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia)
 			hmm_results.append((n_states, result))
 		except:
 			continue
