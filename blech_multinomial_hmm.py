@@ -280,7 +280,7 @@ if len(laser_exists) > 0:
 	for n_states in range(min_states, max_states + 1):
 		# Run Multinomial HMM - skip if it doesn't converge
 		try:
-			result = multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
+			result = multinomial_hmm_implement(n_states, threshold, max_iterations, seeds, n_cpu, binned_spikes, on_trials, edge_inertia, dist_inertia)
 			hmm_results.append((n_states, result))
 		except:
 			continue
