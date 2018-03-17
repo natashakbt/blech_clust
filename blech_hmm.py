@@ -35,10 +35,18 @@ def multinomial_hmm_implement(n_states, threshold, max_iterations, seeds, n_cpu,
 	results = [pool.apply_async(multinomial_hmm, args = (n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 	output = [p.get() for p in results]
 
+	# Remove any threads that didn't converge - these will have NaN's as the log likelihood
+	cleaned_output = []
+	for i in range(len(output)):
+		if math.isnan(output[i][1]):
+			continue
+		else:
+			cleaned_output.append(output[i])
+
 	# Find the process that ended up with the highest log likelihood, and return it as the solution. If several processes ended up with the highest log likelihood, just pick the earliest one
-	log_probs = [output[i][1] for i in range(len(output))]
+	log_probs = [cleaned_output[i][1] for i in range(len(cleaned_output))]
 	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
-	return output[maximum_pos]		
+	return cleaned_output[maximum_pos]		
 
 def poisson_hmm(n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
 
