@@ -41,15 +41,36 @@ def fit(data, identity, palatability, iterations, threshold, switchlim1, switchl
 	switchpoints = np.array([[i, j] for i in range(switchlim1[0], switchlim1[1], 1) for j in range(i + switchlim2[0], switchlim2[1], 1)])
 	states = find_states(identity, palatability, switchpoints, data)
 	logp_list = []
+	loglik_list = []
+	exp_loglik_list = []
 	converged = 0
 	for i in range(iterations):
 		switches = []
-		this_logp = 0
 		loglik_list = logp(data, p, states)
+
+		# Initially, we used the max/mode of the probability of the switchpoints given the p and the data
+		# Now we will work with the mean of that probability instead	
 		max_loglik = np.argmax(loglik_list, axis = 1)
 		logp_list.append(np.sum(np.max(loglik_list, axis = 1)))
 		switches = switchpoints[max_loglik, :]
+		max_states = states[np.arange(data.shape[0]), max_loglik, :]
 
+		# loglik_list is shaped # trials x # of putative switchpoints. We first exponentiate the logprobs to probs, then scale/normalize across the putative switchpoints to get the posterior probability of the switchpoints given the data and p
+		exp_loglik_list = np.exp(loglik_list)
+		exp_loglik_list /= np.tile(np.sum(exp_loglik_list, axis = 1).reshape(loglik_list.shape[0], 1), (1, loglik_list.shape[1]))
+		# Find the mean switchpoints for every trial by multiplying the array of switchpoints by their posterior probabilities in exp_loglik_list - recast to integers
+#		mean_switches = np.sum(np.tile(exp_loglik_list.reshape(loglik_list.shape[0], loglik_list.shape[1], 1), (1, 1, 2))*np.tile(switchpoints.reshape(1, switchpoints.shape[0], switchpoints.shape[1]), (loglik_list.shape[0], 1, 1)), axis = 1).astype('int')
+		
+		# Now find the state sequence given by these mean switchpoints
+		# We can use the find_states func, but with a twist. The find_states func first finds the state sequence determined by each input pair of switchpoints for every trial
+		# So it gives us an array of shape # trials x # switchpoints x time
+#		mean_states = find_states(identity, palatability, mean_switches, data)
+		# But we know that the switchpoints we are feeding in here are specific to trials - so switchpoint 1 corresponds to trial 1 and so on. So we associate the switchpoints that way and get an array of shape # trials X time
+#		mean_states = np.array([mean_states[trial, trial, :] for trial in range(mean_states.shape[0])])
+		# Now we get the log likelihood of the data with these mean switchpoints using the logp function
+		# We need to get mean_states into a comparable shape as the states array which is usually fed into logp. So we add an axis in the middle of mean_states
+#		logp_list.append(np.sum(logp(data, p, mean_states.reshape(mean_states.shape[0], 1, mean_states.shape[1]))))
+		
 #		for trial in range(data.shape[0]):
 #			logp_max, switches_max = E_step(data[trial], identity[trial], palatability[trial], switchlim1, switchlim2, p)
 #			states = find_states(identity[trial], palatability[trial], switchpoints, data.shape[1])
@@ -61,7 +82,7 @@ def fit(data, identity, palatability, iterations, threshold, switchlim1, switchl
 #		switches = np.array(switches).astype('int')
 #		logp_list.append(this_logp)
 
-		max_states = states[np.arange(data.shape[0]), max_loglik, :] 
+ 
 		p_numer = np.zeros((num_states, num_emissions))
 		# Concatenate the logp maximizing state sequence and data together, and then find the counts of the (state, emission) pairs
 		unique_pairs, unique_counts = np.unique(np.vstack((max_states.flatten(), data.flatten())), axis = 1, return_counts = True)
@@ -86,28 +107,27 @@ def fit(data, identity, palatability, iterations, threshold, switchlim1, switchl
 #		Add a small number to the probabilities in case one of them is 0 - in that case, calculating logs gives "DivideByZeroError"
 #		p = normalize_p(p + 1e-14)
 	
-		if i > 0 and np.abs(logp_list[-1] - logp_list[-2]) < threshold:
+		if i > 1 and np.abs(logp_list[-1] - logp_list[-2]) < threshold:
 			converged = 1
 			break
-		
-	return logp_list, p, switches, converged
+
+	return logp_list, p, switches, converged, exp_loglik_list, switchpoints
 
 def implement_EM(restarts, n_cpu, data, identity, palatability, iterations, threshold, switchlim1, switchlim2, num_states, num_emissions):
 	pool = mp.Pool(processes = n_cpu)
 
-	results = [pool.apply_async(fit, args = (data, identity, palatability, iterations, threshold, switchlim1, switchlim2, num_states, num_emissions, restart,)) for restart in range(restarts)]
+	results = [pool.apply_async(fit, args = (data, identity, palatability, iterations, threshold, switchlim1, switchlim2, num_states, num_emissions, restart,)) for restart in range(restarts[0], restarts[1])]
 	output = [result.get() for result in results]
 
 	converged_seeds = np.array([i for i in range(len(output)) if output[i][3] == 1])
 	if len(converged_seeds) == 0:
-		print("Another round of {:d} seeds running as none converged the first time round".format(restarts))
-		implement_EM(restarts, n_cpu, data, identity, palatability, iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
+		print("Another round of {:d} seeds running as none converged the first time round".format(restarts[1]))
+		rand_int = np.random.randint(1, 10)
+		implement_EM((rand_int*restarts[1], (rand_int + 1)*restarts[1]), n_cpu, data, identity, palatability, iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
 	else:
 		logprobs = np.array([output[i][0][-1] for i in range(len(output))])
 		max_logprob = np.argmax(logprobs[converged_seeds])
-		return logprobs[converged_seeds[max_logprob]], output[converged_seeds[max_logprob]][1], output[converged_seeds[max_logprob]][2]
-
-	
+		return output[converged_seeds[max_logprob]][0], output[converged_seeds[max_logprob]][1], output[converged_seeds[max_logprob]][2], output[converged_seeds[max_logprob]][4], output[converged_seeds[max_logprob]][5]
 
 	
 

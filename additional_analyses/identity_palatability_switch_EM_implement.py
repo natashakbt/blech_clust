@@ -170,6 +170,11 @@ firing = []
 # Another list to save the spiking data with the laser inactivations taken into account
 inactivated_spikes = []
 
+# More lists to save 1.) the (posterior) probability that the palatability switchpoint came before the laser came on, 2.) posterior probability of the switchpoints, 3.) entire array of potential switchpoints
+p_pal_before_laser = [] 
+posterior_prob_switchpoints = []
+switchpoint_array = []
+
 # Now run the EM inference for every laser condition
 # This model assumes 7 states of firing - 1 detection, 2 identity, 4 palatability
 # Also assumes 2 switchpoints - first from detection to identity, then from identity to palatability
@@ -183,6 +188,12 @@ threshold = float(params[1])
 restarts = int(params[2])
 n_cpu = int(params[3])
 
+# Save these parameters in a file for later reference
+f = open("identity_palatability_switch_EM_params.txt", "w")
+for param in params:
+	print(param, file = f)
+f.close()
+
 # Laser off trials
 print("===========================================")
 print("Running laser off trials")
@@ -190,7 +201,7 @@ print("Running laser off trials")
 switchlim1 = [20, 60]
 # Second changepoint happens between changepoint1+200 and 1300ms post taste
 switchlim2 = [20, 130]
-logprob, p, switches = IPEM.implement_EM(restarts, n_cpu, spikes_cat[0, :, :150], identity[0, :], palatability[0, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
+logprob, p, switches, posterior_prob, switchpoint_list = IPEM.implement_EM((0, restarts), n_cpu, spikes_cat[0, :, :150], identity[0, :], palatability[0, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -202,6 +213,13 @@ this_firing = []
 inactivated_spikes.append(spikes[0, :, :150, :])
 # Append the converged firing probabilities to the main list
 probs.append(p)
+# Append the posterior probabilities of the switchpoints to the main list
+posterior_prob_switchpoints.append(posterior_prob)
+# Append the list of switchpoints to the main list
+switchpoint_array.append(switchpoint_list)
+
+# This is the laser off condition, so there's 0 probability of palatability switchpoint happening before lasers came on
+p_pal_before_laser.append(np.zeros(spikes_cat.shape[1]))
 
 # Run through the trials in this condition
 for i in range(num_trials):
@@ -232,7 +250,7 @@ print("Running laser early trials")
 switchlim1 = [10, 60]
 # Second changepoint happens between changepoint1+200 and 1300ms post start of trial
 switchlim2 = [20, 130]
-logprob, p, switches = IPEM.implement_EM(restarts, n_cpu, spikes_cat[1, :, 50:200], identity[1, :], palatability[1, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
+logprob, p, switches, posterior_prob, switchpoint_list = IPEM.implement_EM((0, restarts), n_cpu, spikes_cat[1, :, 50:200], identity[1, :], palatability[1, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -244,6 +262,13 @@ this_firing = []
 inactivated_spikes.append(spikes[1, :, 50:200, :])
 # Append the converged firing probabilities to the main list
 probs.append(p)
+# Append the posterior probabilities of the switchpoints to the main list
+posterior_prob_switchpoints.append(posterior_prob)
+# Append the list of switchpoints to the main list
+switchpoint_array.append(switchpoint_list)
+
+# This is the laser early condition, so there's 0 probability of palatability switchpoint happening before lasers came on
+p_pal_before_laser.append(np.zeros(spikes_cat.shape[1]))
 
 # Run through the trials in this condition
 for i in range(num_trials):
@@ -274,7 +299,7 @@ print("Running laser middle trials")
 switchlim1 = [20, 60]
 # Second changepoint happens between changepoint1+100 and 1300ms post start of trial
 switchlim2 = [10, 130]
-logprob, p, switches = IPEM.implement_EM(restarts, n_cpu, np.concatenate((spikes_cat[2, :, :70], spikes_cat[2, :, 120:200]), axis = 1), identity[2, :], palatability[2, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
+logprob, p, switches, posterior_prob, switchpoint_list = IPEM.implement_EM((0, restarts), n_cpu, np.concatenate((spikes_cat[2, :, :70], spikes_cat[2, :, 120:200]), axis = 1), identity[2, :], palatability[2, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -286,6 +311,14 @@ this_firing = []
 inactivated_spikes.append(np.concatenate((spikes[2, :, :70, :], spikes[2, :, 120:200, :]), axis = 1))
 # Append the converged firing probabilities to the main list
 probs.append(p)
+# Append the posterior probabilities of the switchpoints to the main list
+posterior_prob_switchpoints.append(posterior_prob)
+# Append the list of switchpoints to the main list
+switchpoint_array.append(switchpoint_list)
+
+# This is the laser middle condition - find the probability that the palatability switchpoint came before 700ms (or 70 time points)
+switchpoints_before_laser = np.where(switchpoint_list[:, 1] <= 70.0)[0]
+p_pal_before_laser.append(np.sum(posterior_prob[:, switchpoints_before_laser], axis = 1))
 
 # Run through the trials in this condition
 for i in range(num_trials):
@@ -316,7 +349,7 @@ print("Running laser late trials")
 switchlim1 = [20, 60]
 # Second changepoint happens between changepoint1+200 and 1300ms post start of trial
 switchlim2 = [20, 130]
-logprob, p, switches = IPEM.implement_EM(restarts, n_cpu, np.concatenate((spikes_cat[3, :, :140], spikes_cat[3, :, 190:200]), axis = 1), identity[3, :], palatability[3, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
+logprob, p, switches, posterior_prob, switchpoint_list = IPEM.implement_EM((0, restarts), n_cpu, np.concatenate((spikes_cat[3, :, :140], spikes_cat[3, :, 190:200]), axis = 1), identity[3, :], palatability[3, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
 
 # Make a list to save the converged trial numbers and switchpoints for this laser condition
 this_converged_trial_nums = []
@@ -328,6 +361,14 @@ this_firing = []
 inactivated_spikes.append(np.concatenate((spikes[3, :, :140, :], spikes[3, :, 190:200, :]), axis = 1))
 # Append the converged firing probabilities to the main list
 probs.append(p)
+# Append the posterior probabilities of the switchpoints to the main list
+posterior_prob_switchpoints.append(posterior_prob)
+# Append the list of switchpoints to the main list
+switchpoint_array.append(switchpoint_list)
+
+# This is the laser late condition - find the probability that the palatability switchpoint came before 1400ms (or 140 time points)
+switchpoints_before_laser = np.where(switchpoint_list[:, 1] <= 140.0)[0]
+p_pal_before_laser.append(np.sum(posterior_prob[:, switchpoints_before_laser], axis = 1))
 
 # Run through the trials in this condition
 for i in range(num_trials):
@@ -355,17 +396,23 @@ print("==========================================")
 # All the arrays are homogenously sized in the EM case - however, they weren't when MCMC was being used for inference. That's why the old pattern of saving arrays persists
 hf5.create_array('/EM_switch', 'inactivated_spikes', np.array(inactivated_spikes))
 hf5.create_array('/EM_switch', 'firing_probabilities', np.array(probs))
+# Also save the probability for the palatability state coming in before the laser inactivation started
+hf5.create_array('/EM_switch', 'palatability_before_laser_probability', np.array(p_pal_before_laser))
 # All the other need to be saved on a laser condition-by-condition basis
 hf5.create_group('/EM_switch', 'converged_trial_nums')
 hf5.create_group('/EM_switch', 'switchpoints')
 hf5.create_group('/EM_switch', 'converged_trial_palatability')
 hf5.create_group('/EM_switch', 'converged_trial_firing')
+hf5.create_group('/EM_switch', 'posterior_prob_switchpoints')
+hf5.create_group('/EM_switch', 'potential_switchpoints')
 # Now run through the laser conditions and save the arrays for that condition to file
 for laser in range(len(inactivated_spikes)):
 	hf5.create_array('/EM_switch/converged_trial_nums', 'laser_condition_{:d}'.format(laser), converged_trial_nums[laser])
 	hf5.create_array('/EM_switch/switchpoints', 'laser_condition_{:d}'.format(laser), switchpoints[laser])
 	hf5.create_array('/EM_switch/converged_trial_palatability', 'laser_condition_{:d}'.format(laser), pal[laser])
 	hf5.create_array('/EM_switch/converged_trial_firing', 'laser_condition_{:d}'.format(laser), firing[laser])
+	hf5.create_array('/EM_switch/posterior_prob_switchpoints', 'laser_condition_{:d}'.format(laser), posterior_prob_switchpoints[laser])
+	hf5.create_array('/EM_switch/potential_switchpoints', 'laser_condition_{:d}'.format(laser), switchpoint_array[laser])
 hf5.flush()
 
 # ---------------------------Palatability correlation calculation---------------------------------------------------
