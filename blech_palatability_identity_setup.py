@@ -266,43 +266,45 @@ hf5.flush()
 
 #---------Palatability rank order deduction-----------------------------------------------------------------------------------
 # Use the mean firing of neurons in a user-defined time bin (usually 700-1200ms) and find the rank order of palatabilities that gives the highest linear/Pearson correlation
+# Do the analysis only if there are 4 tastes in the dataset
 
-# Ask the user for the limits of the bin to use for palatability deduction
-p_deduce_params = easygui.multenterbox(msg = 'Enter the start and end times to use for palatability deduction', fields = ['Start time (ms)', 'End time (ms)'])
-for i in range(len(p_deduce_params)):
-	p_deduce_params[i] = int(p_deduce_params[i])
+if num_tastes == 4:
+	# Ask the user for the limits of the bin to use for palatability deduction
+	p_deduce_params = easygui.multenterbox(msg = 'Enter the start and end times to use for palatability deduction', fields = ['Start time (ms)', 'End time (ms)'])
+	for i in range(len(p_deduce_params)):
+		p_deduce_params[i] = int(p_deduce_params[i])
 
-# Open a file to write the results of palatability deduction
-f = open('palatability_deduction.txt', 'w')
+	# Open a file to write the results of palatability deduction
+	f = open('palatability_deduction.txt', 'w')
 
-# The basic possible palatability patterns - permutations of these give all possible palatability rank orders
-base_p_patterns = [[1, 1, 1, 1], [1, 1, 1, 2], [1, 1, 2, 2], [1, 1, 2, 3], [1, 2, 2, 3], [1, 2, 3, 4]]
+	# The basic possible palatability patterns - permutations of these give all possible palatability rank orders
+	base_p_patterns = [[1, 1, 1, 1], [1, 1, 1, 2], [1, 1, 2, 2], [1, 1, 2, 3], [1, 2, 2, 3], [1, 2, 3, 4]]
 
-# Find the times/places from the neural_response_laser array that we need in the analysis
-x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
-places = np.where((x >= p_deduce_params[0])*(x <= p_deduce_params[1]))[0]
+	# Find the times/places from the neural_response_laser array that we need in the analysis
+	x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
+	places = np.where((x >= p_deduce_params[0])*(x <= p_deduce_params[1]))[0]
 
-# Run through the laser conditions
-for i in range(unique_lasers.shape[0]):
-	print("Laser condition: ", unique_lasers[i, :], file=f)
-	# Run through the basic palatability patterns	
-	for pattern in base_p_patterns:
-		order = []
-		corrs = []
-		# Run through all permutations of this pattern
-		for per in itertools.permutations(pattern):
-			order.append(per)
-			this_corr = []
-			# Run through the units
-			for unit in range(num_units):
-				# Get correlation for 1.) ith laser condition, 2.) in times indicated by places, 3.) for this unit, and 4.) this permutation of the basic pattern
-				this_corr.append(pearsonr(np.mean(neural_response_laser[i, places, :, unit, :], axis = 0).T.reshape(-1), np.tile(per, neural_response_laser.shape[-1]))[0]**2)
-			corrs.append(np.mean(this_corr))
-		# Now get the order with the maximum average correlation across units
-		print("Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs), file=f)
-	print("", file=f)
+	# Run through the laser conditions
+	for i in range(unique_lasers.shape[0]):
+		print("Laser condition: ", unique_lasers[i, :], file=f)
+		# Run through the basic palatability patterns	
+		for pattern in base_p_patterns:
+			order = []
+			corrs = []
+			# Run through all permutations of this pattern
+			for per in itertools.permutations(pattern):
+				order.append(per)
+				this_corr = []
+				# Run through the units
+				for unit in range(num_units):
+					# Get correlation for 1.) ith laser condition, 2.) in times indicated by places, 3.) for this unit, and 4.) this permutation of the basic pattern
+					this_corr.append(pearsonr(np.mean(neural_response_laser[i, places, :, unit, :], axis = 0).T.reshape(-1), np.tile(per, neural_response_laser.shape[-1]))[0]**2)
+				corrs.append(np.mean(this_corr))
+			# Now get the order with the maximum average correlation across units
+			print("Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs), file=f)
+		print("", file=f)
 
-f.close()
+	f.close()
 		
 #---------End palatability rank order deduction--------------------------------------------------------------------
 
