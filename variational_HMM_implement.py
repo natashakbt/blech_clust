@@ -31,15 +31,7 @@ def implement_categorical(data = None, restarts = None, num_states = None, num_e
 def run_categorical(data = None, num_states = None, num_emissions = None, restart = None, max_iter = None, threshold = None):
 	np.random.seed(restart)
 	model_MAP = dhmm.CategoricalHMM(num_states = num_states, num_emissions = num_emissions, max_iter = max_iter, threshold = threshold)
-	initial_transitions = np.zeros((num_states, num_states))
-	for i in range(num_states):
-		not_transitioning_prob = (0.999-0.95)*np.random.random() + 0.95
-		for j in range(num_states):
-			if i==j:
-				initial_transitions[i, j] = not_transitioning_prob
-			else:
-				initial_transitions[i, j] = float((1.0 - not_transitioning_prob)/(num_states - 1))
-	model_MAP.fit(data = data, p_transitions = initial_transitions, p_emissions = np.random.random((num_states, num_emissions)), p_start = np.random.random(num_states), \
+	model_MAP.fit(data = data, p_transitions = np.random.random((num_states, num_states)), p_emissions = np.random.random((num_states, num_emissions)), p_start = np.random.random(num_states), \
 transition_pseudocounts = np.random.random((num_states, num_states)), emission_pseudocounts = np.random.random((num_states, num_emissions)), start_pseudocounts = np.random.random(num_states), verbose = False)
 
 	model_VI = vhmm.CategoricalHMM(num_states = num_states, num_emissions = num_emissions, max_iter = max_iter, threshold = threshold)
