@@ -5,6 +5,7 @@ import easygui
 import ast
 import pylab as plt
 from sklearn.mixture import GaussianMixture
+import blech_waveforms_datashader
 
 # Get directory where the hdf5 file sits, and change to that directory
 dir_name = easygui.diropenbox()
@@ -128,15 +129,21 @@ while True:
 		# Show the cluster plots if the solution converged
 		if g.converged_:
 			split_predictions = g.predict(data)
-			x = np.arange(len(spike_waveforms[0])/10)
+			x = np.arange(len(spike_waveforms[0])/10) + 1
 			for cluster in range(n_clusters):
 				split_points = np.where(split_predictions == cluster)[0]				
-				plt.figure(cluster)
-				slices_dejittered = spike_waveforms[this_cluster, ::10]
-				plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
-				plt.xlabel('Time')
-				plt.ylabel('Voltage (microvolts)')
-				plt.title('Split Cluster{:d}, Number of waveforms={:d}'.format(cluster, split_points.shape[0]))
+				# plt.figure(cluster)
+				slices_dejittered = spike_waveforms[this_cluster, :]		# Waveforms and times from the chosen cluster
+				times_dejittered = spike_times[this_cluster]
+				times_dejittered = times_dejittered[split_points]		# Waveforms and times from the chosen split of the chosen cluster
+				ISIs = np.ediff1d(np.sort(times_dejittered))/30.0
+				violations1 = 100.0*float(np.sum(ISIs < 1.0)/split_points.shape[0])
+				violations2 = 100.0*float(np.sum(ISIs < 2.0)/split_points.shape[0])
+				fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[split_points, :], x)
+				# plt.plot(x-15, slices_dejittered[split_points, :].T, linewidth = 0.01, color = 'red')
+				ax.set_xlabel('Sample (30 samples per ms)')
+				ax.set_ylabel('Voltage (microvolts)')
+				ax.set_title("Split Cluster{:d}, 2ms ISI violations={:.1f} percent".format(cluster, violations2) + "\n" + "1ms ISI violations={:.1f}%, Number of waveforms={:d}".format(violations1, split_points.shape[0]))
 		else:
 			print("Solution did not converge - try again with higher number of iterations or lower convergence criterion")
 			continue
@@ -145,18 +152,25 @@ while True:
 		# Ask the user for the split clusters they want to choose
 		chosen_split = easygui.multchoicebox(msg = 'Which split cluster do you want to choose? Hit cancel to exit', choices = tuple([str(i) for i in range(n_clusters)]))
 		try:
-			chosen_split = int(chosen_split[0])
+			#chosen_split = int(chosen_split[0])
+			chosen_split = [int(chosen_split[i]) for i in range(len(chosen_split))]
+			split_merge = False
+			if len(chosen_split) > 1:
+				split_merge = easygui.multchoicebox(msg = 'I want to merge these splited-clusters into one unit (True = Yes, False = No)', choices = ('True', 'False'))
+				split_merge = ast.literal_eval(split_merge[0])
+           
 		except:
 			continue
+
 
 	# Get list of existing nodes/groups under /sorted_units
 	node_list = hf5.list_nodes('/sorted_units')
 
-	# If node_list is empty, start naming units from 001
+	# If node_list is empty, start naming units from 000
 	unit_name = ''
 	max_unit = 0
 	if node_list == []:		
-		unit_name = 'unit%03d' % 1
+		unit_name = 'unit%03d' % 0
 	# Else name the new unit by incrementing the last unit by 1 
 	else:
 		unit_numbers = []
@@ -172,25 +186,76 @@ while True:
 
 	# If the user re-clustered/split clusters, add the chosen clusters in split_clusters
 	if re_cluster:
-		hf5.create_group('/sorted_units', unit_name)
-		unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]	# Waveforms of originally chosen cluster
-		unit_waveforms = unit_waveforms[np.where(split_predictions == chosen_split)[0], :]	# Subsetting this set of waveforms to include only the chosen split
-		unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]			# Do the same thing for the spike times
-		unit_times = unit_times[np.where(split_predictions == chosen_split)[0]]
-		waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-		times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
-		unit_description['electrode_number'] = electrode_num
-		single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
-		unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
-		# If the user says that this is a single unit, ask them whether its regular or fast spiking
-		unit_description['regular_spiking'] = 0
-		unit_description['fast_spiking'] = 0
-		if int(ast.literal_eval(single_unit[0])):
-			unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
-			unit_description[unit_type[0]] = 1		
-		unit_description.append()
-		table.flush()
-		hf5.flush()
+		if split_merge:
+			unit_waveforms = []
+			unit_times = []
+			cluster_unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]
+			cluster_unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
+			for cluster_ in chosen_split:
+				if unit_waveforms == []:
+					unit_waveforms = cluster_unit_waveforms[np.where(split_predictions == cluster_)[0], :]
+					unit_times = cluster_unit_times[np.where(split_predictions == cluster_)[0]]
+				else:
+					unit_waveforms = np.concatenate((unit_waveforms, cluster_unit_waveforms[np.where(split_predictions == cluster_)[0], :]))
+					unit_times = np.concatenate((unit_times, cluster_unit_times[np.where(split_predictions == cluster_)[0]]))
+
+			# Show the merged cluster to the user, and ask if they still want to merge
+			x = np.arange(len(unit_waveforms[0])/10) + 1
+			fig, ax = blech_waveforms_datashader.waveforms_datashader(unit_waveforms, x)
+			# plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+			ax.set_xlabel('Sample (30 samples per ms)')
+			ax.set_ylabel('Voltage (microvolts)')
+			ax.set_title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
+			plt.show()
+ 
+			# Warn the user about the frequency of ISI violations in the merged unit
+			ISIs = np.ediff1d(np.sort(unit_times))/30.0
+			violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
+			violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
+			proceed = easygui.multchoicebox(msg = 'My merged cluster has %.1f percent (<2ms) and %.1f percent (<1ms) ISI violations out of %i total waveforms. I want to still merge these clusters into one unit (True = Yes, False = No)' % (violations2, violations1, len(unit_times)), choices = ('True', 'False'))
+			proceed = ast.literal_eval(proceed[0])
+
+			# Create unit if the user agrees to proceed, else abort and go back to start of the loop 
+			if proceed:	
+				hf5.create_group('/sorted_units', unit_name)
+				waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+				times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+				unit_description['electrode_number'] = electrode_num
+				single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
+				unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+				# If the user says that this is a single unit, ask them whether its regular or fast spiking
+				unit_description['regular_spiking'] = 0
+				unit_description['fast_spiking'] = 0
+				if int(ast.literal_eval(single_unit[0])):
+					unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
+					unit_description[unit_type[0]] = 1
+				unit_description.append()
+				table.flush()
+				hf5.flush()
+			else:
+				continue
+
+		else:#if not split_merge:
+			hf5.create_group('/sorted_units', unit_name)
+			unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]	# Waveforms of originally chosen cluster
+			unit_waveforms = unit_waveforms[np.where(split_predictions == chosen_split[0])[0], :]	# Subsetting this set of waveforms to include only the chosen split
+			unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]			# Do the same thing for the spike times
+			unit_times = unit_times[np.where(split_predictions == chosen_split[0])[0]]
+			waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+			times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+			unit_description['electrode_number'] = electrode_num
+			single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
+			unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
+			# If the user says that this is a single unit, ask them whether its regular or fast spiking
+			unit_description['regular_spiking'] = 0
+			unit_description['fast_spiking'] = 0
+			if int(ast.literal_eval(single_unit[0])):
+				unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
+				unit_description[unit_type[0]] = 1		
+			unit_description.append()
+			table.flush()
+			hf5.flush()
+
 		
 
 	# If only 1 cluster was chosen (and it wasn't split), add that as a new unit in /sorted_units. Ask if the isolated unit is an almost-SURE single unit
@@ -213,6 +278,7 @@ while True:
 		table.flush()
 		hf5.flush()
 
+
 	else:
 		# If the chosen units are going to be merged, merge them
 		if merge:
@@ -227,17 +293,19 @@ while True:
 					unit_times = np.concatenate((unit_times, spike_times[np.where(predictions == int(cluster))[0]]))
 
 			# Show the merged cluster to the user, and ask if they still want to merge
-			x = np.arange(len(unit_waveforms[0])/10)
-			plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
-			plt.xlabel('Time (30 samples per ms)')
-			plt.ylabel('Voltage (microvolts)')
-			plt.title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
+			x = np.arange(len(unit_waveforms[0])/10) + 1
+			fig, ax = blech_waveforms_datashader.waveforms_datashader(unit_waveforms, x)
+			# plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+			ax.set_xlabel('Sample (30 samples per ms)')
+			ax.set_ylabel('Voltage (microvolts)')
+			ax.set_title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
 			plt.show()
  
 			# Warn the user about the frequency of ISI violations in the merged unit
 			ISIs = np.ediff1d(np.sort(unit_times))/30.0
-			violations = np.where(ISIs < 2.0)[0]
-			proceed = easygui.multchoicebox(msg = 'My merged cluster has %f percent (%i/%i) ISI violations (<2ms). I want to still merge these clusters into one unit (True = Yes, False = No)' % ((float(len(violations))/float(len(unit_times)))*100.0, len(violations), len(unit_times)), choices = ('True', 'False'))
+			violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
+			violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
+			proceed = easygui.multchoicebox(msg = 'My merged cluster has %.1f percent (<2ms) and %.1f percent (<1ms) ISI violations out of %i total waveforms. I want to still merge these clusters into one unit (True = Yes, False = No)' % (violations2, violations1, len(unit_times)), choices = ('True', 'False'))
 			proceed = ast.literal_eval(proceed[0])
 
 			# Create unit if the user agrees to proceed, else abort and go back to start of the loop 
