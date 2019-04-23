@@ -65,6 +65,7 @@ else:
 	sys.exit()
 
 # Now first set the ordering of laser trials straight across data files
+# We don't really need to do this as the laser conditions have already been sorted into order when the ancillary analysis node was made
 laser_order = []
 for i in range(len(unique_lasers)):
 	# The first file defines the order	
@@ -116,16 +117,18 @@ for i in range(len(unique_lasers)):
 	for condition in range(unique_lasers[i].shape[0]):
 		laser_condition[(laser[i][analyze_indices, :, :, 0].flatten() == unique_lasers[i][laser_order[i][condition]][0])*(laser[i][analyze_indices, :, :, 1].flatten() == unique_lasers[i][laser_order[i][condition]][1])] = condition
 
-	# Standardize the firing/response data by the mean firing for every neuron in every time bin	
-	this_response_mean = np.tile(np.mean(unscaled_neural_response[i][analyze_indices, :, :], axis = -1).reshape((len(analyze_indices), unscaled_neural_response[i].shape[1], 1)), (1, 1, unscaled_neural_response[i].shape[2]))
-	this_response_std = np.tile(np.std(unscaled_neural_response[i][analyze_indices, :, :], axis = -1).reshape((len(analyze_indices), unscaled_neural_response[i].shape[1], 1)), (1, 1, unscaled_neural_response[i].shape[2]))
-	this_response = (unscaled_neural_response[i][analyze_indices, :, :] - this_response_mean)/this_response_std  
+	# Standardize the firing/response data by the mean firing for every neuron in every time bin - multiply by the sign of the average spearman correlation here	
+	this_response_mean = np.tile(np.mean(unscaled_neural_response[i][analyze_indices, :, :]*sign_corr, axis = -1).reshape((len(analyze_indices), unscaled_neural_response[i].shape[1], 1)), (1, 1, unscaled_neural_response[i].shape[2]))
+	this_response_std = np.tile(np.std(unscaled_neural_response[i][analyze_indices, :, :]*sign_corr, axis = -1).reshape((len(analyze_indices), unscaled_neural_response[i].shape[1], 1)), (1, 1, unscaled_neural_response[i].shape[2]))
+	this_response = (unscaled_neural_response[i][analyze_indices, :, :]*sign_corr - this_response_mean)/this_response_std
+	# If the firing on all trials in a time bin is zero, its std would be 0 and that would give nans in this_response. Change nans to 0 if they occur
+	this_response[np.isnan(this_response)] = 0.0 
 
 	# Now append these data to the respective arrays
 	time.append(this_time.flatten())
 	neuron.append(this_neurons.flatten())
 	palatability_array.append(palatability[i][analyze_indices, :, :].flatten())
-	response_array.append(this_response.flatten()*sign_corr.flatten())
+	response_array.append(this_response.flatten())
 	laser_array.append(laser_condition)
 
 # Now make a pandas dataframe with the data. (Subtract 1 from the palatability array to index palatabilities from 0 - not doing this since there are no main effects in the model anymore)
@@ -152,7 +155,7 @@ with pm.Model() as model:
 	obs = pm.Normal("obs", mu = regression, sd = sd, observed = firing_data["Firing"])
 
 	# Metropolis sampling works best!
-	tr = pm.sample(tune = 10000, draws = 50000, njobs = 4, start = pm.find_MAP(), step = pm.Metropolis())
+	tr = pm.sample(tune = 10000, draws = 50000, cores = 4, start = pm.find_MAP(), step = pm.Metropolis())
 
 # Print the Gelman-Rubin rhat convergence statistics to a file
 f = open("palatability_regression_convergence.txt", "w")
