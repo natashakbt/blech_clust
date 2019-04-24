@@ -93,7 +93,7 @@ intra_J3 = []
 for unit1 in range(len(hf51.root.unit_descriptor[:])):
 	# Only go ahead if this is a single unit
 	if hf51.root.unit_descriptor[unit1]['single_unit'] == 1:
-		exec("wf_day1 = hf51.root.sorted_units.unit%03d.waveforms[:]" % (unit1 + 1))
+		exec("wf_day1 = hf51.root.sorted_units.unit%03d.waveforms[:]" % (unit1))
 		pca = PCA(n_components = 3)
 		pca.fit(wf_day1)
 		pca_wf_day1 = pca.transform(wf_day1)
@@ -102,7 +102,7 @@ for unit1 in range(len(hf51.root.unit_descriptor[:])):
 for unit2 in range(len(hf52.root.unit_descriptor[:])):
 	# Only go ahead if this is a single unit
 	if hf52.root.unit_descriptor[unit2]['single_unit'] == 1:
-		exec("wf_day2 = hf52.root.sorted_units.unit%03d.waveforms[:]" % (unit2 + 1))
+		exec("wf_day2 = hf52.root.sorted_units.unit%03d.waveforms[:]" % (unit2))
 		pca = PCA(n_components = 3)
 		pca.fit(wf_day2)
 		pca_wf_day2 = pca.transform(wf_day2)
@@ -117,10 +117,10 @@ for unit1 in range(len(hf51.root.unit_descriptor[:])):
 		# Run through the units on day 2 and check if it was present (same electrode and unit type)
 		for unit2 in range(len(hf52.root.unit_descriptor[:])):
 			print(unit1, unit2, len(hf51.root.unit_descriptor[:]), len(hf52.root.unit_descriptor[:]))
- 			if hf52.root.unit_descriptor[unit2] == hf51.root.unit_descriptor[unit1]:
-				# Load up the waveforms for unit1 and unit2
-				exec("wf_day1 = hf51.root.sorted_units.unit%03d.waveforms[:]" % (unit1 + 1))
-				exec("wf_day2 = hf52.root.sorted_units.unit%03d.waveforms[:]" % (unit2 + 1))
+			if hf52.root.unit_descriptor[unit2] == hf51.root.unit_descriptor[unit1]:
+			    # Load up the waveforms for unit1 and unit2
+				exec("wf_day1 = hf51.root.sorted_units.unit%03d.waveforms[:]" % (unit1))
+				exec("wf_day2 = hf52.root.sorted_units.unit%03d.waveforms[:]" % (unit2))
 
 				#energy1 = np.sqrt(np.sum(wf_day1**2, axis = 1))/wf_day1.shape[1]
 				#energy2 = np.sqrt(np.sum(wf_day2**2, axis = 1))/wf_day2.shape[1]

@@ -36,7 +36,9 @@ import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
 rpy2.robjects.numpy2ri.activate()
 from rpy2.robjects.packages import importr
-import pandas.rpy.common as com
+# rpy.common got deprecated in newer versions of pandas. So we use rpy2 instead
+#import pandas.rpy.common as com
+from rpy2.robjects import r
 
 # Fire up BaSAR on R
 basar = importr('BaSAR')
@@ -56,10 +58,12 @@ Br = ro.r.matrix(env[taste, trial, :], nrow = 1, ncol = 7000)
 ro.r.assign('B', Br)
 ro.r('x = c(B[1,])')
 ro.r('r_local = BaSAR.local(x, 0.1, 1, 20, t, 0, 300)') # x is the data, we scan periods from 0.1s (10 Hz) to 1s (1 Hz) in 20 steps. Window size is 300ms. There are no background functions (=0)
-p_r = com.load_data('r_local')
-r_p = np.array(p_r['p'])
+#p_r = com.load_data('r_local')
+p_r = r['r_local']
+# r_local is returned as a length 2 object, with the first element being omega and the second being the posterior probabilities. These need to be recast as floats
+r_p = np.array(p_r[1]).astype('float')
 p[:, :] = r_p[:, :]
-omega = np.array(p_r['omega'])/(2.0*np.pi) 
+omega[:] = np.array(p_r[0]).astype('float')/(2.0*np.pi) 
 
 # Save p and omega by taste and trial number
 np.save('taste%i_trial%i_p.npy' % (taste, trial), p)

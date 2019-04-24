@@ -13,6 +13,7 @@ import matplotlib.cm as cm
 from scipy.spatial.distance import mahalanobis
 from scipy import linalg
 import memory_monitor as mm
+import blech_waveforms_datashader
 
 # Read blech.dir, and cd to that directory
 f = open('blech.dir', 'r')
@@ -239,9 +240,8 @@ for i in range(max_clusters-1):
 	# Create file, and plot spike waveforms for the different clusters. Plot 10 times downsampled dejittered/smoothed waveforms.
 	# Additionally plot the ISI distribution of each cluster 
 	os.mkdir('./Plots/%i/Plots/%i_clusters_waveforms_ISIs' % (electrode_num, i+2))
-	x = np.arange(len(slices_dejittered[0])/10)
+	x = np.arange(len(slices_dejittered[0])/10) + 1
 	for cluster in range(i+2):
-		fig = plt.figure()
 		cluster_points = np.where(predictions[:] == cluster)[0]
 
 		#for point in cluster_points:
@@ -250,10 +250,11 @@ for i in range(max_clusters-1):
 		#		plot_wf[time] = slices_dejittered[point, time*10]
 		#	plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
 		#	plt.hold(True)
-		plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
-		plt.xlabel('Time ({:d} samples per ms)'.format(int(sampling_rate/1000)))
-		plt.ylabel('Voltage (microvolts)')
-		plt.title('Cluster%i' % cluster)
+		# plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
+		fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[cluster_points, :], x, dir_name = "datashader_temp_el" + str(electrode_num))
+		ax.set_xlabel('Sample ({:d} samples per ms)'.format(int(sampling_rate/1000)))
+		ax.set_ylabel('Voltage (microvolts)')
+		ax.set_title('Cluster%i' % cluster)
 		fig.savefig('./Plots/%i/Plots/%i_clusters_waveforms_ISIs/Cluster%i_waveforms' % (electrode_num, i+2, cluster))
 		plt.close("all")
 		
@@ -263,7 +264,7 @@ for i in range(max_clusters-1):
 		ISIs = ISIs/30.0
 		plt.hist(ISIs, bins = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, np.max(ISIs)])
 		plt.xlim([0.0, 10.0])
-		plt.title("2ms ISI violations = %f percent (%i/%i)" %((float(len(np.where(ISIs < 2.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 2.0)[0]), len(cluster_times)))
+		plt.title("2ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 2.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 2.0)[0]), len(cluster_times)) + '\n' + "1ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 1.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
 		fig.savefig('./Plots/%i/Plots/%i_clusters_waveforms_ISIs/Cluster%i_ISIs' % (electrode_num, i+2, cluster))
 		plt.close("all")		
 

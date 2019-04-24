@@ -170,11 +170,14 @@ for unit in range(len(chosen_units)):
 	# The logic of using ADVI here follows from: https://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html
 	# And also from: https://pymc-devs.github.io/pymc3/notebooks/variational_api_quickstart.html
 	# Here we aren't scaling the variance of the gradient as it doesn't seem to give much improvement in simple models (look at the first link above)
+	
+	# We also use callbacks similar to those used in the 'init' portion of pm.sample - this stops ADVI once it has converged/ELBO doesn't change beyond a threshold
+	cb = [pm.callbacks.CheckParametersConvergence(diff='absolute', tolerance = 1e-4), pm.callbacks.CheckParametersConvergence(diff='relative', tolerance = 1e-4),]
 	with model:
 		#trace = pm.sample(num_samples + 1000, tune = 1000)[1000:]
 		#v_params = pm.variational.advi(n = 200000)
 		#trace = pm.variational.sample_vp(v_params, draws=num_samples)
-		inference = pm.fit(n=200000, method = 'advi')
+		inference = pm.fit(n=200000, method = 'fullrank_advi', callbacks = cb)
 		trace = inference.sample(num_samples)
 
 	# Print the Gelman-Rubin statistics for this model to file

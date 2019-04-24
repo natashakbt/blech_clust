@@ -27,7 +27,7 @@ for files in file_list:
 hf5 = tables.open_file(hdf5_name, 'r')
 
 # Ask the user for the HMM parameters  
-hmm_params = easygui.multenterbox(msg = 'Fill in the parameters for running a HMM (Poisson or Multinomial emissions) on your data', fields = ['Minimum number of states', 'Maximum number of states', 'Maximum number of iterations', 'Convergence criterion (usually 1e-9)', 'Number of random restarts for HMM (50-60 is more than enough)', 'Transition probability inertia (between 0 and 1)', 'Emission Distribution intertia (between 0 and 1)'])
+hmm_params = easygui.multenterbox(msg = 'Fill in the parameters for running a categorical variational HMM on your data', fields = ['Minimum number of states', 'Maximum number of states', 'Maximum number of iterations', 'Convergence criterion (usually 1e-9)', 'Number of random restarts for HMM (50-60 is more than enough)'])
 
 # Ask the user for the taste to run the HMM on
 tastes = hf5.list_nodes('/spike_trains')
@@ -60,15 +60,15 @@ else:
 	for i in range(len(chosen_units)):
 		chosen_units[i] = int(chosen_units[i])
 
-# Convert the chosen units into numpy array, and subtract 1 - this gives us the unit number to use in the spike arrays (because they run from 0 to n-1)
+# Convert the chosen units into numpy array
 chosen_units = np.array(chosen_units)
 
 # Create the folder for storing the plots coming in from HMM analysis of the data - pass if it exists
 try:
-	os.mkdir("HMM_plots")
+	os.mkdir("variational_HMM_plots")
 	# Make folders for storing plots from each of the tastes within HMM_plots
 	for i in range(len(tastes)):
-		os.mkdir('HMM_plots/dig_in_%i' % i)
+		os.mkdir('variational_HMM_plots/dig_in_%i' % i)
 except: 
 	pass
 
@@ -95,9 +95,10 @@ f = open('blech.hmm_units', 'w')
 for unit in chosen_units:
 	print(unit, file=f)
 f.close()
+hf5.close()
 
 # Grab Brandeis unet username
-username = easygui.multenterbox(msg = 'Enter your Brandeis unet id', fields = ['unet username'])
+username = easygui.multenterbox(msg = 'Enter your Brandeis unet id/computer username', fields = ['unet username'])
 
 # Dump shell file for running parallel job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
@@ -111,8 +112,3 @@ print("python blech_multinomial_hmm.py", file=f)
 print("python blech_poisson_hmm.py", file=g)
 f.close()
 g.close()
-
-hf5.close()
-
-
-

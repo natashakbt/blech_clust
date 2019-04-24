@@ -72,20 +72,20 @@ np.save('lasers.npy', lasers)
 for condition in range(mean_firing_rates.shape[1]):
 	fig = plt.figure()
 	for taste in range(mean_firing_rates.shape[2]):
-		# Calculate the difference in the mean firing rate between this condition+taste and control (laser off) for the same taste (0 is control)
+		# Calculate the difference in the mean firing rate between the control (laser off) and inactivated for the same taste (0 is control)
 		diff = mean_firing_rates[:, condition, taste, :, 0] - mean_firing_rates[:, condition, taste, :, 1]
 
-		# Get the proportion of the diff distribution below zero (as you'd expect laser on to inhibit firing for Arch)
-		proportion_below_zero = np.sum(diff[:, :] <= 0.0, axis = 1)/diff.shape[1]
+		# Get the proportion of the diff distribution above zero (as you'd expect laser on to inhibit firing for Arch)
+		proportion_below_zero = np.sum(diff[:, :] >= 0.0, axis = 1)/diff.shape[1]
 
 		# Now plot the distribution of these proportions across the units in the population
 		sns.kdeplot(proportion_below_zero, cumulative = True, label = 'Taste {}'.format(taste))
 		#plt.hist(proportion_below_zero, histtype = 'step', normed = 1, cumulative = True, label = 'Taste {}'.format(taste), linewidth = 2.0)		
-		plt.xlabel('P{(laser_off firing - laser_on firing) <= 0}')
+		plt.xlabel('P{(laser_off firing - laser_on firing) >= 0}')
 		plt.ylabel('Proportion of units (Total = {})'.format(mean_firing_rates.shape[0]))
 		#plt.tick_params(axis='both', which='major', labelsize=20)
 		plt.xlim([0.0, 1.0])
-		plt.title('Proportion of units against P{(laser_off firing - laser_on firing) <= 0}') 
+		plt.title('Proportion of units against P{(laser_off firing - laser_on firing) >= 0}') 
 	plt.legend(loc = 'upper left', fontsize = 15)
 	#fig.set_size_inches(18.5, 10.5)
 	plt.tight_layout()
@@ -99,17 +99,17 @@ for taste in range(mean_firing_rates.shape[2]):
 		# Calculate the difference in the mean firing rate between this condition+taste and control (laser off) for the same taste (0 is control)
 		diff = mean_firing_rates[:, condition, taste, :, 0] - mean_firing_rates[:, condition, taste, :, 1]
 
-		# Get the proportion of the diff distribution below zero (as you'd expect laser on to inhibit firing for Arch)
-		proportion_below_zero = np.sum(diff[:, :] <= 0.0, axis = 1)/diff.shape[1]
+		# Get the proportion of the diff distribution above zero (as you'd expect laser on to inhibit firing for Arch)
+		proportion_below_zero = np.sum(diff[:, :] >= 0.0, axis = 1)/diff.shape[1]
 
 		# Now plot the distribution of these proportions across the units in the population
 		sns.kdeplot(proportion_below_zero, cumulative = True, label = 'Dur:{}ms,Lag:{}ms'.format(lasers[condition + 1, 0], lasers[condition + 1, 1]))
 		#plt.hist(proportion_below_zero, histtype = 'step', normed = 1, cumulative = True, label = 'duration:{},lag:{}'.format(lasers[condition + 1, 0], lasers[condition + 1, 1]), linewidth = 2.0)		
-		plt.xlabel('P{(laser_off firing - laser_on firing) <= 0}')
+		plt.xlabel('P{(laser_off firing - laser_on firing) >= 0}')
 		plt.ylabel('Number of units (Total = {})'.format(mean_firing_rates.shape[0]))
 		#plt.tick_params(axis='both', which='major', labelsize=20)
 		plt.xlim([0.0, 1.0])
-		plt.title('Proportion of units against P{(laser_off firing - laser_on firing) <= 0}') 
+		plt.title('Proportion of units against P{(laser_off firing - laser_on firing) >= 0}') 
 	plt.legend(loc = 'upper left', fontsize = 15)
 	plt.tight_layout()
 	#fig.set_size_inches(18.5, 10.5)
@@ -125,7 +125,7 @@ p_values = float(p_values[0])
 data = np.zeros((mean_firing_rates.shape[1], mean_firing_rates.shape[2]))
 for condition in range(mean_firing_rates.shape[1]):
 	for taste in range(mean_firing_rates.shape[2]):
-		# Calculate the difference in the mean firing rate between this condition+taste and control (laser off) for the same taste
+		# Calculate the difference in the mean firing rate between this condition+taste and control (laser off) for the same taste (0 is control)
 		diff = mean_firing_rates[:, condition, taste, :, 0] - mean_firing_rates[:, condition, taste, :, 1]
 
 		# Get the proportion of the diff distribution below zero (as you'd expect laser on to inhibit firing for Arch)
@@ -152,6 +152,21 @@ plt.tight_layout(h_pad=3)
 #fig.set_size_inches(18.5, 10.5)
 fig.savefig('Significant_neurons.png', bbox_inches = 'tight')
 plt.close('all')
+
+# Make histograms, across tastes, of the change in firing produced by the laser as a percentage of the firing in the control/laser off condition. Plot such a histogram for each laser condition on top of each other
+# First get the difference in mean firing rate produced by the laser (averaged across tastes) as percent of the mean control firing
+mean_diff = np.mean(mean_firing_rates[:, :, :, :, 0] - mean_firing_rates[:, :, :, :, 1], axis = (2, 3))/np.mean(mean_firing_rates[:, :, :, :, 0], axis = (2, 3))
+fig = plt.figure()
+# Plot the laser conditions on the same histogram, on top of each other
+for condition in range(mean_firing_rates.shape[1]):
+	plt.hist(mean_diff[:, condition], alpha = 0.5, bins = 20, label = 'Dur:{}ms,Lag:{}ms'.format(lasers[condition + 1, 0], lasers[condition + 1, 1]))
+plt.xlabel(r"$\frac{Firing_{LaserOFF} - Firing_{LaserON}}{Firing_{LaserOFF}}$")
+plt.ylabel("Number of neurons")
+plt.legend(loc = 'upper left', fontsize = 15)
+plt.tight_layout(h_pad=3)
+fig.savefig('Percent_change_firing_rate.png', bbox_inches = 'tight')
+plt.close('all')
+
 
 
  
