@@ -391,56 +391,6 @@ firing.append(np.array(this_firing))
 print("Laser late trials done")
 print("==========================================")
 
-# Laser off trials analyzed the same way as laser middle trials
-print("===========================================")
-print("Running laser off trials like the laser middle trials")
-# 700-1200ms of trials are cut off in this condition
-# First changepoint happens between 200 to 600 ms post start of trial
-switchlim1 = [20, 60]
-# Second changepoint happens between changepoint1+100 and 1300ms post start of trial
-switchlim2 = [10, 130]
-logprob, p, switches, posterior_prob, switchpoint_list = IPEM.implement_EM((0, restarts), n_cpu, np.concatenate((spikes_cat[0, :, :70], spikes_cat[0, :, 120:200]), axis = 1), identity[0, :], palatability[0, :], iterations, threshold, switchlim1, switchlim2, num_states, num_emissions)
-
-# Make a list to save the converged trial numbers and switchpoints for this laser condition
-this_converged_trial_nums = []
-this_switchpoints = []
-# Lists for palatability ranks and firing rates in this laser condition
-this_pal = []
-this_firing = []
-# Get the spiking data for this laser condition
-inactivated_spikes.append(np.concatenate((spikes[0, :, :70, :], spikes[0, :, 120:200, :]), axis = 1))
-# Append the converged firing probabilities to the main list
-probs.append(p)
-# Append the posterior probabilities of the switchpoints to the main list
-posterior_prob_switchpoints.append(posterior_prob)
-# Append the list of switchpoints to the main list
-switchpoint_array.append(switchpoint_list)
-
-# This is the laser middle condition - find the probability that the palatability switchpoint came before 700ms (or 70 time points)
-switchpoints_before_laser = np.where(switchpoint_list[:, 1] <= 70.0)[0]
-p_pal_before_laser.append(np.sum(posterior_prob[:, switchpoints_before_laser], axis = 1))
-
-# Run through the trials in this condition
-for i in range(num_trials):
-	# Save 1.) Trial number
-	this_converged_trial_nums.append(i)
-	# 2.) Switchpoints
-	start = switches[i, 0]
-	end = switches[i, 1]
-	this_switchpoints.append([start, end])
-	# 3.) Palatability rank
-	this_pal.append(palatability[0, i])
-	# 4.) Firing rates
-	this_firing.append([np.mean(inactivated_spikes[4][i, start:end, :], axis = 0), np.mean(inactivated_spikes[4][i, end:, :], axis = 0)])
-# Append the lists for this laser condition to the overall lists
-converged_trial_nums.append(np.array(this_converged_trial_nums))
-switchpoints.append(np.array(this_switchpoints))
-pal.append(np.array(this_pal))
-firing.append(np.array(this_firing))
-
-print("Laser off trials like the laser middle trials done")
-print("==========================================")
-
 # Save all these lists to the HDF5 file
 # Inactivated spikes is a homogeneously sized list, so it can be saved to the HDF5 file on its own, so can the firing probabilities
 # All the arrays are homogenously sized in the EM case - however, they weren't when MCMC was being used for inference. That's why the old pattern of saving arrays persists

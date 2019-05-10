@@ -246,106 +246,106 @@ ltp_segments = np.empty((ltps.shape[0], ltps.shape[1], ltps.shape[2], 3), dtype 
 for i in range(gapes.shape[0]):
 	for j in range(gapes.shape[1]):
 		for k in range(gapes.shape[2]):
-			#if sig_trials[i, j, k] > 0.0:
-			# Where does activity in the gape/LTP range happen on this trial
-			gape_places = np.where(gapes[i, j, k, :time_limits[1]] > 0)[0] 
-			ltp_places = np.where(ltps[i, j, k, :time_limits[1]] > 0)[0]
+			if sig_trials[i, j, k] > 0.0:
+				# Where does activity in the gape/LTP range happen on this trial
+				gape_places = np.where(gapes[i, j, k, :time_limits[1]] > 0)[0] 
+				ltp_places = np.where(ltps[i, j, k, :time_limits[1]] > 0)[0]
 
-			# Drop any activity that's below the minimum onset lag
-			# gape_places = gape_places[gape_places >= min_onset_lag]
-			# ltp_places = ltp_places[ltp_places >= min_onset_lag]
+				# Drop any activity that's below the minimum onset lag
+				# gape_places = gape_places[gape_places >= min_onset_lag]
+				# ltp_places = ltp_places[ltp_places >= min_onset_lag]
 
-			# If there's no activity (or just one time point of activity) in the gape range, mark this trial appropriately in gape_segments
-			if len(gape_places) <= 1:
-				gape_segments[i, j, k, :] = np.array([0, -1, -1])
-			else:
-				# Get the difference between the consecutive time points where gapes has 1s - if this difference is > 1, this indicates different bouts
-				gape_diff = np.ediff1d(gape_places)
-				# If gapes are broken by less than the max_broken_gape length, correct them
-				gape_diff[np.where(gape_diff < max_broken_gape)[0]] = np.ones(len(np.where(gape_diff < max_broken_gape)[0]))
-				# Check where this diff is > 1
-				bout_changes = np.where(gape_diff > 1)[0]
-				gape_bouts = []
-				# Run through the bouts, and see if they are greater than the minimum acceptable length
-				if len(bout_changes) == 0:
-					if np.abs(gape_places[0] - gape_places[-1]) >= min_gape_len and gape_places[0] >= min_onset_lag:
-						gape_segments[i, j, k, :]  = np.array([1, gape_places[0], np.abs(gape_places[0] - gape_places[-1])])
-					else:
-						gape_segments[i, j, k, :] = np.array([0, -1, -1])
+				# If there's no activity (or just one time point of activity) in the gape range, mark this trial appropriately in gape_segments
+				if len(gape_places) <= 1:
+					gape_segments[i, j, k, :] = np.array([0, -1, -1])
 				else:
-					for l in range(len(bout_changes)):
-						if l == len(bout_changes) - 1:
-							if l == 0:
-								if np.abs(gape_places[0] - gape_places[bout_changes[l]]) >= min_gape_len and gape_places[0] >= min_onset_lag:
-									gape_bouts.append((gape_places[0], gape_places[bout_changes[l]]))
-								if np.abs(gape_places[bout_changes[l] + 1] - gape_places[-1]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
-									gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[-1]))
-							else:
-								if np.abs(gape_places[bout_changes[l] + 1] - gape_places[-1]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
-									gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[-1]))
+					# Get the difference between the consecutive time points where gapes has 1s - if this difference is > 1, this indicates different bouts
+					gape_diff = np.ediff1d(gape_places)
+					# If gapes are broken by less than the max_broken_gape length, correct them
+					gape_diff[np.where(gape_diff < max_broken_gape)[0]] = np.ones(len(np.where(gape_diff < max_broken_gape)[0]))
+					# Check where this diff is > 1
+					bout_changes = np.where(gape_diff > 1)[0]
+					gape_bouts = []
+					# Run through the bouts, and see if they are greater than the minimum acceptable length
+					if len(bout_changes) == 0:
+						if np.abs(gape_places[0] - gape_places[-1]) >= min_gape_len and gape_places[0] >= min_onset_lag:
+							gape_segments[i, j, k, :]  = np.array([1, gape_places[0], np.abs(gape_places[0] - gape_places[-1])])
 						else:
-							if l == 0:
-								if np.abs(gape_places[0] - gape_places[bout_changes[l]]) >= min_gape_len and gape_places[0] >= min_onset_lag:
-									gape_bouts.append((gape_places[0], gape_places[bout_changes[l]]))
-								if np.abs(gape_places[bout_changes[l] + 1] - gape_places[bout_changes[l+1]]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
-									gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[bout_changes[l+1]]))
-							else:
-								if np.abs(gape_places[bout_changes[l] + 1] - gape_places[bout_changes[l+1]]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
-									gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[bout_changes[l+1]]))
-					# Now summarize the gape bouts in gape_segments
-					if len(gape_bouts) == 0:
-						gape_segments[i, j, k, :] = np.array([0, -1, -1])
+							gape_segments[i, j, k, :] = np.array([0, -1, -1])
 					else:
-						gape_segments[i, j, k, :] = np.array([len(gape_bouts), gape_bouts[0][0], np.mean([np.abs(gape_bouts[m][0] - gape_bouts[m][1]) for m in range(len(gape_bouts))])])
+						for l in range(len(bout_changes)):
+							if l == len(bout_changes) - 1:
+								if l == 0:
+									if np.abs(gape_places[0] - gape_places[bout_changes[l]]) >= min_gape_len and gape_places[0] >= min_onset_lag:
+										gape_bouts.append((gape_places[0], gape_places[bout_changes[l]]))
+									if np.abs(gape_places[bout_changes[l] + 1] - gape_places[-1]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
+										gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[-1]))
+								else:
+									if np.abs(gape_places[bout_changes[l] + 1] - gape_places[-1]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
+										gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[-1]))
+							else:
+								if l == 0:
+									if np.abs(gape_places[0] - gape_places[bout_changes[l]]) >= min_gape_len and gape_places[0] >= min_onset_lag:
+										gape_bouts.append((gape_places[0], gape_places[bout_changes[l]]))
+									if np.abs(gape_places[bout_changes[l] + 1] - gape_places[bout_changes[l+1]]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
+										gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[bout_changes[l+1]]))
+								else:
+									if np.abs(gape_places[bout_changes[l] + 1] - gape_places[bout_changes[l+1]]) >= min_gape_len and gape_places[bout_changes[l] + 1] >= min_onset_lag:
+										gape_bouts.append((gape_places[bout_changes[l] + 1], gape_places[bout_changes[l+1]]))
+						# Now summarize the gape bouts in gape_segments
+						if len(gape_bouts) == 0:
+							gape_segments[i, j, k, :] = np.array([0, -1, -1])
+						else:
+							gape_segments[i, j, k, :] = np.array([len(gape_bouts), gape_bouts[0][0], np.mean([np.abs(gape_bouts[m][0] - gape_bouts[m][1]) for m in range(len(gape_bouts))])])
 
-		
-			# If there's no activity (or just one time point of activity) in the ltp range, mark this trial appropriately in ltp_segments
-			if len(ltp_places) <= 1:
-				ltp_segments[i, j, k, :] = np.array([0, -1, -1])
-			else:
-				# Get the difference between the consecutive time points where ltps has 1s - if this difference is > 1, this indicates different bouts
-				ltp_diff = np.ediff1d(ltp_places)
-				# If ltps are broken by less than the max_broken_ltp length, correct them
-				ltp_diff[np.where(ltp_diff < max_broken_ltp)[0]] = np.ones(len(np.where(ltp_diff < max_broken_ltp)[0]))
-				# Check where this diff is > 1
-				bout_changes = np.where(ltp_diff > 1)[0]
-				ltp_bouts = []
-				# Run through the bouts, and see if they are greater than the minimum acceptable length
-				if len(bout_changes) == 0:
-					if np.abs(ltp_places[0] - ltp_places[-1]) >= min_ltp_len:
-						ltp_segments[i, j, k, :]  = np.array([1, ltp_places[0], np.abs(ltp_places[0] - ltp_places[-1])])
-					else:
-						ltp_segments[i, j, k, :] = np.array([0, -1, -1])
+			
+				# If there's no activity (or just one time point of activity) in the ltp range, mark this trial appropriately in ltp_segments
+				if len(ltp_places) <= 1:
+					ltp_segments[i, j, k, :] = np.array([0, -1, -1])
 				else:
-					for l in range(len(bout_changes)):
-						if l == len(bout_changes) - 1:
-							if l == 0:
-								if np.abs(ltp_places[0] - ltp_places[bout_changes[l]]) >= min_ltp_len and ltp_places[0] >= min_onset_lag:
-									ltp_bouts.append((ltp_places[0], ltp_places[bout_changes[l]]))
-								if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[-1]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
-									ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[-1]))
-							else:
-								if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[-1]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
-									ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[-1]))
+					# Get the difference between the consecutive time points where ltps has 1s - if this difference is > 1, this indicates different bouts
+					ltp_diff = np.ediff1d(ltp_places)
+					# If ltps are broken by less than the max_broken_ltp length, correct them
+					ltp_diff[np.where(ltp_diff < max_broken_ltp)[0]] = np.ones(len(np.where(ltp_diff < max_broken_ltp)[0]))
+					# Check where this diff is > 1
+					bout_changes = np.where(ltp_diff > 1)[0]
+					ltp_bouts = []
+					# Run through the bouts, and see if they are greater than the minimum acceptable length
+					if len(bout_changes) == 0:
+						if np.abs(ltp_places[0] - ltp_places[-1]) >= min_ltp_len:
+							ltp_segments[i, j, k, :]  = np.array([1, ltp_places[0], np.abs(ltp_places[0] - ltp_places[-1])])
 						else:
-							if l == 0:
-								if np.abs(ltp_places[0] - ltp_places[bout_changes[l]]) >= min_ltp_len and ltp_places[0] >= min_onset_lag:
-									ltp_bouts.append((ltp_places[0], ltp_places[bout_changes[l]]))
-								if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[bout_changes[l+1]]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
-									ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[bout_changes[l+1]]))
-							else:
-								if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[bout_changes[l+1]]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
-									ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[bout_changes[l+1]]))
-					# Now summarize the ltp bouts in ltp_segments
-					if len(ltp_bouts) == 0:
-						ltp_segments[i, j, k, :] = np.array([0, -1, -1])
+							ltp_segments[i, j, k, :] = np.array([0, -1, -1])
 					else:
-						ltp_segments[i, j, k, :] = np.array([len(ltp_bouts), ltp_bouts[0][0], np.mean([np.abs(ltp_bouts[m][0] - ltp_bouts[m][1]) for m in range(len(ltp_bouts))])])
+						for l in range(len(bout_changes)):
+							if l == len(bout_changes) - 1:
+								if l == 0:
+									if np.abs(ltp_places[0] - ltp_places[bout_changes[l]]) >= min_ltp_len and ltp_places[0] >= min_onset_lag:
+										ltp_bouts.append((ltp_places[0], ltp_places[bout_changes[l]]))
+									if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[-1]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
+										ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[-1]))
+								else:
+									if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[-1]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
+										ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[-1]))
+							else:
+								if l == 0:
+									if np.abs(ltp_places[0] - ltp_places[bout_changes[l]]) >= min_ltp_len and ltp_places[0] >= min_onset_lag:
+										ltp_bouts.append((ltp_places[0], ltp_places[bout_changes[l]]))
+									if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[bout_changes[l+1]]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
+										ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[bout_changes[l+1]]))
+								else:
+									if np.abs(ltp_places[bout_changes[l] + 1] - ltp_places[bout_changes[l+1]]) >= min_ltp_len and ltp_places[bout_changes[l] + 1] >= min_onset_lag:
+										ltp_bouts.append((ltp_places[bout_changes[l] + 1], ltp_places[bout_changes[l+1]]))
+						# Now summarize the ltp bouts in ltp_segments
+						if len(ltp_bouts) == 0:
+							ltp_segments[i, j, k, :] = np.array([0, -1, -1])
+						else:
+							ltp_segments[i, j, k, :] = np.array([len(ltp_bouts), ltp_bouts[0][0], np.mean([np.abs(ltp_bouts[m][0] - ltp_bouts[m][1]) for m in range(len(ltp_bouts))])])
 
 			# If this trial is 0 on sig_trials, mark it appropriately on gape_segments and ltp_segments
-			#else:
-			#	gape_segments[i, j, k, :] = np.array([0, -1, -1])
-			#	ltp_segments[i, j, k, :] = np.array([0, -1, -1])
+			else:
+				gape_segments[i, j, k, :] = np.array([0, -1, -1])
+				ltp_segments[i, j, k, :] = np.array([0, -1, -1])
 					
 #.................................
 

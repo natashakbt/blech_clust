@@ -44,7 +44,7 @@ for unit in range(len(units)):
 	fig.savefig('./unit_waveforms_plots/Unit%i.png' % (unit))
 	plt.close("all")
 	
-	# Also plot the mean and SD for every unit - downsample the waveforms 10 times to remove effects of upsampling during de-jittering
+	# Also plot the mean and SEM for every unit - downsample the waveforms 10 times to remove effects of upsampling during de-jittering
 	fig = plt.figure()
 	plt.plot(x, np.mean(waveforms[:, ::10], axis = 0), linewidth = 4.0)
 	plt.fill_between(x, np.mean(waveforms[:, ::10], axis = 0) - np.std(waveforms[:, ::10], axis = 0), np.mean(waveforms[:, ::10], axis = 0) + np.std(waveforms[:, ::10], axis = 0), alpha = 0.4)

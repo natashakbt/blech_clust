@@ -40,7 +40,6 @@ gapes_Li = []
 p_pal_before_laser = []
 posterior_prob_switchpoints = []
 potential_switchpoint_array = []
-pre_stim = []
 
 for dir_name in dirs:
 	# Change to the directory
@@ -59,13 +58,11 @@ for dir_name in dirs:
 	unique_lasers.append(hf5.root.EM_switch.unique_lasers[:])
 	r_pearson.append(hf5.root.EM_switch.r_pearson[:])
 	p_pearson.append(hf5.root.EM_switch.p_pearson[:])
-	# Read the gapes and LTPs
-	gapes.append(hf5.root.ancillary_analysis.gapes[:, :, :, :])
-	ltps.append(hf5.root.ancillary_analysis.ltps[:, :, :, :])
-	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:, :, :, :])
+	# Read only the post-stim data for the gapes and LTPs
+	gapes.append(hf5.root.ancillary_analysis.gapes[:, :, :, int(hf5.root.ancillary_analysis.pre_stim.read()):])
+	ltps.append(hf5.root.ancillary_analysis.ltps[:, :, :, int(hf5.root.ancillary_analysis.pre_stim.read()):])
+	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:, :, :, int(hf5.root.ancillary_analysis.pre_stim.read()):])
 	num_trials.append(np.array(hf5.root.EM_switch.inactivated_spikes[:]).shape[1] / num_tastes)
-	# Read the pre-stimulus time
-	pre_stim.append(int(hf5.root.ancillary_analysis.pre_stim.read()))
 	# Make lists to pull the switchpoints, converged_trials, potential switchpoints and their posterior probabilities for this dataset
 	this_switchpoints = []
 	this_converged_trials = []
@@ -88,9 +85,6 @@ for dir_name in dirs:
 	# Close the hdf5 file
 	hf5.close()
 
-# Assuming that the pre-stimulus time is the same in all files, set pre_stim to the pre-stimulus time from the first file
-pre_stim = pre_stim[0]
-
 # Check if the number of laser activation/inactivation windows is same across files, raise an error and quit if it isn't
 if all(unique_lasers[i].shape == unique_lasers[0].shape for i in range(len(unique_lasers))):
 	pass
@@ -101,7 +95,7 @@ else:
 # Now first set the ordering of laser trials straight across data files
 laser_order = []
 for i in range(len(unique_lasers)):
-	# The first file defines the order
+	# The first file defines the order	
 	if i == 0:
 		laser_order.append(np.arange(unique_lasers[i].shape[0]))
 	# And everyone else follows
@@ -225,7 +219,7 @@ for split in plot_switch:
 		# Gaping on trials with switchpoint before split
 		fig = plt.figure()
 		for i in range(num_tastes):
-			plt.plot(np.mean(gapes_before[i][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[i])
+			plt.plot(np.mean(gapes_before[i][:, :post_stim], axis = 0), label = tastes[i])
 		plt.legend()
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -235,7 +229,7 @@ for split in plot_switch:
 		# Gaping on trials with switchpoint after split
 		fig = plt.figure()
 		for i in range(num_tastes):
-			plt.plot(np.mean(gapes_after[i][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[i])
+			plt.plot(np.mean(gapes_after[i][:, :post_stim], axis = 0), label = tastes[i])
 		plt.legend()
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -247,12 +241,12 @@ for split in plot_switch:
 		# Now plot only dil and concentrated quinine, with errorbars for comparisons
 		# Gaping on trials with switchpoint before split
 		fig = plt.figure()
-		plt.plot(np.mean(gapes_before[2][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[2])
-		std_error = np.std(gapes_before[2][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_before[2].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_before[2][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_before[2][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)		
-		plt.plot(np.mean(gapes_before[3][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[3])
-		std_error = np.std(gapes_before[3][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_before[3].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_before[3][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_before[3][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)
+		plt.plot(np.mean(gapes_before[2][:, :post_stim], axis = 0), label = tastes[2])
+		std_error = np.std(gapes_before[2][:, :post_stim], axis = 0)/np.sqrt(gapes_before[2].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_before[2][:, :post_stim], axis = 0) - std_error, np.mean(gapes_before[2][:, :post_stim], axis = 0) + std_error, alpha = 0.3)		
+		plt.plot(np.mean(gapes_before[3][:, :post_stim], axis = 0), label = tastes[3])
+		std_error = np.std(gapes_before[3][:, :post_stim], axis = 0)/np.sqrt(gapes_before[3].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_before[3][:, :post_stim], axis = 0) - std_error, np.mean(gapes_before[3][:, :post_stim], axis = 0) + std_error, alpha = 0.3)
 		plt.legend()		
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -261,12 +255,12 @@ for split in plot_switch:
 		fig.savefig("Before_{:d}_Dur{:d}_Lag{:d}_Quinine.png".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
 		# Gaping on trials with switchpoint after split
 		fig = plt.figure()
-		plt.plot(np.mean(gapes_after[2][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[2])
-		std_error = np.std(gapes_after[2][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_after[2].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_after[2][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_after[2][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)		
-		plt.plot(np.mean(gapes_after[3][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[3])
-		std_error = np.std(gapes_after[3][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_after[3].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_after[3][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_after[3][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)
+		plt.plot(np.mean(gapes_after[2][:, :post_stim], axis = 0), label = tastes[2])
+		std_error = np.std(gapes_after[2][:, :post_stim], axis = 0)/np.sqrt(gapes_after[2].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_after[2][:, :post_stim], axis = 0) - std_error, np.mean(gapes_after[2][:, :post_stim], axis = 0) + std_error, alpha = 0.3)		
+		plt.plot(np.mean(gapes_after[3][:, :post_stim], axis = 0), label = tastes[3])
+		std_error = np.std(gapes_after[3][:, :post_stim], axis = 0)/np.sqrt(gapes_after[3].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_after[3][:, :post_stim], axis = 0) - std_error, np.mean(gapes_after[3][:, :post_stim], axis = 0) + std_error, alpha = 0.3)
 		plt.legend()		
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -315,7 +309,7 @@ for split in plot_switch:
 		# Gaping on trials with switchpoint before split
 		fig = plt.figure()
 		for i in range(num_tastes):
-			plt.plot(np.mean(gapes_before_posterior[i][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[i])
+			plt.plot(np.mean(gapes_before_posterior[i][:, :post_stim], axis = 0), label = tastes[i])
 		plt.legend()
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -325,7 +319,7 @@ for split in plot_switch:
 		# Gaping on trials with switchpoint after split
 		fig = plt.figure()
 		for i in range(num_tastes):
-			plt.plot(np.mean(gapes_after_posterior[i][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[i])
+			plt.plot(np.mean(gapes_after_posterior[i][:, :post_stim], axis = 0), label = tastes[i])
 		plt.legend()
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -337,12 +331,12 @@ for split in plot_switch:
 		# Now plot only dil and concentrated quinine, with errorbars for comparisons
 		# Gaping on trials with switchpoint before split
 		fig = plt.figure()
-		plt.plot(np.mean(gapes_before_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[2])
-		std_error = np.std(gapes_before_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_before_posterior[2].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_before_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_before_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)		
-		plt.plot(np.mean(gapes_before_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[3])
-		std_error = np.std(gapes_before_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_before_posterior[3].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_before_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_before[3][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)
+		plt.plot(np.mean(gapes_before_posterior[2][:, :post_stim], axis = 0), label = tastes[2])
+		std_error = np.std(gapes_before_posterior[2][:, :post_stim], axis = 0)/np.sqrt(gapes_before_posterior[2].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_before_posterior[2][:, :post_stim], axis = 0) - std_error, np.mean(gapes_before_posterior[2][:, :post_stim], axis = 0) + std_error, alpha = 0.3)		
+		plt.plot(np.mean(gapes_before_posterior[3][:, :post_stim], axis = 0), label = tastes[3])
+		std_error = np.std(gapes_before_posterior[3][:, :post_stim], axis = 0)/np.sqrt(gapes_before_posterior[3].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_before_posterior[3][:, :post_stim], axis = 0) - std_error, np.mean(gapes_before[3][:, :post_stim], axis = 0) + std_error, alpha = 0.3)
 		plt.legend()		
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -351,12 +345,12 @@ for split in plot_switch:
 		fig.savefig("Before_{:d}_Dur{:d}_Lag{:d}_Quinine_posterior.png".format(split*10, int(unique_lasers[0][laser, 0]), int(unique_lasers[0][laser, 1])), bbox_inches = "tight")
 		# Gaping on trials with switchpoint after split
 		fig = plt.figure()
-		plt.plot(np.mean(gapes_after_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[2])
-		std_error = np.std(gapes_after_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_after_posterior[2].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_after_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_after_posterior[2][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)		
-		plt.plot(np.mean(gapes_after_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0), label = tastes[3])
-		std_error = np.std(gapes_after_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0)/np.sqrt(gapes_after_posterior[3].shape[0])
-		plt.fill_between(np.arange(post_stim), np.mean(gapes_after_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0) - std_error, np.mean(gapes_after_posterior[3][:, pre_stim:pre_stim + post_stim], axis = 0) + std_error, alpha = 0.3)
+		plt.plot(np.mean(gapes_after_posterior[2][:, :post_stim], axis = 0), label = tastes[2])
+		std_error = np.std(gapes_after_posterior[2][:, :post_stim], axis = 0)/np.sqrt(gapes_after_posterior[2].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_after_posterior[2][:, :post_stim], axis = 0) - std_error, np.mean(gapes_after_posterior[2][:, :post_stim], axis = 0) + std_error, alpha = 0.3)		
+		plt.plot(np.mean(gapes_after_posterior[3][:, :post_stim], axis = 0), label = tastes[3])
+		std_error = np.std(gapes_after_posterior[3][:, :post_stim], axis = 0)/np.sqrt(gapes_after_posterior[3].shape[0])
+		plt.fill_between(np.arange(post_stim), np.mean(gapes_after_posterior[3][:, :post_stim], axis = 0) - std_error, np.mean(gapes_after_posterior[3][:, :post_stim], axis = 0) + std_error, alpha = 0.3)
 		plt.legend()		
 		plt.xlabel("Time post stimulus (ms)")
 		plt.ylabel("Mean fraction of power in 4-6Hz")
@@ -367,9 +361,6 @@ for split in plot_switch:
 
 
 #----------------------------Splitting EMG data by posterior probability of switchpoints done-------------------------
-
-'''
-Not lining up by switchpoints anymore
 
 #----------------------------Plotting EMG data lined up by switchpoints-----------------------------------------------
 # Plot the EMG data, averaged across trials, lined up by the switchpoints
@@ -457,6 +448,10 @@ for laser in range(num_lasers):
 
 #----------------------------Plotting EMG data lined up by switchpoints done------------------------------------------
 
+
+
+
+'''
 gapes_less_700 = [[[] for j in range(num_tastes)] for i in range(num_lasers)]
 gapes_more_700 = [[[] for j in range(num_tastes)] for i in range(num_lasers)]
 gapes_Li_less_700 = [[] for i in range(4)]
