@@ -4,14 +4,14 @@ import numpy as np
 import multiprocessing as mp
 import math
 
-def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia, hmm_type):
+def poisson_hmm_implement(n_states, threshold, max_iterations, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia, hmm_type):
 
 	# Create a pool of asynchronous n_cpu processes running poisson_hmm() - no. of processes equal to seeds
 	pool = mp.Pool(processes = n_cpu)
 	if hmm_type == 'generic':
-		results = [pool.apply_async(poisson_hmm, args = (n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
+		results = [pool.apply_async(poisson_hmm, args = (n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 	else:
-		results = [pool.apply_async(poisson_hmm_feedforward, args = (n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
+		results = [pool.apply_async(poisson_hmm_feedforward, args = (n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 		
 	output = [p.get() for p in results]
 
@@ -28,19 +28,30 @@ def poisson_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_
 	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
 	return cleaned_output[maximum_pos]	
 
-def multinomial_hmm_implement(n_states, threshold, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia):
+def multinomial_hmm_implement(n_states, threshold, max_iterations, seeds, n_cpu, binned_spikes, off_trials, edge_inertia, dist_inertia):
 
 	# Create a pool of asynchronous n_cpu processes running multinomial_hmm() - no. of processes equal to seeds
 	pool = mp.Pool(processes = n_cpu)
-	results = [pool.apply_async(multinomial_hmm, args = (n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
+	results = [pool.apply_async(multinomial_hmm, args = (n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia,)) for seed in range(seeds)]
 	output = [p.get() for p in results]
 
-	# Find the process that ended up with the highest log likelihood, and return it as the solution. If several processes ended up with the highest log likelihood, just pick the earliest one
-	log_probs = [output[i][1] for i in range(len(output))]
-	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
-	return output[maximum_pos]		
+	# Remove any threads that didn't converge - these will have NaN's as the log likelihood
+	cleaned_output = []
+	for i in range(len(output)):
+		if math.isnan(output[i][1]):
+			continue
+		else:
+			cleaned_output.append(output[i])
 
-def poisson_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+	# Find the process that ended up with the highest log likelihood, and return it as the solution. If several processes ended up with the highest log likelihood, just pick the earliest one
+	log_probs = [cleaned_output[i][1] for i in range(len(cleaned_output))]
+	maximum_pos = np.where(log_probs == np.max(log_probs))[0][0]
+	return cleaned_output[maximum_pos]		
+
+def poisson_hmm(n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+
+	# Seed the random number generator
+	np.random.seed(seed)
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
@@ -69,7 +80,7 @@ def poisson_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inert
 	model.bake()
 
 	# Train the model only on the trials indicated by off_trials
-	model.fit(binned_spikes[off_trials, :, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
+	model.fit(binned_spikes[off_trials, :, :], algorithm = 'baum-welch', stop_threshold = threshold, max_iterations = max_iterations, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
 	log_prob = [model.log_probability(binned_spikes[i, :, :]) for i in off_trials]
 	log_prob = np.sum(log_prob)
 
@@ -92,7 +103,10 @@ def poisson_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inert
 
 	return model_json, log_prob, 2*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, (np.log(len(off_trials)*binned_spikes.shape[1]))*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, state_emissions, state_transitions, posterior_proba
 
-def poisson_hmm_feedforward(n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+def poisson_hmm_feedforward(n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+
+	# Seed the random number generator
+	np.random.seed(seed)
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
@@ -128,7 +142,7 @@ def poisson_hmm_feedforward(n_states, threshold, binned_spikes, seed, off_trials
 	model.bake()
 
 	# Train the model only on the trials indicated by off_trials
-	model.fit(binned_spikes[off_trials, :, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
+	model.fit(binned_spikes[off_trials, :, :], algorithm = 'baum-welch', stop_threshold = threshold, max_iterations = max_iterations, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
 	log_prob = [model.log_probability(binned_spikes[i, :, :]) for i in off_trials]
 	log_prob = np.sum(log_prob)
 
@@ -151,7 +165,10 @@ def poisson_hmm_feedforward(n_states, threshold, binned_spikes, seed, off_trials
 
 	return model_json, log_prob, 2*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, (np.log(len(off_trials)*binned_spikes.shape[1]))*((n_states)**2 + n_states*binned_spikes.shape[2]) - 2*log_prob, state_emissions, state_transitions, posterior_proba
 	
-def multinomial_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+def multinomial_hmm(n_states, threshold, max_iterations, binned_spikes, seed, off_trials, edge_inertia, dist_inertia):
+
+	# Seed the random number generator
+	np.random.seed(seed)
 
 	# Make a pomegranate HiddenMarkovModel object
 	model = HiddenMarkovModel('%i' % seed) 
@@ -184,7 +201,7 @@ def multinomial_hmm(n_states, threshold, binned_spikes, seed, off_trials, edge_i
 	model.bake()
 
 	# Train the model only on the trials indicated by off_trials
-	model.fit(binned_spikes[off_trials, :], algorithm = 'baum-welch', stop_threshold = threshold, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
+	model.fit(binned_spikes[off_trials, :], algorithm = 'baum-welch', stop_threshold = threshold, max_iterations = max_iterations, edge_inertia = edge_inertia, distribution_inertia = dist_inertia, verbose = False)
 	log_prob = [model.log_probability(binned_spikes[i, :]) for i in off_trials]
 	log_prob = np.sum(log_prob)
 

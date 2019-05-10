@@ -151,20 +151,36 @@ except:
 	pass
 hf5.create_group('/', 'Parsed_LFP')
 
-# Run through the tastes
-for i in range(len(dig_in_channels)):
-	num_electrodes = len(lfp_nodes) 
-	num_trials = len(change_points[dig_in_channel_nums[i]])
-	this_taste_LFPs = np.zeros((num_electrodes, num_trials, durations[0] + durations[1]))
-	for electrode in range(num_electrodes):
-		for j in range(len(change_points[dig_in_channel_nums[i]])):
-			this_taste_LFPs[electrode, j, :] = np.mean(lfp_nodes[electrode][change_points[dig_in_channel_nums[i]][j] - durations[0]*30:change_points[dig_in_channel_nums[i]][j] + durations[1]*30].reshape((-1, 30)), axis = 1)
-	
-	print (float(i)/len(dig_in_channels)) #Shows progress	
+# Ask if this analysis is looking at more than 1 trial and/or taste
+msg   = "Do you want to create LFPs for more than ONE trial (ie. Do you have several tastes) ?"
+trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
-	# Put the LFP data for this taste in hdf5 file under /Parsed_LFP
-	hf5.create_array('/Parsed_LFP', 'dig_in_%i_LFPs' % (dig_in_channel_nums[i]), this_taste_LFPs)
-	hf5.flush()
+# Run through the tastes if user said there are more than 1 trial
+if trial_check == "Yes":
+    for i in range(len(dig_in_channels)):
+        	num_electrodes = len(lfp_nodes) 
+        	num_trials = len(change_points[dig_in_channel_nums[i]])
+        	this_taste_LFPs = np.zeros((num_electrodes, num_trials, durations[0] + durations[1]))
+        	for electrode in range(num_electrodes):
+        		for j in range(len(change_points[dig_in_channel_nums[i]])):
+        			this_taste_LFPs[electrode, j, :] = np.mean(lfp_nodes[electrode][change_points[dig_in_channel_nums[i]][j] - durations[0]*30:change_points[dig_in_channel_nums[i]][j] + durations[1]*30].reshape((-1, 30)), axis = 1)
+        	
+        	print (float(i)/len(dig_in_channels)) #Shows progress	
+        
+        	# Put the LFP data for this taste in hdf5 file under /Parsed_LFP
+        	hf5.create_array('/Parsed_LFP', 'dig_in_%i_LFPs' % (dig_in_channel_nums[i]), this_taste_LFPs)
+        	hf5.flush()
+        
+if trial_check == "No":
+    num_electrodes = len(lfp_nodes) 
+    num_trials = len(change_points[dig_in_channel_nums[0]])-1
+    this_taste_LFPs = np.zeros((num_electrodes, num_trials, durations[0] + durations[1]))
+    for electrode in range(num_electrodes):
+        this_taste_LFPs[electrode, 0, :] = np.mean(lfp_nodes[electrode][change_points[dig_in_channel_nums[0]][0] - durations[0]*30:change_points[dig_in_channel_nums[0]][0] + durations[1]*30].reshape((-1, 30)), axis = 1)
+    
+    	# Put the LFP data for this session in hdf5 file under /Parsed_LFP
+    hf5.create_array('/Parsed_LFP', 'dig_in_%i_LFPs' % (dig_in_channel_nums[0]), this_taste_LFPs)
+    hf5.flush()
 			
 # Ask people if they want to delete rawLFPs or not, that way we offer the option to run analyses in many different ways. (ie. First half V back half)
 msg   = "Do you want to delete the Raw LFP data?"

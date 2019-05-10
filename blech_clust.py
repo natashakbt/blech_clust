@@ -13,7 +13,7 @@ import read_file
 dir_name = easygui.diropenbox()
 
 # Get the type of data files (.rhd or .dat)
-file_type = easygui.multchoicebox(msg = 'What type of files am I dealing with?', choices = ('.dat', '.rhd', 'one file per channel'))
+file_type = easygui.multchoicebox(msg = 'What type of files am I dealing with?', choices = ('one file per channel', '.dat', '.rhd'))
 
 # Change to that directory
 os.chdir(dir_name)

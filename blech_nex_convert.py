@@ -3,6 +3,7 @@
 
 # Import stuff
 from neo.io import NeuroExplorerIO as nex
+from scipy.signal import resample
 import numpy as np
 import easygui
 import tables
@@ -45,7 +46,7 @@ else:
 
 # Ask the user which digital input channels should be used for getting spike train data, and convert the channel numbers into integers for pulling spikes out
 dig_in_pathname = [event.annotations['channel_name'] for event in seg.events]
-dig_in_channels = easygui.multchoicebox(msg = 'Which digital input channels should be used to produce spike train data trial-wise?', choices = ([event.annotations['channel_name'] for event in seg.events]))
+dig_in_channels = easygui.multchoicebox(msg = 'Which digital input channels should be used to produce spike train and emg data (if it exists) trial-wise?', choices = ([event.annotations['channel_name'] for event in seg.events]))
 dig_in_channel_nums = []
 for i in range(len(dig_in_pathname)):
 	if dig_in_pathname[i] in dig_in_channels:
@@ -112,6 +113,40 @@ for i in range(len(units)):
 	unit_description.append()
 	table.flush()
 	hf5.flush()
+
+# If these are Jenn Li's files, they will also have EMG data recorded as analog signals on port AD17. Check if these signals exist
+try:
+	emg_signal = [signal for signal in seg.analogsignals if signal.name == "AD17"]
+	emg_array = np.array(emg_signal[0])
+	emg_sampling_rate = float(emg_signal[0].sampling_rate)
+	emg_times = np.array(emg_signal[0].times)
+except:
+	print("EMG signals do not exist")
+
+# If the EMG signals exist, pull out the pre and post stimulus durations specified by the user
+if emg_array.any():
+	# Make an array to store the emg data for each digital input
+	# First axis of this array has two elements because we always put in two unipolar EMG electrodes in the new Intan system. The old Plexon system had a single bipolar electrode instead
+	# So, we just keep the second element along this axis as 0 when reading the old data - when the downstream filtering code subtracts the 2 unipolar voltages (when we only have a single bipolar voltage), the 0 value doesn't affect things
+	emg_data = np.zeros((2, len(dig_in_channels), seg.events[dig_in_channel_nums[0]].times.shape[0], durations[0] + durations[1]))
+	
+	# Now fill in the data
+	for i in range(len(dig_in_channels)):
+		# Run through the trials of each digital input
+		for j in range(seg.events[dig_in_channel_nums[i]].times.shape[0]):
+			# Pull out the emg signal
+			trial_time = np.where((emg_times*1000 <= float(seg.events[dig_in_channel_nums[i]].times[j])*1000 + durations[1])*(emg_times*1000 >= float(seg.events[dig_in_channel_nums[i]].times[j])*1000 - durations[0]))[0]
+			data = emg_array[trial_time]
+
+			# Downsample the data to 1000 Hz (in case the sampling rate is higher)
+			if emg_sampling_rate > 1000.0:
+				data = resample(data, durations[0] + durations[1])
+
+			# Sometimes the data ends up being 1 sample more than durations[0] + durations[1], so correct that
+			emg_data[0, i, j, :] = data[:durations[0] + durations[1], 0]
+
+# Save the emg_data
+np.save('emg_data.npy', emg_data) 		
 
 hf5.close()
 
