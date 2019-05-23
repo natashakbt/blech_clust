@@ -79,7 +79,7 @@ for dig_in in trains_dig_in:
 		plt.xlabel('Time from taste delivery (ms)')
 		plt.ylabel('Firing rate (Hz)')
 		plt.plot(time, spike_rate)
-		plt.tight_layout()
+		#plt.tight_layout()
 		fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit))
 		plt.close("all")
 
@@ -95,7 +95,7 @@ for dig_in in trains_dig_in:
 		plt.title('Unit: %i raster plot' % (unit) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
 		plt.xlabel('Time from taste delivery (ms)')
 		plt.ylabel('Trial number')
-		plt.tight_layout()
+		#plt.tight_layout()
 		fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i.png' % (unit))
 		plt.close("all")
 		
@@ -132,7 +132,7 @@ for dig_in in trains_dig_in:
 			plt.xlabel('Time from taste delivery (ms)')
 			plt.ylabel('Firing rate (Hz)')
 			plt.legend(loc = 'upper left', fontsize = 15)
-			plt.tight_layout()
+			#plt.tight_layout()
 			fig.savefig('./PSTH/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_laser_psth.png' % (unit))
 			plt.close("all")
 
@@ -154,7 +154,7 @@ for dig_in in trains_dig_in:
 					plt.title('Unit: %i Dur: %i ms, Lag: %i ms' % (unit, int(duration), int(onset)) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))	
 					plt.xlabel('Time from taste delivery (ms)')
 					plt.ylabel('Trial number')
-					plt.tight_layout()
+					#plt.tight_layout()
 					fig.savefig('./raster/'+str.split(dig_in._v_pathname, '/')[-1]+'/Unit%i_Dur%ims_Lag%ims.png' % (unit, int(duration), int(onset)))
 					plt.close("all")	
 
@@ -202,7 +202,7 @@ for unit in range(num_units):
 	plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
 	fig.text(0.5, 0.02, 'Time from taste delivery (ms)', ha='center')
 	fig.text(0.03, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')	
-	plt.tight_layout()
+	#plt.tight_layout()
 	
 	# Save the combined plot
 	fig.savefig("./PSTH/Unit{:d}_combined_PSTH.png".format(unit))
@@ -253,7 +253,7 @@ for unit in range(num_units):
 		plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
 		fig.text(0.5, 0.02, 'Time from taste delivery (ms)', ha='center')
 		fig.text(0.03, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')
-		plt.tight_layout()		
+		#plt.tight_layout()		
 
 		# Save the combined plot
 		ax[0].set_title("Unit: {:d}, Window size: {:d} ms, Step size: {:d} ms".format(unit, params[0], params[1]))
