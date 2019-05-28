@@ -26,7 +26,6 @@ import math
 import sys
 import easygui
 import tables
-import pickle #for data storage and retreival
 from matplotlib.ticker import PercentFormatter
 from pylab import text
 import pylab as P
@@ -67,8 +66,62 @@ def applyParallel(dfGrouped, func, parallel_kws={}, backend='multiprocessing', b
 
     return pd.concat(retLst) # return concatonated result
 
-#Statistical running funtion
-def spike_phase_stats(data_frame,stats_frame,frequency_list,time_vector):
+# =============================================================================
+# #Statistical running funtion
+# def spike_phase_stats(data_frame,stats_frame,frequency_list,time_vector):
+# 	for band_num in range(len(frequency_list)):
+# 		for unit_num in	range(len(data_frame.unit.unique())):
+# 			for time_num in range(len(time_vector)-1):
+# 				
+# 				#Set query to perfrom statistical tests on
+# 				query = data_frame.query('band == @band_num and unit == @unit_num and time >= @time_vector[@time_num] and time < @time_vector[@time_num+1]')
+# 				
+# 				#Set query index
+# 				queryidx = query.index
+# 				
+# 				#Ensures that idx is a possible boolean
+# 				if len(queryidx) != 0:
+# 	
+# 					#Set query to perfrom statistical tests on
+# 					stat_query = stats_frame.query('band == @band_num and unit == @unit_num and time_bin == @time_num')
+# 					
+# 					#Set stat query index
+# 					statqueryidx = stat_query.index
+# 					
+# 					#Perform Rayleigh test of uniformity: H0 (null hypothesis): The population is distributed uniformly around the circle.
+# 					stats_frame.Raytest_p[statqueryidx] = rayleightest(np.array(query.phase))
+# 				
+# 					#Make sure that this binned data is NOT distrubted uniformily around circle 
+# 					#Discern where is the non-uniformity (radial location of Von Mises distribution) in radians (multiply by 57.2958, into degrees)
+# 					#And the magnitude of this
+# 					if rayleightest(np.array(query.phase)) <= 0.05:
+# 						stats_frame.circ_mean[statqueryidx] = vonmisesmle(np.array(query.phase))[0]
+# 						stats_frame.circ_kappa[statqueryidx]=vonmisesmle(np.array(query.phase))[1]
+# 
+# 
+# 	return stats_frame
+# 
+# =============================================================================
+
+
+def spike_phase_stats(data_frame,frequency_list,time_vector):
+	#Create dataframe to store statistics with column for Rayleigh p values, mean circular angle of data, magnitude of non-uniformity, and distribution tests (comparitive)
+	test_array = np.zeros((len(time_vector)-1,len(data_frame.taste.unique()),len(data_frame.unit.unique()),len(data_frame.band.unique())))
+	
+	nd_idx_objs = []
+	for dim in range(test_array.ndim):
+	    this_shape = np.ones(len(test_array.shape))
+	    this_shape[dim] = test_array.shape[dim]
+	    nd_idx_objs.append(np.broadcast_to( np.reshape(np.arange(test_array.shape[dim]),this_shape.astype('int')), test_array.shape).flatten())
+	
+	stats_frame = pd.DataFrame(data = {'time_bin' : nd_idx_objs[0].flatten(),
+	                                   'taste' : nd_idx_objs[1].flatten(),
+	                                   'unit' : nd_idx_objs[2].flatten(),
+	                                   'band' : nd_idx_objs[3].flatten()})
+		
+	stats_frame["Raytest_p"] = ""; stats_frame["circ_mean"] = ""; stats_frame["circ_kappa"] = ""
+
+	
 	for band_num in range(len(frequency_list)):
 		for unit_num in	range(len(data_frame.unit.unique())):
 			for time_num in range(len(time_vector)-1):
@@ -120,11 +173,6 @@ for files in file_list:
 dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/dframe','r+')
 freq_dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/freq_keys','r+')
 
-# =============================================================================
-# #Open the hdf5 file
-# hf5 = tables.open_file(hdf5_name, 'r+')
-# =============================================================================
-
 #Exctract frequency names
 freq_bands = np.array(freq_dframe.iloc[:][0]).astype(str).reshape(np.array(freq_dframe.iloc[:][0]).size,1)
 
@@ -137,29 +185,31 @@ else:
 	#Change this dependending on the session type		
 	t= np.linspace(0,1200000,50)
 	bins=50
-
-#Create dataframe to store statistics with column for Rayleigh p values, mean circular angle of data, magnitude of non-uniformity, and distribution tests (comparitive)
-test_array = np.zeros((len(t)-1,len(dframe.taste.unique()),len(dframe.unit.unique()),len(dframe.band.unique())))
-nd_idx_objs = []
-for dim in range(test_array.ndim):
-    this_shape = np.ones(len(test_array.shape))
-    this_shape[dim] = test_array.shape[dim]
-    nd_idx_objs.append(np.broadcast_to( np.reshape(np.arange(test_array.shape[dim]),this_shape.astype('int')), test_array.shape).flatten())
-
-stats_dframe = pd.DataFrame(data = {'time_bin' : nd_idx_objs[0].flatten(),
-                                   'taste' : nd_idx_objs[1].flatten(),
-                                   'unit' : nd_idx_objs[2].flatten(),
-                                   'band' : nd_idx_objs[3].flatten()})
-	
-stats_dframe["Raytest_p"] = ""; stats_dframe["circ_mean"] = ""; stats_dframe["circ_kappa"] = ""
-
+# =============================================================================
+# 
+# #Create dataframe to store statistics with column for Rayleigh p values, mean circular angle of data, magnitude of non-uniformity, and distribution tests (comparitive)
+# test_array = np.zeros((len(t)-1,len(dframe.taste.unique()),len(dframe.unit.unique()),len(dframe.band.unique())))
+# nd_idx_objs = []
+# for dim in range(test_array.ndim):
+#     this_shape = np.ones(len(test_array.shape))
+#     this_shape[dim] = test_array.shape[dim]
+#     nd_idx_objs.append(np.broadcast_to( np.reshape(np.arange(test_array.shape[dim]),this_shape.astype('int')), test_array.shape).flatten())
+# 
+# stats_dframe = pd.DataFrame(data = {'time_bin' : nd_idx_objs[0].flatten(),
+#                                    'taste' : nd_idx_objs[1].flatten(),
+#                                    'unit' : nd_idx_objs[2].flatten(),
+#                                    'band' : nd_idx_objs[3].flatten()})
+# 	
+# stats_dframe["Raytest_p"] = ""; stats_dframe["circ_mean"] = ""; stats_dframe["circ_kappa"] = ""
+# 
+# =============================================================================
 # =============================================================================
 # #Parellel processing for statistics
 # =============================================================================
 
 #tempfunction to escape issue with using lambda
-def tmpfunc(x, stats_dframe=stats_dframe, freq_bands=freq_bands, t=t):
-	return spike_phase_stats(x,stats_dframe,freq_bands,t)
+def tmpfunc(x, freq_bands=freq_bands, t=t):
+	return spike_phase_stats(x,freq_bands,t)
 
 
 #Perform statistics multiprocessing using taste as the group
@@ -167,12 +217,13 @@ dfnew = applyParallel(dframe.groupby(dframe.taste), tmpfunc)
 
 #Clean up dataframe to account for multiple (* taste number) entries for values
 df_ordered = dfnew
-df_ordered.drop(dfnew[dfnew.taste > 0].index, inplace=True) #Drops all duplicates
+df_ordered.drop(df_ordered[df_ordered.taste > 0].index, inplace=True) #Drops all duplicates
 df_ordered = df_ordered.reset_index(drop=True) #Resets the index to accurately detail info
-df_ordered.taste = np.tile(dframe.taste.unique(),len(t)*(len(dframe.band.unique()))*len(dframe.unit.unique())) #Reenters labels
+df_ordered.taste = np.tile(dframe.taste.unique(),(len(t)-1)*(len(dframe.band.unique()))*len(dframe.unit.unique())*len(dframe.taste.unique())) #Reenters labels
 
 #Save dframe into node within HdF5 file
 df_ordered.to_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe')
+
 
 
 #TRY PLOTTING
@@ -187,6 +238,8 @@ hist = query_check.hist(column='Raytest_p',bins=25)
 query_check = dframe.query('band == 0 and unit == 0 and taste == 0')
 hist = query_check.hist(column='phase',bins=25)
 
+colors = plt.get_cmap('winter_r')(np.linspace(0, 1, 4))
+
 for unit in dframe.unit.unique():
 	
 	#plot both conditions for unit
@@ -195,12 +248,12 @@ for unit in dframe.unit.unique():
 	fig.text(0.5, 0.05, 'Taste', ha='center',fontsize=14)
 	axes_list = [item for sublist in axes for item in sublist]
 	
-	for ax, taste in zip(axes.flatten(),dframe.taste.unique()):
-		query_check = dframe.query('band == 0 and unit == @unit and taste == @taste')
+	for ax, taste, color in zip(axes.flatten(),dframe.taste.unique(),colors):
+		query_check = dframe.query('band == 0 and unit == @unit and taste == @taste and time>=2000 and time<=4000')
 		df_var = query_check.phase
 		
 		ax = axes_list.pop(0)
-		im =ax.hist(np.array(df_var), bins=25, alpha=0.7)
+		im =ax.hist(np.array(df_var), bins=25, color=color, alpha=0.7)
 		ax.set_title(taste,size=15,y=1)
 					
 	
