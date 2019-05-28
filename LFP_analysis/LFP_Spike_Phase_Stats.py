@@ -66,68 +66,38 @@ def applyParallel(dfGrouped, func, parallel_kws={}, backend='multiprocessing', b
 
     return pd.concat(retLst) # return concatonated result
 
-# =============================================================================
-# #Statistical running funtion
-# def spike_phase_stats(data_frame,stats_frame,frequency_list,time_vector):
-# 	for band_num in range(len(frequency_list)):
-# 		for unit_num in	range(len(data_frame.unit.unique())):
-# 			for time_num in range(len(time_vector)-1):
-# 				
-# 				#Set query to perfrom statistical tests on
-# 				query = data_frame.query('band == @band_num and unit == @unit_num and time >= @time_vector[@time_num] and time < @time_vector[@time_num+1]')
-# 				
-# 				#Set query index
-# 				queryidx = query.index
-# 				
-# 				#Ensures that idx is a possible boolean
-# 				if len(queryidx) != 0:
-# 	
-# 					#Set query to perfrom statistical tests on
-# 					stat_query = stats_frame.query('band == @band_num and unit == @unit_num and time_bin == @time_num')
-# 					
-# 					#Set stat query index
-# 					statqueryidx = stat_query.index
-# 					
-# 					#Perform Rayleigh test of uniformity: H0 (null hypothesis): The population is distributed uniformly around the circle.
-# 					stats_frame.Raytest_p[statqueryidx] = rayleightest(np.array(query.phase))
-# 				
-# 					#Make sure that this binned data is NOT distrubted uniformily around circle 
-# 					#Discern where is the non-uniformity (radial location of Von Mises distribution) in radians (multiply by 57.2958, into degrees)
-# 					#And the magnitude of this
-# 					if rayleightest(np.array(query.phase)) <= 0.05:
-# 						stats_frame.circ_mean[statqueryidx] = vonmisesmle(np.array(query.phase))[0]
-# 						stats_frame.circ_kappa[statqueryidx]=vonmisesmle(np.array(query.phase))[1]
-# 
-# 
-# 	return stats_frame
-# 
-# =============================================================================
-
-
+ #Statistical running funtion
 def spike_phase_stats(data_frame,frequency_list,time_vector):
-	#Create dataframe to store statistics with column for Rayleigh p values, mean circular angle of data, magnitude of non-uniformity, and distribution tests (comparitive)
-	test_array = np.zeros((len(time_vector)-1,len(data_frame.taste.unique()),len(data_frame.unit.unique()),len(data_frame.band.unique())))
+# =============================================================================
+# 	#Create dataframe to store statistics with column for Rayleigh p values, mean circular angle of data, magnitude of non-uniformity, and distribution tests (comparitive)
+# =============================================================================
 	
-	nd_idx_objs = []
-	for dim in range(test_array.ndim):
-	    this_shape = np.ones(len(test_array.shape))
-	    this_shape[dim] = test_array.shape[dim]
-	    nd_idx_objs.append(np.broadcast_to( np.reshape(np.arange(test_array.shape[dim]),this_shape.astype('int')), test_array.shape).flatten())
-	
-	stats_frame = pd.DataFrame(data = {'time_bin' : nd_idx_objs[0].flatten(),
-	                                   'taste' : nd_idx_objs[1].flatten(),
-	                                   'unit' : nd_idx_objs[2].flatten(),
-	                                   'band' : nd_idx_objs[3].flatten()})
+	frame_dict = {'time_bin' : time_vector[:-1],
+			 'taste' : data_frame.taste.unique(),
+			 'unit' : data_frame.unit.unique(),
+			 'band' : data_frame.band.unique()}
+
+	frame_list = [pd.DataFrame(data = val,columns=[key]) for key,val in frame_dict.items()]
+	for frame in frame_list:
+		frame['tmp'] = 1
 		
+	stats_frame = frame_list[0]
+	for frame_num in range(1,len(frame_list)):
+		stats_frame = stats_frame.merge(frame_list[frame_num],how='outer')
+	stats_frame = stats_frame.drop(['tmp'],axis=1)
+	
 	stats_frame["Raytest_p"] = ""; stats_frame["circ_mean"] = ""; stats_frame["circ_kappa"] = ""
 
 	
 	for band_num in range(len(frequency_list)):
-		for unit_num in	range(len(data_frame.unit.unique())):
+		for taste_num in	range(len(data_frame.taste.unique())):
 			for time_num in range(len(time_vector)-1):
 				
 				#Set query to perfrom statistical tests on
-				query = data_frame.query('band == @band_num and unit == @unit_num and time >= @time_vector[@time_num] and time < @time_vector[@time_num+1]')
+				query = data_frame.query('band == @band_num  \
+							 and taste == @taste_num \
+							 and time >= @time_vector[@time_num] \
+							 and time < @time_vector[@time_num+1]')
 				
 				#Set query index
 				queryidx = query.index
@@ -136,7 +106,9 @@ def spike_phase_stats(data_frame,frequency_list,time_vector):
 				if len(queryidx) != 0:
 	
 					#Set query to perfrom statistical tests on
-					stat_query = stats_frame.query('band == @band_num and unit == @unit_num and time_bin == @time_num')
+					stat_query = stats_frame.query('band == @band_num \
+									and taste == @taste_num \
+									and time_bin == @time_vector[@time_num]')
 					
 					#Set stat query index
 					statqueryidx = stat_query.index
@@ -185,24 +157,7 @@ else:
 	#Change this dependending on the session type		
 	t= np.linspace(0,1200000,50)
 	bins=50
-# =============================================================================
-# 
-# #Create dataframe to store statistics with column for Rayleigh p values, mean circular angle of data, magnitude of non-uniformity, and distribution tests (comparitive)
-# test_array = np.zeros((len(t)-1,len(dframe.taste.unique()),len(dframe.unit.unique()),len(dframe.band.unique())))
-# nd_idx_objs = []
-# for dim in range(test_array.ndim):
-#     this_shape = np.ones(len(test_array.shape))
-#     this_shape[dim] = test_array.shape[dim]
-#     nd_idx_objs.append(np.broadcast_to( np.reshape(np.arange(test_array.shape[dim]),this_shape.astype('int')), test_array.shape).flatten())
-# 
-# stats_dframe = pd.DataFrame(data = {'time_bin' : nd_idx_objs[0].flatten(),
-#                                    'taste' : nd_idx_objs[1].flatten(),
-#                                    'unit' : nd_idx_objs[2].flatten(),
-#                                    'band' : nd_idx_objs[3].flatten()})
-# 	
-# stats_dframe["Raytest_p"] = ""; stats_dframe["circ_mean"] = ""; stats_dframe["circ_kappa"] = ""
-# 
-# =============================================================================
+	
 # =============================================================================
 # #Parellel processing for statistics
 # =============================================================================
@@ -211,19 +166,29 @@ else:
 def tmpfunc(x, freq_bands=freq_bands, t=t):
 	return spike_phase_stats(x,freq_bands,t)
 
-
 #Perform statistics multiprocessing using taste as the group
-dfnew = applyParallel(dframe.groupby(dframe.taste), tmpfunc)
+dfnew = applyParallel(dframe.groupby(dframe.unit), tmpfunc)
 
-#Clean up dataframe to account for multiple (* taste number) entries for values
-df_ordered = dfnew
-df_ordered.drop(df_ordered[df_ordered.taste > 0].index, inplace=True) #Drops all duplicates
-df_ordered = df_ordered.reset_index(drop=True) #Resets the index to accurately detail info
-df_ordered.taste = np.tile(dframe.taste.unique(),(len(t)-1)*(len(dframe.band.unique()))*len(dframe.unit.unique())*len(dframe.taste.unique())) #Reenters labels
+# =============================================================================
+# #Store back into HDF5
+# =============================================================================
+
+#convert strings to numerical data
+dfnew = dfnew.apply(pd.to_numeric, errors = 'coerce')
 
 #Save dframe into node within HdF5 file
-df_ordered.to_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe')
+dfnew.to_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe')
 
+
+
+#pull in dframes
+dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe','r+')
+
+
+plt.pcolor(dfnew)
+plt.yticks(np.arange(0.5, len(df.index), 1), df.index)
+plt.xticks(np.arange(0.5, len(df.columns), 1), df.columns)
+plt.show()
 
 
 #TRY PLOTTING
@@ -499,4 +464,21 @@ tuple_save = 'Passive_Phaselock_stats_%i_%s_%i_%s.dump' %(len(all_day1), stats_d
 output_name =   os.path.join(dir_name, tuple_save)
 pickle.dump(stats_dframe, open(output_name, 'wb'))  	
 
-		
+
+test1 = dframe.query('taste == 0')		
+
+
+
+frame_dict = {'time_bin' : t[:-1],
+			 'taste' : test1.taste.unique(),
+			 'unit' : test1.unit.unique(),
+			 'band' : test1.band.unique()}
+
+frame_list = [pd.DataFrame(data = val,columns=[key]) for key,val in frame_dict.items()]
+for frame in frame_list:
+	frame['tmp'] = 1
+	
+test2 = frame_list[0]
+for frame_num in range(1,len(frame_list)):
+	test2 = test2.merge(frame_list[frame_num],how='outer')
+test2 = test2.drop(['tmp'],axis=1)
