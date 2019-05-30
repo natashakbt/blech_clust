@@ -152,7 +152,7 @@ freq_bands = np.array(freq_dframe.iloc[:][0]).astype(str).reshape(np.array(freq_
 if np.size(dframe.taste.unique())>0:
 	#Change this dependending on the session type		
 	t= np.linspace(0,7000,71)
-	bins=300
+	bins=70
 else:
 	#Change this dependending on the session type		
 	t= np.linspace(0,1200000,50)
@@ -181,8 +181,9 @@ dfnew.to_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe')
 
 
 
-#pull in dframes
-dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe','r+')
+	
+plt.plot(query.time_bin,query.Raytest_p)
+values = {'ids': ['Raytest_p'], 'vals': [1, 3]}
 
 
 plt.pcolor(dfnew)
@@ -463,22 +464,3 @@ for taste in range(len(dframe.taste.unique())):
 tuple_save = 'Passive_Phaselock_stats_%i_%s_%i_%s.dump' %(len(all_day1), stats_dframe.condition.unique()[0],len(all_day2), stats_dframe.condition.unique()[1])
 output_name =   os.path.join(dir_name, tuple_save)
 pickle.dump(stats_dframe, open(output_name, 'wb'))  	
-
-
-test1 = dframe.query('taste == 0')		
-
-
-
-frame_dict = {'time_bin' : t[:-1],
-			 'taste' : test1.taste.unique(),
-			 'unit' : test1.unit.unique(),
-			 'band' : test1.band.unique()}
-
-frame_list = [pd.DataFrame(data = val,columns=[key]) for key,val in frame_dict.items()]
-for frame in frame_list:
-	frame['tmp'] = 1
-	
-test2 = frame_list[0]
-for frame_num in range(1,len(frame_list)):
-	test2 = test2.merge(frame_list[frame_num],how='outer')
-test2 = test2.drop(['tmp'],axis=1)
