@@ -163,12 +163,19 @@ else:
 #Perform statistics multiprocessing using taste as the group
 dfnew = spike_phase_stats(dframe, t)
 
+#convert strings to numerical data
+dfnew = dfnew.apply(pd.to_numeric, errors = 'coerce')
+
+#  ___        _               _   
+# / _ \ _   _| |_ _ __  _   _| |_ 
+#| | | | | | | __| '_ \| | | | __|
+#| |_| | |_| | |_| |_) | |_| | |_ 
+# \___/ \__,_|\__| .__/ \__,_|\__|
+#                |_|              
+
 # =============================================================================
 # #Store back into HDF5
 # =============================================================================
-
-#convert strings to numerical data
-dfnew = dfnew.apply(pd.to_numeric, errors = 'coerce')
 
 #Save dframe into node within HdF5 file
 dfnew.to_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe')
