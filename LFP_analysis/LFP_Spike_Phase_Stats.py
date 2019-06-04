@@ -40,7 +40,7 @@ def applyParallel(dfGrouped, func, parallel_kws={}, backend='multiprocessing', b
         raise TypeError(f'dfGrouped must be pandas.core.groupby.GroupBy, not {type(dfGrouped)}')
 
     # Set default parallel args
-    default_parallel_kws = dict(n_jobs=multiprocessing.cpu_count(), max_nbytes=None, verbose=11)
+    default_parallel_kws = dict(n_jobs=multiprocessing.cpu_count(), max_nbytes=None, verbose=1)
     for key,item in default_parallel_kws.items():
         parallel_kws.setdefault(key, item)
     print("Apply parallel with {} verbosity".format(parallel_kws["verbose"]))
@@ -78,18 +78,12 @@ def spike_phase_stats(data_frame, time_vector):
         stats_frame = stats_frame.merge(frame_list[frame_num],how='outer')
     stats_frame = stats_frame.drop(['tmp'],axis=1)
     
-    # Add columns for appropriate stats
-    stats_frame["Raytest_p"] = ""; stats_frame["circ_mean"] = ""; stats_frame["circ_kappa"] = ""
-
 
     # Bin spiketimes in time-bins
     data_frame['time_bin'] = pd.cut(x=data_frame.time,bins=t,labels=np.asarray(t[:-1]).astype(int))
     
     # Group by all variables to iterate over groups
     group_frame = data_frame.groupby(['band','taste','unit','time_bin'])
-    
-    # Set all iterable values as indices
-    stats_frame = stats_frame.set_index(['band','taste','unit','time_bin'])
     
     
     # Lambda function which calculates stats and returns list with indices
@@ -105,10 +99,15 @@ def spike_phase_stats(data_frame, time_vector):
     applyParallel(group_frame, run_stats, parallel_kws={}, backend='multiprocessing', backend_kws={})
     
     # Compile lists of list into dataframe to be output
-    stats_frame = pd.DataFrame(stats_list,columns = ['band','taste','unit','time_bin',\
-                                                      'Raytest_p','circ_mean','circ_kappa'])
+    temp_stats_frame = pd.DataFrame(stats_list,columns = ['band','taste','unit','time_bin',\
+                                                          'Raytest_p','circ_mean','circ_kappa'])\
+                                                        .apply(pd.to_numeric, errors = 'coerce')
     
-
+    # Merge with original stats frame
+    ### This prevents skipping of groups since iterating over groups only returns ###
+    ### non-empty groups ###
+    stats_frame = stats_frame.merge(temp_stats_frame,how='outer')
+    
     return stats_frame
 
 # ___                            _     ____        _        
