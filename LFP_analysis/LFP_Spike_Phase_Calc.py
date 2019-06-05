@@ -8,6 +8,14 @@ Created on Thu Feb 14 10:23:58 2019
 Created on Wed Feb 13 19:36:13 2019
 
 """
+
+# ____       _               
+#/ ___|  ___| |_ _   _ _ __  
+#\___ \ / _ \ __| | | | '_ \ 
+# ___) |  __/ |_| |_| | |_) |
+#|____/ \___|\__|\__,_| .__/ 
+#                     |_|    
+
 # =============================================================================
 # Import stuff
 # =============================================================================
@@ -18,7 +26,9 @@ import os # functions for interacting w operating system
 
 # 3rd-party libraries
 import numpy as np # module for low-level scientific computing
-from scipy.signal import hilbert #Hilbert transform to determine the amplitude envelope and instantaneous frequency of an amplitude-modulated signal
+#Hilbert transform to determine the amplitude envelope and 
+#instantaneous frequency of an amplitude-modulated signal
+from scipy.signal import hilbert 
 from scipy.signal import butter
 from scipy.signal import filtfilt
 import matplotlib.pyplot as plt # makes matplotlib work like MATLAB. ’pyplot’ functions.
@@ -59,7 +69,8 @@ colors = plt.get_cmap('winter_r')(np.linspace(0, 1, len(iter_freqs)))
 # Import/Open HDF5 File
 # =============================================================================
 
-#Get name of directory where the data files and hdf5 file sits, and change to that directory for processing
+#Get name of directory where the data files and hdf5 file sits, 
+#and change to that directory for processing
 dir_name = easygui.diropenbox()
 os.chdir(dir_name)
 
@@ -79,31 +90,37 @@ trains_dig_in = hf5.list_nodes('/spike_trains')
 lfp_array = np.asarray([lfp[:] for lfp in lfps_dig_in])
 spike_array = np.asarray([spikes.spike_array[:] for spikes in trains_dig_in])
 
-# =============================================================================
-# Processing
-# =============================================================================
+# ____                              _             
+#|  _ \ _ __ ___   ___ ___  ___ ___(_)_ __   __ _ 
+#| |_) | '__/ _ \ / __/ _ \/ __/ __| | '_ \ / _` |
+#|  __/| | | (_) | (_|  __/\__ \__ \ | | | | (_| |
+#|_|   |_|  \___/ \___\___||___/___/_|_| |_|\__, |
+#                                           |___/ 
+
 # =============================================================================
 # Calculate phases
 # =============================================================================
 
 # Create processed phase arrays
-analytic_signal_array = np.zeros((len(iter_freqs),) + lfp_array.shape, dtype = np.complex128)
+analytic_signal_array = np.zeros((len(iter_freqs),) + \
+        lfp_array.shape, dtype = np.complex128)
 phase_array = np.zeros((len(iter_freqs),) + lfp_array.shape)
 
 for band in trange(len(iter_freqs), desc = 'bands'):
     for taste in range(lfp_array.shape[0]):
         for channel in range(lfp_array.shape[1]):
             for trial in range(lfp_array.shape[2]):
-                band_filt_sig = butter_bandpass_filter(data = lfp_array[taste,channel,trial,:], 
-                                                       lowcut = iter_freqs[band][1], 
-                                                       highcut =  iter_freqs[band][2], 
-                                                       fs = 1000)
+                band_filt_sig = butter_bandpass_filter(
+                                    data = lfp_array[taste,channel,trial,:], 
+                                    lowcut = iter_freqs[band][1], 
+                                    highcut =  iter_freqs[band][2], 
+                                    fs = 1000)
                 analytic_signal = hilbert(band_filt_sig)
                 instantaneous_phase = np.angle(analytic_signal)
                 
                 analytic_signal_array[band,taste,channel,trial,:] = analytic_signal
                 phase_array[band,taste,channel,trial,:] = instantaneous_phase
-				   	
+
 # =============================================================================
 # Use mean LFP (across channels) to calculate phase (since all channels have same phase)
 # =============================================================================
@@ -126,7 +143,12 @@ nd_idx_objs = []
 for dim in range(mean_phase_array.ndim):
     this_shape = np.ones(len(mean_phase_array.shape))
     this_shape[dim] = mean_phase_array.shape[dim]
-    nd_idx_objs.append(np.broadcast_to( np.reshape(np.arange(mean_phase_array.shape[dim]),this_shape.astype('int')), mean_phase_array.shape).flatten())
+    nd_idx_objs.append(
+            np.broadcast_to(
+                np.reshape(
+                    np.arange(mean_phase_array.shape[dim]),
+                            this_shape.astype('int')), 
+                mean_phase_array.shape).flatten())
 
 phase_frame = pd.DataFrame(data = {'band' : nd_idx_objs[0].flatten(),
                                     'taste' : nd_idx_objs[1].flatten(),
@@ -136,6 +158,13 @@ phase_frame = pd.DataFrame(data = {'band' : nd_idx_objs[0].flatten(),
 
 # Merge : Gives dataframe with length of (bands x numner of spikes)
 final_phase_frame = pd.merge(spikes_frame,phase_frame,how='inner')
+
+#  ___        _               _   
+# / _ \ _   _| |_ _ __  _   _| |_ 
+#| | | | | | | __| '_ \| | | | __|
+#| |_| | |_| | |_| |_) | |_| | |_ 
+# \___/ \__,_|\__| .__/ \__,_|\__|
+#                |_|              
 
 #Save dframes into node within HdF5 file
 final_phase_frame.to_hdf(hdf5_name,'Spike_Phase_Dframe/dframe')
