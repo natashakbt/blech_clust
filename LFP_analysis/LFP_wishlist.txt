@@ -1,0 +1,7 @@
+--Description for every script on top of file
+--Descriptive stats output
+	--# of phase locked units in given bin
+	--Before and after stimulus delivery
+--Sliding window for phase stats
+--Use functions/classes in scripts so I/O of different
+	forms of data is easier
