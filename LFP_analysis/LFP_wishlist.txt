@@ -1,4 +1,5 @@
 --Description for every script on top of file
+--Extract LFP from non-dead channels (figure out metric for this)
 --Descriptive stats output
 	--# of phase locked units in given bin
 	--Before and after stimulus delivery
