@@ -10,6 +10,7 @@ import os
 import glob
 import matplotlib.pyplot as plt
 import re
+from tqdm import trange
 #Import specific functions in order to filter the data file
 from scipy.signal import butter
 from scipy.signal import filtfilt
@@ -95,7 +96,7 @@ hf5.create_group('/', 'raw_LFP')
 
 #Loop through each neuron-recording electrode (from .dat files), 
 #filter data, and create array in new LFP node
-for i in range(len(Raw_Electrodefiles)):
+for i in trange(len(Raw_Electrodefiles)):
 
     #Read and filter data
     data = np.fromfile(Raw_Electrodefiles[i], dtype = np.dtype('int16'))
