@@ -316,54 +316,20 @@ if trial_check == "No":
         
     #create timing variables
     pre_stim = 0
-    lower = int(analysis_params[0])
-    upper = int(analysis_params[1])
-    Fs = int(analysis_params[2])
-    signal_window = int(analysis_params[3])
-    window_overlap = int(analysis_params[4])
-    
-    #establish meshing and plotting paramters
-    plotting_params = easygui.multenterbox(
-            msg = 'Input plotting paramters:', 
-            fields = ['Minimum frequency (Hz):','Maximum frequency (Hz):'], 
-            values = ['3','40'])
-    
-    base_time = lower 
+
 else:    
     analysis_params = easygui.multenterbox(
             msg = 'Input analysis paramters:', 
             fields = ['Pre-stimulus signal duration (ms; from set-up)',
                     'Post-stimulus signal duration (ms; from set-up)',
                     'Pre-Taste array start time (ms)', 
-                    'Taste array end time (ms)', 
-                    'Sampling Rate (samples per second)', 
-                    'Signal Window (ms)', 
-                    'Window Overlap (ms; default 90%)'], 
-            values = ['2000','5000','0','2500','1000','900','850'])
+                    'Taste array end time (ms)'], 
+            values = ['2000','5000','0','2500'])
     
     #create timing variables
-    pre_stim = int(analysis_params[0])
-    post_stim = int(analysis_params[1])
-    lower = int(analysis_params[2])
-    upper = int(analysis_params[3])
-    Fs = int(analysis_params[4])
-    signal_window = int(analysis_params[5])
-    window_overlap = int(analysis_params[6])
-    
-    #establish meshing and plotting paramters
-    plotting_params = easygui.multenterbox(
-            msg = 'Input plotting paramters:', 
-            fields = ['Minimum frequency (Hz):',
-                    'Maximum frequency (Hz):', 
-                    'Pre-stim plot time (ms):', 
-                    'Post-stim plot time (ms):'], 
-            values = ['3','40', '1000',int(upper)])
+    pre_stim = int(durations[0])
 
     # Ask if this analysis is an average of normalization 
-    # (not supported for passive sitting yet)
-    msg   = "Do you want to normalize to baseline (time before stimulus) "\
-            "or have a mean (post-stimulus)?"
-    analysis_type = easygui.buttonbox(msg,choices = ["Normalize","Mean"])
     taste_params = easygui.multenterbox(
             msg = 'Input taste identities:', 
             fields = ['Taste 1 (dig_in_1)', 
@@ -371,28 +337,7 @@ else:
                     'Taste 3 (dig_in_3)',
                     'Taste 4 (dig_in_4)'],
             values = ['NaCl','Sucrose','Citric Acid','QHCl'])
-    
-    #Adjust array parameters
-    if analysis_type == "Normalize":
-        analysis_params_2 = easygui.multenterbox(
-                msg = 'Input normalizing paramter:', 
-                fields = ['Baseline (pre-stimulus signal duration (ms))'], 
-                values = ['2000'])
-        base_time = int(analysis_params_2[0])
-        
-    else:
-        base_time = 2000    
 
-#Detail selections to user
-print('analysis will use signals: ' + str(base_time) + 'ms' + \
-        ' before stim onset & ' + str(upper) + 'ms after stim onset')
-
-#specify frequency bands
-iter_freqs = [
-        ('Theta', 4, 7),
-        ('Mu', 7, 12),
-        ('Beta', 13, 25),
-        ('Gamma', 30, 45)]
 
 # =============================================================================
 # #Channel Check
@@ -433,9 +378,6 @@ for taste in range(len(LFP_data)):
         fig.savefig('./LFP_channel_check/' + hdf5_name[0:4] + \
                 '_ %s_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0],
                     taste_params[taste]) + '_channelcheck.png')   
-        plt.show()
-        plt.close(fig)
-
 
 # ==============================
 # Close Out 
