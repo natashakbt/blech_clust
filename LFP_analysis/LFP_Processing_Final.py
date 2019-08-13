@@ -40,6 +40,7 @@ electrodegroup = np.unique(hf5.root.unit_descriptor[:]['electrode_number'])
 ## List all appropriate dat files
 Raw_Electrodefiles = np.sort(glob.glob('*amp*dat*'))
 Raw_Electrodefiles = Raw_Electrodefiles[electrodegroup]
+
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #======================================
@@ -62,8 +63,8 @@ Raw_Electrodefiles = Raw_Electrodefiles[electrodegroup]
 #        # Remove channels which are not electrodes
 #        Raw_Electrodefiles = [Raw_Electrodefiles[x] for x in range(len(Raw_Electrodefiles)) \
 #                        if x not in non_electrode_channels_inds]
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 
 # ==============================
 # Extract Raw Data 
@@ -204,15 +205,13 @@ if trial_check == "Yes":
             this_taste_LFPs = np.zeros((
                     num_electrodes, num_trials, durations[0] + durations[1]))
             for electrode in range(num_electrodes):
-                for j in range(
-                                len(change_points[dig_in_channel_nums[i]])):
-
+                for j in range(len(change_points[dig_in_channel_nums[i]])):
                     this_taste_LFPs[electrode, j, :] =\
-                                np.mean(
-                                    lfp_nodes[electrode]\
-                                    [change_points[dig_in_channel_nums[i]][j] -\
-                                    durations[0]*30:change_points[dig_in_channel_nums[i]][j] \
-                                    + durations[1]*30].reshape((-1, 30)), axis = 1)
+                        np.mean(
+                            lfp_nodes[electrode]\
+                            [change_points[dig_in_channel_nums[i]][j] -\
+                            durations[0]*30:change_points[dig_in_channel_nums[i]][j] \
+                            + durations[1]*30].reshape((-1, 30)), axis = 1)
             
             print (float(i)/len(dig_in_channels)) #Shows progress   
         
@@ -242,7 +241,6 @@ if trial_check == "No":
 #(ie. First half V back half)
 msg   = "Do you want to delete the Raw LFP data?"
 rawLFPdelete = easygui.buttonbox(msg,choices = ["Yes","No"])
-
 if rawLFPdelete == "Yes":
     #Delete data
     hf5.remove_node('/raw_LFP', recursive = True)
@@ -428,10 +426,13 @@ for taste in range(len(LFP_data)):
                         ymax=np.max(channel_data[:,chan]), linewidth=4, color='r')
                 
         fig.subplots_adjust(hspace=0,wspace = -0.15)
-        fig.suptitle('%s - Channel Check: %s' %(taste_params[taste], 
-            hdf5_name[0:4])+'\n' + 'Raw LFP Traces; Date: %s' %(re.findall(r'_(\d{6})', 
+        fig.suptitle('Dig in {} - '.format(taste) + \
+                '%s - Channel Check: %s' %(taste_params[taste], 
+                hdf5_name[0:4])+'\n' + 'Raw LFP Traces; Date: %s' \
+                                %(re.findall(r'_(\d{6})', 
                 hdf5_name)[0]),size=16,fontweight='bold')
         fig.savefig('./LFP_channel_check/' + hdf5_name[0:4] + \
+                '_dig_in{}'.format(taste) + \
                 '_ %s_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0],
                     taste_params[taste]) + '_channelcheck.png')   
         plt.show()
