@@ -51,6 +51,41 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=2):
     y = filtfilt(b, a, data)
     return y
 
+def getFlaggedLFPs(hf5_name):
+
+    # Load flagged channels from HDF5 if present
+    try:
+        flagged_channels = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
+        flagged_channel_bool = 1
+    except:
+        print('No flagged channels dataset present. Defaulting to not using flags.')
+        flagged_channel_bool = 0
+
+    #Open the hdf5 file
+    hf5 = tables.open_file(hdf5_name, 'r+')
+
+    # Pull LFPS and spikes
+    # Make sure not taking anything other than a dig_in
+    lfps_dig_in = [node for node in hf5.list_nodes('/Parsed_LFP') if 'dig_in' in str(node)]
+
+    # If flagged channels dataset present
+    if flagged_channel_bool > 0:
+        good_channel_list = [list(flag_frame.\
+                query('Dig_In == {} and Error_Flag == 1'.format(dig_in))['Channel']) \
+                for dig_in in range(len(lfps_dig_in))]
+    else:
+        good_channel_list = [list(flag_frame.\
+                query('Dig_In == {}'.format(dig_in))['Channel']) \
+                for dig_in in range(len(lfps_dig_in))]
+
+    # Load LFPs and remove flagged channels if present
+    lfp_list = [dig_in[:][good_channel_list[dig_in_num],:] \
+        for dig_in_num,dig_in in enumerate(lfps_dig_in)]
+
+    hf5.close()
+
+    return lfp_list
+
 # =============================================================================
 # Define common variables
 # =============================================================================
@@ -82,38 +117,11 @@ for files in file_list:
 	if files[-2:] == 'h5':
 		hdf5_name = files
 
-# Load flagged channels from HDF5
-# If absent, make empty data frame
-try:
-    flagged_channels = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
-    flagged_channel_bool = 1
-except:
-    print('No flagged channels dataset present. Defaulting to not using flags.')
-    flagged_channel_bool = 0
 
-#Open the hdf5 file
+lfp_list = getFlaggedLFPs(hdf5_name)
+
 hf5 = tables.open_file(hdf5_name, 'r+')
-
-# Pull LFPS and spikes
-lfps_dig_in = hf5.list_nodes('/Parsed_LFP')
-# Make sure not taking anything other than a dig_in
-lfps_dig_in = [node for node in lfps_dig_in \
-        if 'dig_in' in str(node)]
 trains_dig_in = hf5.list_nodes('/spike_trains')
-
-# Load LFPs and remove flagged channels if present
-lfp_list = [lfp[:] for lfp in lfps_dig_in]
-
-if flagged_channel_bool > 0:
-    good_channel_list = [list(flag_frame.\
-            query('Dig_In == {} and Error_Flag == 1'.format(dig_in))['Channel']) \
-            for dig_in in range(len(lfps_dig_in))]
-else:
-    good_channel_list = [list(flag_frame.query('Dig_In == {}'.format(dig_in))['Channel']) \
-            for dig_in in range(len(lfps_dig_in))]
-
-lfp_list = [dig_in[good_channel_list[dig_in_num],:] \
-        for dig_in_num,dig_in in enumerate(lfp_list)]
 spike_array = np.asarray([spikes.spike_array[:] for spikes in trains_dig_in])
 
 # ____                              _             
