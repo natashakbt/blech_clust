@@ -144,8 +144,11 @@ filtered_signal_list = [ filtered_tuple (band, taste,
 # Use mean LFP (across channels) to calculate phase (since all channels have same phase)
 # =============================================================================
 # Process filtered signals to extract hilbert transform and phase 
-mean_analytic_signal_list = [ filtered_tuple(x.Band, x.Taste, np.mean(hilbert(x.Data),axis=0)) \
-                        for x in filtered_signal_list ]
+
+#mean_analytic_signal_list = \
+#                [ filtered_tuple(x.Band, x.Taste, np.mean(hilbert(x.Data),axis=0)) \
+#                    for x in filtered_signal_list ]
+
 mean_phase_list = [ filtered_tuple(x.Band, x.Taste, np.mean(np.angle(x.Data),axis=0)) \
                         for x in filtered_signal_list ]
                            
@@ -177,6 +180,8 @@ def make_array_identifiers(array):
 
 nd_idx_objs = make_array_identifiers(mean_phase_array)
 
+# Run through all groups of mean phase, convert to pandas dataframe
+# and concatenate into single dataframe
 phase_frame = pd.concat(
         [pd.DataFrame( data = { 'band' : dat.Band,
                                 'taste' : dat.Taste,
