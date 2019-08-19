@@ -39,7 +39,14 @@ try:
 except:
     taste_check = []
 
+# Create dataframe with all tastes and channels
 flag_frame = pd.DataFrame(list(product(range(taste_num),range(channel_num))),
                 columns = ['Dig_In','Channel'])
-flag_frame = flag_frame.query('Dig_In in @taste_check or Channel in @channel_check')
+
+# Create list of all flagged rows in dataframe and mark
+flagged_rows = np.isin(list(flag_frame['Dig_In']),taste_check) + \
+                    np.isin(list(flag_frame['Channel']),channel_check)
+flag_frame['Error_Flag'] = flagged_rows * 1 
+
+#Write out to file
 flag_frame.to_hdf(hdf5_name, parsed_lfp_addr + '/flagged_channels')

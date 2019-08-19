@@ -86,9 +86,10 @@ for files in file_list:
 # If absent, make empty data frame
 try:
     flagged_channels = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
+    flagged_channel_bool = 1
 except:
     print('No flagged channels dataset present. Defaulting to not using flags.')
-    flagged_channels = pd.DataFrame()
+    flagged_channel_bool = 0
 
 #Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
@@ -103,14 +104,13 @@ trains_dig_in = hf5.list_nodes('/spike_trains')
 # Load LFPs and remove flagged channels if present
 lfp_list = [lfp[:] for lfp in lfps_dig_in]
 
-if len(flagged_channels) > 0:
-    good_channel_list = [[channel for channel in range(len(lfp_list[dig_in])) \
-        if channel not in \
-        list(flagged_channels.query('Dig_In == {}'.format(dig_in))['Channel'])] \
-        for dig_in in range(len(lfps_dig_in))]
+if flagged_channel_bool > 0:
+    good_channel_list = [list(flag_frame.\
+            query('Dig_In == {} and Error_Flag == 1'.format(dig_in))['Channel']) \
+            for dig_in in range(len(lfps_dig_in))]
 else:
-    good_channel_list = [[channel for channel in range(len(lfp_list[dig_in]))] \
-        for dig_in in range(len(lfps_dig_in))]
+    good_channel_list = [list(flag_frame.query('Dig_In == {}'.format(dig_in))['Channel']) \
+            for dig_in in range(len(lfps_dig_in))]
 
 lfp_list = [dig_in[good_channel_list[dig_in_num],:] \
         for dig_in_num,dig_in in enumerate(lfp_list)]
