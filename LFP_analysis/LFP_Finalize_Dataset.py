@@ -3,6 +3,8 @@ import glob
 import tables
 from itertools import product
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 
 # =============================================================================
 # #Channel Check Processing
@@ -19,17 +21,23 @@ taste_num = len([x for x in hf5.list_nodes(parsed_lfp_addr) \
 channel_num = hf5.list_nodes(parsed_lfp_addr)[0].shape[0]
 
 #Ask user to check LFP traces to ensure channels are not shorted/bad in order to remove said channel from further processing
-channel_check =  list(map(int,easygui.multchoicebox(
-        msg = 'Choose the channel numbers that you '\
-                'want to REMOVE from further analyses. '
-                'Click clear all and ok if all channels are good', 
-                choices = tuple([i for i in range(channel_num)]))))
+try:
+    channel_check =  list(map(int,easygui.multchoicebox(
+            msg = 'Choose the channel numbers that you '\
+                    'want to REMOVE from further analyses. '
+                    'Click clear all and ok if all channels are good', 
+                    choices = tuple([i for i in range(channel_num)]))))
+except:
+    channel_check = []
 
-taste_check = list(map(int, easygui.multchoicebox(
-        msg = 'Chose the taste numbers that you want to '\
-                'REMOVE from further analyses. Click clear all '\
-                'and ok if all channels are good',
-                choices = tuple([i for i in range(taste_num)]))))
+try:
+    taste_check = list(map(int, easygui.multchoicebox(
+            msg = 'Chose the taste numbers that you want to '\
+                    'REMOVE from further analyses. Click clear all '\
+                    'and ok if all channels are good',
+                    choices = tuple([i for i in range(taste_num)]))))
+except:
+    taste_check = []
 
 flag_frame = pd.DataFrame(list(product(range(taste_num),range(channel_num))),
                 columns = ['Dig_In','Channel'])
