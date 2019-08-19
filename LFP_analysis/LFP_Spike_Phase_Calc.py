@@ -36,6 +36,7 @@ import easygui
 import tables
 from tqdm import trange
 import pandas as pd
+import collections
 
 # =============================================================================
 # Define functions
@@ -81,13 +82,38 @@ for files in file_list:
 	if files[-2:] == 'h5':
 		hdf5_name = files
 
+# Load flagged channels from HDF5
+# If absent, make empty data frame
+try:
+    flagged_channels = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
+except:
+    print('No flagged channels dataset present. Defaulting to not using flags.')
+    flagged_channels = pd.DataFrame()
+
 #Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Pull LFPS and spikes
 lfps_dig_in = hf5.list_nodes('/Parsed_LFP')
+# Make sure not taking anything other than a dig_in
+lfps_dig_in = [node for node in lfps_dig_in \
+        if 'dig_in' in str(node)]
 trains_dig_in = hf5.list_nodes('/spike_trains')
-lfp_array = np.asarray([lfp[:] for lfp in lfps_dig_in])
+
+# Load LFPs and remove flagged channels if present
+lfp_list = [lfp[:] for lfp in lfps_dig_in]
+
+if len(flagged_channels) > 0:
+    good_channel_list = [[channel for channel in range(len(lfp_list[dig_in])) \
+        if channel not in \
+        list(flagged_channels.query('Dig_In == {}'.format(dig_in))['Channel'])] \
+        for dig_in in range(len(lfps_dig_in))]
+else:
+    good_channel_list = [[channel for channel in range(len(lfp_list[dig_in]))] \
+        for dig_in in range(len(lfps_dig_in))]
+
+lfp_list = [dig_in[good_channel_list[dig_in_num],:] \
+        for dig_in_num,dig_in in enumerate(lfp_list)]
 spike_array = np.asarray([spikes.spike_array[:] for spikes in trains_dig_in])
 
 # ____                              _             
@@ -101,37 +127,33 @@ spike_array = np.asarray([spikes.spike_array[:] for spikes in trains_dig_in])
 # Calculate phases
 # =============================================================================
 
-# Create processed phase arrays
-analytic_signal_array = np.zeros((len(iter_freqs),) + \
-        lfp_array.shape, dtype = np.complex128)
-phase_array = np.zeros((len(iter_freqs),) + lfp_array.shape)
-
-for band in trange(len(iter_freqs), desc = 'bands'):
-    for taste in range(lfp_array.shape[0]):
-        for channel in range(lfp_array.shape[1]):
-            for trial in range(lfp_array.shape[2]):
-                band_filt_sig = butter_bandpass_filter(
-                                    data = lfp_array[taste,channel,trial,:], 
-                                    lowcut = iter_freqs[band][1], 
-                                    highcut =  iter_freqs[band][2], 
-                                    fs = 1000)
-                analytic_signal = hilbert(band_filt_sig)
-                instantaneous_phase = np.angle(analytic_signal)
-                
-                analytic_signal_array[band,taste,channel,trial,:] = analytic_signal
-                phase_array[band,taste,channel,trial,:] = instantaneous_phase
+# Create lists of phase array
+# Save data as namedTuple so band and taste are annotated
+filtered_tuple = collections.namedtuple('BandpassFilteredData',['Band','Taste','Data'])
+filtered_signal_list = [ filtered_tuple (band, taste,
+                                butter_bandpass_filter(
+                                            data = dig_in,
+                                            lowcut = iter_freqs[band][1], 
+                                            highcut =  iter_freqs[band][2], 
+                                            fs = 1000)) \
+                                            for taste,dig_in in enumerate(lfp_list)\
+                    for band in trange(len(iter_freqs), desc = 'bands') \
+                    if len(dig_in) > 0]
 
 # =============================================================================
 # Use mean LFP (across channels) to calculate phase (since all channels have same phase)
 # =============================================================================
-mean_analytic_signal = np.mean(analytic_signal_array,axis=2)
-mean_phase_array = np.angle(mean_analytic_signal)
-
+# Process filtered signals to extract hilbert transform and phase 
+mean_analytic_signal_list = [ filtered_tuple(x.Band, x.Taste, np.mean(hilbert(x.Data),axis=0)) \
+                        for x in filtered_signal_list ]
+mean_phase_list = [ filtered_tuple(x.Band, x.Taste, np.mean(np.angle(x.Data),axis=0)) \
+                        for x in filtered_signal_list ]
+                           
 # =============================================================================
 # Calculate phase locking: for every spike, find phase for every band
 # =============================================================================
 # Find spiketimes
-# Find what phase each spike occured	
+# Find what phase each spike occured
 spike_times = spike_array.nonzero()
 spikes_frame = pd.DataFrame(data = {'taste':spike_times[0],
                                     'trial':spike_times[1],
@@ -139,22 +161,31 @@ spikes_frame = pd.DataFrame(data = {'taste':spike_times[0],
                                     'time':spike_times[3]})
 
 # Create array index identifiers
-nd_idx_objs = []
-for dim in range(mean_phase_array.ndim):
-    this_shape = np.ones(len(mean_phase_array.shape))
-    this_shape[dim] = mean_phase_array.shape[dim]
-    nd_idx_objs.append(
-            np.broadcast_to(
-                np.reshape(
-                    np.arange(mean_phase_array.shape[dim]),
-                            this_shape.astype('int')), 
-                mean_phase_array.shape).flatten())
+# Used to convert array to pandas dataframe
+def make_array_identifiers(array):
+    nd_idx_objs = []
+    for dim in range(array.ndim):
+        this_shape = np.ones(len(array.shape))
+        this_shape[dim] = array.shape[dim]
+        nd_idx_objs.append(
+                np.broadcast_to(
+                    np.reshape(
+                        np.arange(array.shape[dim]),
+                                this_shape.astype('int')), 
+                    array.shape).flatten())
+    return nd_idx_objs
 
-phase_frame = pd.DataFrame(data = {'band' : nd_idx_objs[0].flatten(),
-                                    'taste' : nd_idx_objs[1].flatten(),
-                                    'trial' : nd_idx_objs[2].flatten(),
-                                    'time' : nd_idx_objs[3].flatten(),
-                                    'phase' : mean_phase_array.flatten()})
+nd_idx_objs = make_array_identifiers(mean_phase_array)
+
+phase_frame = pd.concat(
+        [pd.DataFrame( data = { 'band' : dat.Band,
+                                'taste' : dat.Taste,
+                                'trial' : idx[0].flatten(),
+                                'time' : idx[1].flatten(),
+                                'phase' : dat.Data.flatten()}) \
+                                for dat, idx in \
+                    map(lambda dat: (dat, make_array_identifiers(dat.Data)),mean_phase_list)]
+        )
 
 # Merge : Gives dataframe with length of (bands x numner of spikes)
 final_phase_frame = pd.merge(spikes_frame,phase_frame,how='inner')
