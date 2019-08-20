@@ -60,6 +60,14 @@ def applyParallel(dfGrouped, func, parallel_kws={},
     return retLst
     #return pd.concat(retLst) # return concatonated result
 
+# Lambda function which calculates stats and returns list with indices
+# and output stats
+def run_stats(name, group):
+    return list(name) + [rayleightest(np.array(group.phase)),
+                    vonmisesmle(np.array(group.phase))[0],
+                    vonmisesmle(np.array(group.phase))[1]
+                    ]
+    
 
  #Statistical running funtion
 def spike_phase_stats(data_frame, time_vector):
@@ -95,14 +103,6 @@ def spike_phase_stats(data_frame, time_vector):
     group_frame = data_frame.groupby(['band','taste','unit','time_bin'])
     
     
-    # Lambda function which calculates stats and returns list with indices
-    # and output stats
-    def run_stats(name, group):
-        return list(name) + [rayleightest(np.array(group.phase)),
-                        vonmisesmle(np.array(group.phase))[0],
-                        vonmisesmle(np.array(group.phase))[1]
-                        ]
-        
     # Parallel loop over all groups and run stats (using "applyParallel" 
     # function defined above).
     # Returns list of lists containing output of lambda function
