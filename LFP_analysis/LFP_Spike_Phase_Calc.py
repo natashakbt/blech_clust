@@ -23,6 +23,8 @@ Created on Wed Feb 13 19:36:13 2019
 # import Libraries
 # Built-in Python libraries
 import os # functions for interacting w operating system
+import sys
+import glob
 
 # 3rd-party libraries
 import numpy as np # module for low-level scientific computing
@@ -55,7 +57,7 @@ def getFlaggedLFPs(hf5_name):
 
     # Load flagged channels from HDF5 if present
     try:
-        flagged_channels = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
+        flag_frame = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
         flagged_channel_bool = 1
     except:
         print('No flagged channels dataset present. Defaulting to not using flags.')
@@ -71,7 +73,7 @@ def getFlaggedLFPs(hf5_name):
     # If flagged channels dataset present
     if flagged_channel_bool > 0:
         good_channel_list = [list(flag_frame.\
-                query('Dig_In == {} and Error_Flag == 1'.format(dig_in))['Channel']) \
+                query('Dig_In == {} and Error_Flag == 0'.format(dig_in))['Channel']) \
                 for dig_in in range(len(lfps_dig_in))]
     else:
         good_channel_list = [list(flag_frame.\
@@ -105,18 +107,13 @@ colors = plt.get_cmap('winter_r')(np.linspace(0, 1, len(iter_freqs)))
 # Import/Open HDF5 File
 # =============================================================================
 
-#Get name of directory where the data files and hdf5 file sits, 
-#and change to that directory for processing
-dir_name = easygui.diropenbox()
-os.chdir(dir_name)
+# If directory provided with script, use that otherwise ask
+try:
+    dir_name = os.path.dirname(sys.argv[1])
+except:
+    dir_name = easygui.diropenbox(msg = 'Select directory with HDF5 file')
 
-#Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-	if files[-2:] == 'h5':
-		hdf5_name = files
-
+hdf5_name = glob.glob(dir_name + '/*.h5')[0]
 
 lfp_list = getFlaggedLFPs(hdf5_name)
 
@@ -185,8 +182,6 @@ def make_array_identifiers(array):
                                 this_shape.astype('int')), 
                     array.shape).flatten())
     return nd_idx_objs
-
-nd_idx_objs = make_array_identifiers(mean_phase_array)
 
 # Run through all groups of mean phase, convert to pandas dataframe
 # and concatenate into single dataframe
