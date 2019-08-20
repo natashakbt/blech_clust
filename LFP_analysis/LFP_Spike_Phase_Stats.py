@@ -97,11 +97,12 @@ def spike_phase_stats(data_frame, time_vector):
     
     # Lambda function which calculates stats and returns list with indices
     # and output stats
-    run_stats = lambda name, group : list(name) + [rayleightest(np.array(group.phase)),
-                                                     vonmisesmle(np.array(group.phase))[0],
-                                                     vonmisesmle(np.array(group.phase))[1]
-                                                    ]
-    
+    def run_stats(name, group):
+        return list(name) + [rayleightest(np.array(group.phase)),
+                        vonmisesmle(np.array(group.phase))[0],
+                        vonmisesmle(np.array(group.phase))[1]
+                        ]
+        
     # Parallel loop over all groups and run stats (using "applyParallel" 
     # function defined above).
     # Returns list of lists containing output of lambda function
