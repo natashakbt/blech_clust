@@ -1,16 +1,24 @@
 import easygui
+import numpy as np
 import glob
 import tables
 from itertools import product
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
+import sys
+import os
 
 # =============================================================================
 # #Channel Check Processing
 # =============================================================================
 
-dir_name = easygui.diropenbox(msg = 'Select directory with HDF5 file')
+# If directory provided with script, use that otherwise ask
+try:
+    dir_name = os.path.dirname(sys.argv[1])
+except:
+    dir_name = easygui.diropenbox(msg = 'Select directory with HDF5 file')
+
 hdf5_name = glob.glob(dir_name + '/*.h5')[0]
 
 #Open the hdf5 file
@@ -34,7 +42,7 @@ try:
     taste_check = list(map(int, easygui.multchoicebox(
             msg = 'Chose the taste numbers that you want to '\
                     'REMOVE from further analyses. Click clear all '\
-                    'and ok if all channels are good',
+                    'and ok if all tastes are good',
                     choices = tuple([i for i in range(taste_num)]))))
 except:
     taste_check = []
@@ -50,3 +58,4 @@ flag_frame['Error_Flag'] = flagged_rows * 1
 
 #Write out to file
 flag_frame.to_hdf(hdf5_name, parsed_lfp_addr + '/flagged_channels')
+hf5.close()

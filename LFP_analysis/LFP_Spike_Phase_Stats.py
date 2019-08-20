@@ -16,6 +16,8 @@ Created on Tue Feb 19 18:01:25 2019
 #import Libraries
 # Built-in Python libraries
 import os # functions for interacting w operating system
+import sys
+import glob
 
 #import tools for multiprocessing
 import pandas as pd
@@ -33,21 +35,27 @@ from astropy.stats import vonmisesmle
 # =============================================================================
 
 #Parellel processing function
-def applyParallel(dfGrouped, func, parallel_kws={}, backend='multiprocessing', backend_kws={}):
+def applyParallel(dfGrouped, func, parallel_kws={}, 
+                        backend='multiprocessing', backend_kws={}):
     ''' Parallel version of pandas apply '''
 
     if not isinstance(dfGrouped, pd.core.groupby.GroupBy):
-        raise TypeError(f'dfGrouped must be pandas.core.groupby.GroupBy, not {type(dfGrouped)}')
+        raise TypeError(f'dfGrouped must be pandas.core.groupby.GroupBy, '\
+                'not {type(dfGrouped)}')
 
     # Set default parallel args
-    default_parallel_kws = dict(n_jobs=multiprocessing.cpu_count(), max_nbytes=None, verbose=1)
+    default_parallel_kws = \
+                dict(n_jobs=multiprocessing.cpu_count(), max_nbytes=None, verbose=1)
+
     for key,item in default_parallel_kws.items():
         parallel_kws.setdefault(key, item)
     print("Apply parallel with {} verbosity".format(parallel_kws["verbose"]))
 
     # Compute
-    with parallel_backend(backend, **backend_kws): # backend decides how job lib will run your jobs, e.g. threads/processes/dask/etc
-        retLst = Parallel(**parallel_kws)(delayed(func)(name,group) for name, group in dfGrouped)
+    with parallel_backend(backend, **backend_kws): 
+        # backend decides how job lib will run your jobs, e.g. threads/processes/dask/etc
+        retLst = Parallel(**parallel_kws)(delayed(func)(name,group) \
+                        for name, group in dfGrouped)
     
     return retLst
     #return pd.concat(retLst) # return concatonated result
@@ -80,7 +88,8 @@ def spike_phase_stats(data_frame, time_vector):
     
 
     # Bin spiketimes in time-bins
-    data_frame['time_bin'] = pd.cut(x=data_frame.time,bins=t,labels=np.asarray(t[:-1]).astype(int))
+    data_frame['time_bin'] = \
+                pd.cut(x=data_frame.time,bins=t,labels=np.asarray(t[:-1]).astype(int))
     
     # Group by all variables to iterate over groups
     group_frame = data_frame.groupby(['band','taste','unit','time_bin'])
@@ -93,15 +102,19 @@ def spike_phase_stats(data_frame, time_vector):
                                                      vonmisesmle(np.array(group.phase))[1]
                                                     ]
     
-    # Parallel loop over all groups and run stats (using "applyParallel" function defined above)
+    # Parallel loop over all groups and run stats (using "applyParallel" 
+    # function defined above).
     # Returns list of lists containing output of lambda function
-    stats_list = \
-    applyParallel(group_frame, run_stats, parallel_kws={}, backend='multiprocessing', backend_kws={})
+    stats_list = applyParallel(
+            group_frame, 
+            run_stats, 
+            parallel_kws={}, backend='multiprocessing', backend_kws={})
     
     # Compile lists of list into dataframe to be output
-    temp_stats_frame = pd.DataFrame(stats_list,columns = ['band','taste','unit','time_bin',\
-                                                          'Raytest_p','circ_mean','circ_kappa'])\
-                                                        .apply(pd.to_numeric, errors = 'coerce')
+    temp_stats_frame = pd.DataFrame(stats_list,columns = \
+            ['band','taste','unit','time_bin',\
+            'Raytest_p','circ_mean','circ_kappa'])\
+            .apply(pd.to_numeric, errors = 'coerce')
     
     # Merge with original stats frame
     ### This prevents skipping of groups since iterating over groups only returns ###
@@ -121,16 +134,13 @@ def spike_phase_stats(data_frame, time_vector):
 # Import/Open HDF5 File and variables
 # =============================================================================
 
-#Get name of directory where the data files and hdf5 file sits, and change to that directory for processing
-dir_name = easygui.diropenbox()
-os.chdir(dir_name)
+# If directory provided with script, use that otherwise ask
+try:
+    dir_name = sys.argv[1]
+except:
+    dir_name = easygui.diropenbox(msg = 'Select directory with HDF5 file')
 
-#Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-    if files[-2:] == 'h5':
-        hdf5_name = files
+hdf5_name = glob.glob(dir_name + '/*.h5')[0]
 
 #pull in dframes
 dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/dframe','r+')
