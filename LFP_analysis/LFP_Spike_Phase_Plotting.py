@@ -254,7 +254,7 @@ for unit in dfnew.unit.unique():
 			
 		fig.subplots_adjust(hspace=0.25,wspace = -0.15)
 		fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2]),size=16,fontweight='bold')
-		fig.savefig('./Phase_lock_analyses/KDEs/'+'Unit_%i_%s_KDE.png' %(dframe.unit.unique()[unit],freq_vals[band][0]))   
+		fig.savefig('./Phase_lock_analyses/KDEs/'+'Unit_%i_%s_KDE.png' %(sorted(dframe_stat['unit'].unique())[unit],freq_vals[band][0]))   
 		plt.close(fig)
 
 # Make directory to store histogram plots. Delete and remake the directory if it exists
