@@ -68,7 +68,8 @@ def getFlaggedLFPs(hf5_name):
 
     # Pull LFPS and spikes
     # Make sure not taking anything other than a dig_in
-    lfps_dig_in = [node for node in hf5.list_nodes('/Parsed_LFP') if 'dig_in' in str(node)]
+    lfps_dig_in = [node for node in hf5.list_nodes('/Parsed_LFP') \
+            if 'dig_in' in str(node)]
 
     # If flagged channels dataset present
     if flagged_channel_bool > 0:
@@ -149,14 +150,38 @@ filtered_signal_list = [ filtered_tuple (band, taste,
 # Use mean LFP (across channels) to calculate phase (since all channels have same phase)
 # =============================================================================
 # Process filtered signals to extract hilbert transform and phase 
+# Find channel closest in phase to the mean phase of all channels and use
+# that for the phase
 
-#mean_analytic_signal_list = \
-#                [ filtered_tuple(x.Band, x.Taste, np.mean(hilbert(x.Data),axis=0)) \
-#                    for x in filtered_signal_list ]
+phase_list = \
+    [ filtered_tuple(x.Band, x.Taste, np.angle(hilbert(x.Data))) \
+                    for x in filtered_signal_list ]
 
-mean_phase_list = [ filtered_tuple(x.Band, x.Taste, np.mean(np.angle(x.Data),axis=0)) \
-                        for x in filtered_signal_list ]
-                           
+mean_phase_list = \
+    [ filtered_tuple(x.Band, x.Taste, np.mean(x.Data,axis=0)) \
+                    for x in phase_list]
+
+error_list = [np.sum(np.abs(np.subtract(phase.Data, mean_phase.Data)),axis=(1,2)) \
+        for (phase,mean_phase) in zip(phase_list,mean_phase_list)]
+
+chosen_channel = np.argmin(np.sum(np.asarray(error_list),axis=0))
+
+final_phase_list = [ filtered_tuple(x.Band, x.Taste, x.Data[chosen_channel,:,:])\
+        for x in phase_list]
+
+# Calculate wavenumber for every trial
+wavelength_num_list = [ filtered_tuple(x.Band, x.Taste,\
+        np.floor_divide(np.unwrap(x.Data), 2*np.pi)) for x in final_phase_list]
+
+# Validation plots --please leave commented--
+#plt.subplot(311)
+#plt.plot(np.real(filtered_signal_list[0].Data[0,0,:2000]))
+#plt.subplot(312)
+#plt.plot(final_phase_list[0].Data[0,:2000])
+#plt.subplot(313)
+#plt.plot(wavelength_num_list[0].Data[0,:2000])
+#plt.show()
+
 # =============================================================================
 # Calculate phase locking: for every spike, find phase for every band
 # =============================================================================
@@ -186,14 +211,20 @@ def make_array_identifiers(array):
 # Run through all groups of mean phase, convert to pandas dataframe
 # and concatenate into single dataframe
 phase_frame = pd.concat(
-        [pd.DataFrame( data = { 'band' : dat.Band,
-                                'taste' : dat.Taste,
+        [pd.DataFrame( data = { 'band' : phase.Band,
+                                'taste' : phase.Taste,
                                 'trial' : idx[0].flatten(),
                                 'time' : idx[1].flatten(),
-                                'phase' : dat.Data.flatten()}) \
-                                for dat, idx in \
-                    map(lambda dat: (dat, make_array_identifiers(dat.Data)),mean_phase_list)]
+                                'phase' : phase.Data.flatten(),
+                                'wavelength_num': wave_num.Data.flatten()}) \
+
+                for phase, wave_num, idx in \
+    zip(final_phase_list,
+        wavelength_num_list,
+        map(lambda dat: make_array_identifiers(dat.Data),final_phase_list))  
+        ]
         )
+        
 
 # Merge : Gives dataframe with length of (bands x numner of spikes)
 final_phase_frame = pd.merge(spikes_frame,phase_frame,how='inner')
