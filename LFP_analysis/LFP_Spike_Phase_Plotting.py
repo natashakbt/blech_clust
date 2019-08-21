@@ -22,7 +22,11 @@ import math
 import easygui
 from pylab import text
 import seaborn.apionly as sns
+from matplotlib.colors import LinearSegmentedColormap
 
+import time
+
+start_t = time.time()
 # =============================================================================
 # =============================================================================
 # # #Define functions used in code
@@ -50,6 +54,7 @@ def applyParallel(dfGrouped, func, parallel_kws={}, backend='multiprocessing', b
 
     return pd.concat(retLst) # return concatonated result
 
+
 # =============================================================================
 # #Create dataframe to store phasic density matrices using KDE 
 # =============================================================================
@@ -57,7 +62,7 @@ def spike_phase_density(data_frame,frequency_list,time_vector,bin_vals):
 
 	#Create empty dataframe for storing output
 	density_df_all = pd.DataFrame()
-	
+
 	for band_num in range(len(frequency_list)):
 		for taste_num in	range(len(data_frame.taste.unique())):
 			density_all=[[None] *(bin_vals) for i in range(len(time_vector)-1)]
@@ -72,7 +77,7 @@ def spike_phase_density(data_frame,frequency_list,time_vector,bin_vals):
 				#Set query index
 				queryidx = query.index
 				
-                  #Fills bin slot with nan for empty queries
+                 #Fills bin slot with nan for empty queries
 				if len(queryidx) <= 1:
 					density_all[time_num] = np.full(bin_vals,'nan',dtype=np.float64)
                       
@@ -129,6 +134,11 @@ dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/dframe','r+')
 freq_dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/freq_keys','r+')
 dframe_stat = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe','r+')
 
+##REMOVE IF NEW CODE FIXXES ISSUE##
+#apply jitter to dframe to account for occurrances of unitary value in phase
+dframe = dframe.assign(phase = lambda dataframe : dataframe['phase'].map(
+		lambda phase: phase + np.random.rand()*1e-4))
+
 # =============================================================================
 # #Establish variables for processing
 # =============================================================================
@@ -173,20 +183,25 @@ dfnew = applyParallel(dframe.groupby(dframe.unit), tmpfunc)
 dfnew.to_hdf(hdf5_name,'Spike_Phase_Dframe/kde_dframe')
 
 # =============================================================================
-# #Allow user to choose how they want their data represented
-# =============================================================================
-msg = "Enter your personal information"
-title = "Credit Card Application"
-fieldNames = ["Name","Street Address","City","State","ZipCode"]
-fieldValues = []  # we start with blanks for the values
-fieldValues = easygui.multchoicebox(msg,title, fieldNames)
-
-# =============================================================================
 # #Plotting
 # =============================================================================
+# Make directory to store all phaselocking plots. Delete and remake the directory if it exists
+try:
+        os.system('rm -r '+'./Phase_lock_analyses')
+except:
+        pass
+os.mkdir('./Phase_lock_analyses')
+
+# Make directory to store histogram plots. Delete and remake the directory if it exists
+try:
+        os.system('rm -r '+'./Phase_lock_analyses/Phase_histograms')
+except:
+        pass
+os.mkdir('./Phase_lock_analyses/Phase_histograms')
+
 #Creates Histograms for spikes by phase
 for taste, color in zip(dframe.taste.unique(),colors):
-	for band in dframe.band.unique():
+	for band in sorted(dframe.band.unique()):
 		#Set up axes for plotting all tastes together
 		fig,axes = plt.subplots(nrows=math.ceil(len(dframe.unit.unique())/4), ncols=4,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
 		fig.text(0.07, 0.5,'Number of Spikes', va='center', rotation='vertical',fontsize=14)
@@ -205,7 +220,16 @@ for taste, color in zip(dframe.taste.unique(),colors):
 	
 		fig.subplots_adjust(hspace=0.25,wspace = 0.05)
 		fig.suptitle('Taste: %s' %(identities[taste])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2])+'\n' + 'Time: %i - %ims' %(params[0]-params[3],params[4]),size=16,fontweight='bold')						
+		fig.savefig('./Phase_lock_analyses/Phase_histograms/' + '%s_%s_hist.png' %(identities[taste],freq_vals[band][0]))   
+		plt.close(fig)
 
+# Make directory to store histogram plots. Delete and remake the directory if it exists
+try:
+        os.system('rm -r '+'./Phase_lock_analyses/KDEs')
+except:
+        pass
+os.mkdir('./Phase_lock_analyses/KDEs')
+			
 #Creates Heatmaps for density estimationg (KDE) of spikes within phase over time
 for unit in dfnew.unit.unique():
 	for band in dfnew.band.unique():
@@ -229,54 +253,121 @@ for unit in dfnew.unit.unique():
 			ax.axvline(x=np.where(t==params[0]), linewidth=4, color='r')
 			
 		fig.subplots_adjust(hspace=0.25,wspace = -0.15)
-		fig.suptitle('Unit %i' %(dframe.unit.unique()[unit])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2]),size=16,fontweight='bold')
-		fig.savefig('Unit_%i_%s_KDE.png' %(dframe.unit.unique()[unit],freq_vals[band][0]))   
+		fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2]),size=16,fontweight='bold')
+		fig.savefig('./Phase_lock_analyses/KDEs/'+'Unit_%i_%s_KDE.png' %(dframe.unit.unique()[unit],freq_vals[band][0]))   
 		plt.close(fig)
 
+# Make directory to store histogram plots. Delete and remake the directory if it exists
+try:
+        os.system('rm -r '+'./Phase_lock_analyses/ZPMs')
+except:
+        pass
+os.mkdir('./Phase_lock_analyses/ZPMs')
+
 #Creates Heatmaps of Rayleigh pvals based on distribution of spikes within band over time
+#Create categorical values for pvals
+dframe_stat['pval_cat'] = ''
+dframe_stat.loc[(dframe_stat['Raytest_p'] > 0) & (dframe_stat['Raytest_p'] <= 0.05),'pval_cat'] = int(0)
+dframe_stat.loc[(dframe_stat['Raytest_p'] > 0.05) & (dframe_stat['Raytest_p'] <= 0.1),'pval_cat'] = int(1)
+dframe_stat.loc[(dframe_stat['Raytest_p'] > 0.1),'pval_cat'] = int(2)
+dframe_stat = dframe_stat.replace('',np.nan)
+
+#Set colorbar values
+cmap = LinearSegmentedColormap.from_list('Custom', colors[0:3,:], len(colors[0:3,:]))
+
+#Plot by unit
 for unit in dframe_stat.unit.unique():
-	#plot by unit
+	
 	fig,axes = plt.subplots(nrows=2, ncols=2,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
 	fig.text(0.07, 0.5,'Bands', va='center', rotation='vertical',fontsize=14)
 	fig.text(0.5, 0.05, 'Time', ha='center',fontsize=14)
 	axes_list = [item for sublist in axes for item in sublist]
 	
+	#Subplot by Tastant
 	for ax, taste in zip(axes.flatten(),dframe_stat.taste.unique()):
 		query = dframe_stat.query('unit == @unit and taste == @taste')
 		
 		ax = axes_list.pop(0)
-		piv = pd.pivot_table(query, values="Raytest_p",index=["band"], columns=["time_bin"], fill_value=0)
-		im = sns.heatmap(piv,vmin=0, vmax=0.1,cmap="YlGnBu", ax=ax)
-		ax.axvline(x=column_index(piv,params[0]), linewidth=4, color='r')
-		ax.set_title(taste,size=15,y=1)
+		piv = pd.pivot_table(query, values="pval_cat",index=["band"], columns=["time_bin"], fill_value=2)
+		im = sns.heatmap(piv,yticklabels=[x[0] for x in list(freq_vals.values())],annot_kws = {"color": "white"},cmap=cmap, ax=ax)
+
+		# Manually specify colorbar labelling after it's been generated
+		colorbar = ax.collections[0].colorbar
+		colorbar.set_ticks([0.25, 1, 1.75])
+		colorbar.set_ticklabels(['p < 0.05', 'p < 0.1', 'p > 0.1'])
 		
-	fig.suptitle('Unit %i' %(dframe_stat.unit.unique()[unit])+ '\n' + 'Ztest pval Matrices',size=16)
-	fig.savefig('Unit_%i_ZPMs.png' %(dframe_stat.unit.unique()[unit]))   
+		ax.axvline(x=column_index(piv,params[0]), linewidth=4, color='r')
+		ax.set_title(identities[taste],size=15,y=1)
+		
+	fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+ '\n' + 'Ztest pval Matrices',size=16)
+	fig.savefig('./Phase_lock_analyses/ZPMs/'+'Unit_%i_ZPMs.png' %(sorted(dframe_stat['unit'].unique())[unit]))   
 	plt.close(fig)
-# =============================================================================
-# plt_query = density_df_all.query('band == 3 and unit == 0 and taste == 3')
-# plt_query2 = plt_query[plt_query.columns.difference(['band', 'unit','taste'])]
-# plt.imshow(plt_query2.T)
-# 
-# =============================================================================
 
-	
-plt_query = dfnew.query('band == 3 and unit == 0 and taste == 3')
-plt_query2 = plt_query[plt_query.columns.difference(['band', 'unit','taste'])]
-plt.imshow(plt_query2.T)
+#Create grouped bar plots detailing taste evoked spike-phase locking stats
+zpal_params = easygui.multenterbox(msg = 'Enter the parameters for grouped bars', fields = ['Pre-stimulus time (ms)','Post-stimulus time (ms)'],values = ['2000','1200'])
+for i in range(len(zpal_params)):
+	zpal_params[i] = int(zpal_params[i])	
 
-plt.imshow(plt_query.loc[:, plt_query.columns != 'band'].T)
-plt.imshow(plt_query.T)
+# Make directory to store histogram plots. Delete and remake the directory if it exists
+try:
+        os.system('rm -r '+'./Phase_lock_analyses/Frequency_Plots')
+except:
+        pass
+os.mkdir('./Phase_lock_analyses/Frequency_Plots')
 
-
-
+#Create smaller dataframes to work with
+pre_dataframe = dframe_stat.query('time_bin <= @zpal_params[0]')
+post_dataframe = dframe_stat.query('time_bin > @zpal_params[0] and time_bin <= @params[0]+@zpal_params[1]')
 
 for unit in dframe_stat.unit.unique():
-	plt.figure()
-	for taste in dframe_stat.taste.unique():
-		query = dframe_stat.query('unit == @unit and band == 0 and taste == @taste')
-		#test = query.groupby('time_bin')
-		plt.plot(query.time_bin,query.Raytest_p)
+		
+	fig,axes = plt.subplots(nrows=2, ncols=2,sharex=True, sharey=True,figsize=(13, 8), squeeze=False)
+	fig.text(0.07, 0.5,'Number of significant bins', va='center', rotation='vertical',fontsize=14)
+	fig.text(0.5, 0.05, 'Freq. Band', ha='center',fontsize=14)
+	axes_list = [item for sublist in axes for item in sublist]
+	ind = np.arange(len(dframe_stat['band'].unique())) #x locations for groups
+	width = 0.35 #set widths of bars
+	
+	#Subplot by Tastant
+	for ax, taste in zip(axes.flatten(),dframe_stat.taste.unique()):
+		pre_query = pre_dataframe.query('unit == @unit and taste == @taste and pval_cat == 0')
+		post_query = post_dataframe.query('unit == @unit and taste == @taste and pval_cat == 0')
+		
+		#get frequency count before after taste delivery
+		pre_freq = [pre_query['band'].value_counts()[x] if x in pre_query['band'].unique() else 0 for x in sorted(dframe_stat.band.unique())]
+		post_freq = [post_query['band'].value_counts()[x] if x in post_query['band'].unique() else 0 for x in sorted(dframe_stat.band.unique())]
+		
+		ax = axes_list.pop(0)
+		p1 = ax.bar(ind, pre_freq, width, color = colors[0])
+		p2 = ax.bar(ind+width, post_freq, width, color = colors[1])
+
+		ax.set_xticks(ind + width / 2)
+		ax.set_xticklabels(([x[0] for x in list(freq_vals.values())]))
+		ax.set_title(identities[taste],size=15,y=1)
+		
+	ax.legend(('Pre','Post'), bbox_to_anchor=(1.05, 0), loc='lower left', fontsize = 13, borderaxespad=0.)
+	fig.subplots_adjust(hspace=0.2,wspace = 0.1)
+	fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+ '\n' + 'Taste effect on phase-lock frequency' + '\n' + 'Pre: %ims & Post: %ims' %(zpal_params[0],zpal_params[1]),size=16)
+	fig.savefig('./Phase_lock_analyses/Frequency_Plots/'+'Unit_%i_SPFreqency_plots.png' %(sorted(dframe_stat['unit'].unique())[unit]))   
+	plt.close(fig)
+
+
+end_t = time.time()
+print(end_t - start_t)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
