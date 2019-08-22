@@ -134,11 +134,6 @@ dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/dframe','r+')
 freq_dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/freq_keys','r+')
 dframe_stat = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/stats_dframe','r+')
 
-##REMOVE IF NEW CODE FIXXES ISSUE##
-#apply jitter to dframe to account for occurrances of unitary value in phase
-dframe = dframe.assign(phase = lambda dataframe : dataframe['phase'].map(
-		lambda phase: phase + np.random.rand()*1e-4))
-
 # =============================================================================
 # #Establish variables for processing
 # =============================================================================
