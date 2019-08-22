@@ -18,15 +18,14 @@ from joblib import Parallel, delayed, parallel_backend #for parallel processing
 import numpy as np # module for low-level scientific computing
 import matplotlib.pyplot as plt # makes matplotlib work like MATLAB. ’pyplot’ functions.
 from scipy import stats
+import re
 import math
 import easygui
 from pylab import text
 import seaborn.apionly as sns
 from matplotlib.colors import LinearSegmentedColormap
+from scipy.ndimage.filters import gaussian_filter1d
 
-import time
-
-start_t = time.time()
 # =============================================================================
 # =============================================================================
 # # #Define functions used in code
@@ -218,6 +217,12 @@ for taste, color in zip(dframe.taste.unique(),colors):
 		fig.savefig('./Phase_lock_analyses/Phase_histograms/' + '%s_%s_hist.png' %(identities[taste],freq_vals[band][0]))   
 		plt.close(fig)
 
+# =============================================================================
+# =============================================================================
+# # Sig locking over time (density)
+# =============================================================================
+# =============================================================================
+
 # Make directory to store histogram plots. Delete and remake the directory if it exists
 try:
         os.system('rm -r '+'./Phase_lock_analyses/KDEs')
@@ -251,6 +256,12 @@ for unit in dfnew.unit.unique():
 		fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2]),size=16,fontweight='bold')
 		fig.savefig('./Phase_lock_analyses/KDEs/'+'Unit_%i_%s_KDE.png' %(sorted(dframe_stat['unit'].unique())[unit],freq_vals[band][0]))   
 		plt.close(fig)
+
+# =============================================================================
+# =============================================================================
+# # Sig locking over time (unit dependent)
+# =============================================================================
+# =============================================================================
 
 # Make directory to store histogram plots. Delete and remake the directory if it exists
 try:
@@ -297,6 +308,41 @@ for unit in dframe_stat.unit.unique():
 	fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+ '\n' + 'Ztest pval Matrices',size=16)
 	fig.savefig('./Phase_lock_analyses/ZPMs/'+'Unit_%i_ZPMs.png' %(sorted(dframe_stat['unit'].unique())[unit]))   
 	plt.close(fig)
+
+# =============================================================================
+# =============================================================================
+# # Sig locking over time (unit independent)
+# =============================================================================
+# =============================================================================
+	
+#Plot counts of sig phaselocking units over time
+#define color palette
+colors_new = plt.get_cmap('RdBu')(np.linspace(0, 1, 4))
+fig,axes = plt.subplots(nrows=2, ncols=2,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
+fig.text(0.075, 0.5,'Percentage of Units', va='center', rotation='vertical',fontsize=15)
+fig.text(0.5, 0.05, 'Time', ha='center',fontsize=15)
+axes_list = [item for sublist in axes for item in sublist]
+
+for band in sorted(dframe_stat.band.unique()):
+	ax = axes_list.pop(0)
+	for taste in sorted(dframe_stat.taste.unique()):
+		query = dframe_stat.query('taste == @taste and band ==@band and pval_cat == 0')
+		
+		#Applied a first order gaussian filter to smooth lines
+		p1 = ax.plot(sorted(dframe_stat.time_bin.unique()),gaussian_filter1d(np.array([query['time_bin'].value_counts()[x] if x in query['time_bin'].unique() else 0 for x in sorted(dframe_stat.time_bin.unique())])/len(dframe_stat.unit.unique())*100,sigma=1),color = colors_new[taste],linewidth = 2)
+		ax.set_title([x[0] for x in list(freq_vals.values())][band],size=15,y=1)
+
+fig.legend(identities,loc = (0.3, 0), ncol=4)
+fig.subplots_adjust(hspace=0.25,wspace = 0.1)
+fig.suptitle('Animal: %s; Date: %s' %(hdf5_name[:4],re.findall(r'_(\d{6})', hdf5_name)[0])+ '\n' + 'Taste effect on phase-locking' + '\n' + 'Units = %i' %(len(dframe_stat.unit.unique())),size=16)
+fig.savefig('./Phase_lock_analyses/ZPMs/'+'%s_SPL_Distribution.png' %(hdf5_name[:4]))   
+plt.close(fig)
+
+# =============================================================================
+# =============================================================================
+# # #Grouped Bar plots
+# =============================================================================
+# =============================================================================
 
 #Create grouped bar plots detailing taste evoked spike-phase locking stats
 zpal_params = easygui.multenterbox(msg = 'Enter the parameters for grouped bars', fields = ['Pre-stimulus time (ms)','Post-stimulus time (ms)'],values = ['2000','1200'])
@@ -345,18 +391,6 @@ for unit in dframe_stat.unit.unique():
 	fig.suptitle('Unit %i' %(sorted(dframe_stat['unit'].unique())[unit])+ '\n' + 'Taste effect on phase-lock frequency' + '\n' + 'Pre: %ims & Post: %ims' %(zpal_params[0],zpal_params[1]),size=16)
 	fig.savefig('./Phase_lock_analyses/Frequency_Plots/'+'Unit_%i_SPFreqency_plots.png' %(sorted(dframe_stat['unit'].unique())[unit]))   
 	plt.close(fig)
-
-
-end_t = time.time()
-print(end_t - start_t)
-
-
-
-
-
-
-
-
 
 
 
