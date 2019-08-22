@@ -153,8 +153,9 @@ freq_bands = np.array(freq_dframe.iloc[:][0]).astype(str).reshape(np.array(freq_
 #Create time vector (CHANGE THIS BASED ON BIN SIZING NEEDS)        
 if np.size(dframe.taste.unique())>0:
     #Change this dependending on the session type        
-    t= np.linspace(0,7000,71)
-    bins=70
+    #Chose this bin size (250ms) based on smalled Frequency (4Hz)
+	t= np.linspace(0,7000,29) 
+	bins=29
 else:
     #Change this dependending on the session type        
     t= np.linspace(0,1200000,50)
