@@ -226,7 +226,7 @@ for taste, color in zip(dframe.taste.unique(),colors):
     for band in sorted(dframe.band.unique()):
         #Set up axes for plotting all tastes together
         fig,axes = plt.subplots(nrows=math.ceil(len(dframe.unit.unique())/4), 
-                ncols=4,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
+                ncols=4,sharex=True, sharey=False,figsize=(12, 8), squeeze=False)
         fig.text(0.07, 0.5,'Number of Spikes', 
                 va='center', rotation='vertical',fontsize=14)
         fig.text(0.5, 0.05, 'Phase', ha='center',fontsize=14)
@@ -234,8 +234,8 @@ for taste, color in zip(dframe.taste.unique(),colors):
         
         for ax, unit in zip(axes.flatten(),np.sort(dframe.unit.unique())):
             query_check = dframe.query('band == @band and unit == @unit and '+\
-                    'taste == @taste and time>=@params[3] and ' +\'
-                    time<=@params[3]+@params[4]')
+                    'taste == @taste and time>=@params[3] and ' +\
+                    'time<=@params[3]+@params[4]')
             df_var = query_check.phase
             
             ax = axes_list.pop(0)
@@ -412,8 +412,8 @@ plt.close(fig)
 # =============================================================================
 
 #Create grouped bar plots detailing taste evoked spike-phase locking stats
-zpal_params = easygui.multenterbox(msg = 'Enter the parameters for grouped
-        bars', fields = ['Pre-stimulus time (ms)','Post-stimulus time (ms)'],
+zpal_params = easygui.multenterbox(msg = 'Enter the parameters for grouped' +\
+        'bars', fields = ['Pre-stimulus time (ms)','Post-stimulus time (ms)'],
         values = ['2000','2000'])
 for i in range(len(zpal_params)):
     zpal_params[i] = int(zpal_params[i])    
