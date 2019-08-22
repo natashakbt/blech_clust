@@ -200,7 +200,7 @@ for taste, color in zip(dframe.taste.unique(),colors):
 		#Set up axes for plotting all tastes together
 		fig,axes = plt.subplots(nrows=math.ceil(len(dframe.unit.unique())/4), ncols=4,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
 		fig.text(0.07, 0.5,'Number of Spikes', va='center', rotation='vertical',fontsize=14)
-		fig.text(0.5, 0.05, 'Taste', ha='center',fontsize=14)
+		fig.text(0.5, 0.05, 'Phase', ha='center',fontsize=14)
 		axes_list = [item for sublist in axes for item in sublist]
 		
 		for ax, unit in zip(axes.flatten(),np.sort(dframe.unit.unique())):
@@ -214,7 +214,7 @@ for taste, color in zip(dframe.taste.unique(),colors):
 			ax.set_xticklabels([r"-$\pi$",r"-$\pi/2$","$0$",r"$\pi/2$",r"$\pi$"])
 	
 		fig.subplots_adjust(hspace=0.25,wspace = 0.05)
-		fig.suptitle('Taste: %s' %(identities[taste])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2])+'\n' + 'Time: %i - %ims' %(params[0]-params[3],params[4]),size=16,fontweight='bold')						
+		fig.suptitle('Taste: %s' %(identities[taste])+'\n' + 'Freq. Band: %s (%i - %iHz)' %(freq_vals[band][0],freq_vals[band][1],freq_vals[band][2])+'\n' + 'Time: %i - %ims post-delivery' %(params[0]-params[3],params[4]),size=16,fontweight='bold')						
 		fig.savefig('./Phase_lock_analyses/Phase_histograms/' + '%s_%s_hist.png' %(identities[taste],freq_vals[band][0]))   
 		plt.close(fig)
 
