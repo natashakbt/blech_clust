@@ -110,7 +110,8 @@ colors = plt.get_cmap('winter_r')(np.linspace(0, 1, len(iter_freqs)))
 
 # If directory provided with script, use that otherwise ask
 try:
-    dir_name = os.path.dirname(sys.argv[1])
+    #dir_name = os.path.dirname(sys.argv[1])
+    dir_name = sys.argv[1]
 except:
     dir_name = easygui.diropenbox(msg = 'Select directory with HDF5 file')
 
