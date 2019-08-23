@@ -5,17 +5,17 @@ Created on Tue May 28 15:25:18 2019
 
 @author: bradly
 """
+
 #import Libraries
 # Built-in Python libraries
 import os # functions for interacting w operating system
-
 #import tools for multiprocessing
 import pandas as pd
 import multiprocessing
 from joblib import Parallel, delayed, parallel_backend #for parallel processing
-
 # 3rd-party libraries
 import numpy as np # module for low-level scientific computing
+import matplotlib
 import matplotlib.pyplot as plt 
 from scipy import stats
 import re
@@ -25,6 +25,8 @@ from pylab import text
 import seaborn.apionly as sns
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.ndimage.filters import gaussian_filter1d
+import glob 
+import tqdm
 
 # =============================================================================
 # =============================================================================
@@ -114,6 +116,7 @@ def spike_phase_density(data_frame,frequency_list,time_vector,bin_vals):
             
                     
     return density_df_all
+
 # =============================================================================
 # #Define column indexing function for plotting
 # =============================================================================
@@ -133,15 +136,16 @@ def column_index(df, query_cols):
 # =============================================================================
 # Get name of directory where the data files and hdf5 file sits, 
 # and change to that directory for processing
-dir_name = easygui.diropenbox()
-os.chdir(dir_name)
 
-#Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-    if files[-2:] == 'h5':
-        hdf5_name = files
+# If directory provided with script, use that otherwise ask
+try:
+    #dir_name = os.path.dirname(sys.argv[1])
+    dir_name = sys.argv[1]
+except:
+    dir_name = easygui.diropenbox(msg = 'Select directory with HDF5 file')
+
+os.chdir(dir_name)
+hdf5_name = glob.glob(dir_name + '/*.h5')[0]
 
 #pull in dframes
 dframe = pd.read_hdf(hdf5_name,'Spike_Phase_Dframe/dframe','r+')
@@ -221,7 +225,55 @@ except:
         pass
 os.mkdir('./Phase_lock_analyses/Phase_histograms')
 
-#Creates Histograms for spikes by phase
+# =============================================================================
+# Phase Raste plot 
+# =============================================================================
+
+# For single band
+plot_dir = dir_name + '/Phase_lock_analyses/Phase_Rasters'
+if not os.path.exists(plot_dir):
+    os.makedirs(plot_dir)
+
+bin_num = np.min([dframe.trial.max(),dframe.wavelength_num.max()])
+dframe = (dframe.
+        assign(wavelength_id = lambda x : (x.wavelength_num*bin_num)+x.trial))
+
+group_frame = dframe.groupby(['unit','band','taste'])
+
+# Plot indices will instruct seaborn where to place spikes on a scatterplot
+# such that plot indices are specific to (taste,trial,unit) groups but
+# are proportional to wavelength_num ,
+# equal for spikes on the same wave in the same trial,
+# different for spikes on different waves in the same trial,
+# different for spikes on different wavelengths
+def add_plot_indices(grouped_frame):
+    unique_wavelength_ids = pd.DataFrame(
+        {'wavelength_id' : np.unique(grouped_frame.wavelength_id.sort_values())})
+    unique_wavelength_ids['plot_index'] = unique_wavelength_ids.index
+    grouped_frame = \
+    unique_wavelength_ids.merge(grouped_frame,how='outer')
+    return grouped_frame
+
+def make_rasters(single_band_frame, band):
+    g = sns.FacetGrid(single_band_frame , col = 'unit', row = 'taste', sharey=False)
+    g.map(plt.scatter, 'phase', 'plot_index', s = 48, alpha = 0.3)
+    plt.savefig(plot_dir + \
+            '/{}_raster.png'.format(freq_dframe[0][band]))
+    h = sns.FacetGrid(single_band_frame, col = 'unit', row = 'taste', sharey=False)
+    h.map(plt.hist,'phase', bins = 20)
+    plt.savefig(plot_dir +\
+        '/{}_histogram.png'.format(freq_dframe[0][band]))
+
+fin_frame = pd.concat([add_plot_indices(x) for name,x in tqdm.tqdm(group_frame)])  
+
+#for band in dframe.band_num.unique():
+Parallel(n_jobs = len(fin_frame.band.unique()))(delayed(make_rasters)\
+        (fin_frame.query('band == @band'),band) \
+        for band in tqdm.tqdm(fin_frame.band.unique()))
+
+# =============================================================================
+# Creates Histograms for spikes by phase
+# =============================================================================
 for taste, color in zip(dframe.taste.unique(),colors):
     for band in sorted(dframe.band.unique()):
         #Set up axes for plotting all tastes together
