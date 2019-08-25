@@ -238,25 +238,16 @@ bin_num = np.min([dframe.trial.max(),dframe.wavelength_num.max()])
 dframe = (dframe.
         assign(wavelength_id = lambda x : (x.wavelength_num*bin_num)+x.trial))
 
-group_frame = dframe.groupby(['unit','band','taste'])
-
-# Plot indices will instruct seaborn where to place spikes on a scatterplot
-# such that plot indices are specific to (taste,trial,unit) groups but
-# are proportional to wavelength_num ,
-# equal for spikes on the same wave in the same trial,
-# different for spikes on different waves in the same trial,
-# different for spikes on different wavelengths
-def add_plot_indices(grouped_frame):
-    unique_wavelength_ids = pd.DataFrame(
-        {'wavelength_id' : np.unique(grouped_frame.wavelength_id.sort_values())})
-    unique_wavelength_ids['plot_index'] = unique_wavelength_ids.index
-    grouped_frame = \
-    unique_wavelength_ids.merge(grouped_frame,how='outer')
-    return grouped_frame
+stim_time = int(easygui.enterbox('Enter time of stimulus delivery (sec)')) 
 
 def make_rasters(single_band_frame, band):
-    g = sns.FacetGrid(single_band_frame , col = 'unit', row = 'taste', sharey=False)
-    g.map(plt.scatter, 'phase', 'plot_index', s = 48, alpha = 0.3)
+    stim_wavelength = len(np.unique(dframe.trial)) * \
+            np.mean(freq_dframe.loc[band,1:]) * stim_time
+    g = sns.FacetGrid(single_band_frame , col = 'unit', row = 'taste',
+            sharey=True)
+    #g.map(plt.scatter, 'phase', 'plot_index', s = 48, alpha = 0.3)
+    g.map(plt.scatter, 'phase', 'wavelength_id', s = 48, alpha = 0.3)
+    g.map(plt.hlines, y = stim_wavelength, xmin = -np.pi, xmax = np.pi, color  = 'r' )
     plt.savefig(plot_dir + \
             '/{}_raster.png'.format(freq_dframe[0][band]))
     h = sns.FacetGrid(single_band_frame, col = 'unit', row = 'taste', sharey=False)
@@ -264,12 +255,10 @@ def make_rasters(single_band_frame, band):
     plt.savefig(plot_dir +\
         '/{}_histogram.png'.format(freq_dframe[0][band]))
 
-fin_frame = pd.concat([add_plot_indices(x) for name,x in tqdm.tqdm(group_frame)])  
-
 #for band in dframe.band_num.unique():
-Parallel(n_jobs = len(fin_frame.band.unique()))(delayed(make_rasters)\
-        (fin_frame.query('band == @band'),band) \
-        for band in tqdm.tqdm(fin_frame.band.unique()))
+Parallel(n_jobs = len(dframe.band.unique()))(delayed(make_rasters)\
+        (dframe.query('band == @band'),band) \
+        for band in tqdm.tqdm(dframe.band.unique()))
 
 # =============================================================================
 # Creates Histograms for spikes by phase
