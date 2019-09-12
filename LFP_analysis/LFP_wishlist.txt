@@ -1,3 +1,4 @@
+** -- Move generating LFP bands into processing final **
 --Description for every script on top of file
 --Extract LFP from non-dead channels (figure out metric for this)
 --Descriptive stats output
