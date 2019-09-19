@@ -22,6 +22,7 @@
 	--Z-test pvalue matrices --> Refer to Brad
 	--Phase vs time KDE
 		--Default small time-bin size
+		--Sliding window across time option for KDe
 		--Autodetect and enlarge bin if no spikes in timebins
 	--Paired phase-locking Chi-squared correlation coefficients --> Refer to Brad
 	
