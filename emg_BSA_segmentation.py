@@ -46,7 +46,7 @@ ltps = np.zeros((emg_BSA_results.shape[0], emg_BSA_results.shape[1]))
 #gapes = np.array(max_freq <= 7, dtype = int)
 ## LTPs are from 5.95 Hz to 8.65 Hz
 #ltps = np.array((max_freq >= 10)*(max_freq <= 16), dtype = int)
-#Alternatively, gapes from 4.15-5.95 Hz (7-11). LTPs from 5.95 to 8.65 Hz (11-17) 
+#Alternatively, gapes from 3.65-5.95 Hz (6-11). LTPs from 5.95 to 8.65 Hz (11-17) 
 gapes = np.sum(emg_BSA_results[:, :, 6:11], axis = 2)/np.sum(emg_BSA_results[:, :, :], axis = 2)
 ltps = np.sum(emg_BSA_results[:, :, 11:], axis = 2)/np.sum(emg_BSA_results[:, :, :], axis = 2)
 
