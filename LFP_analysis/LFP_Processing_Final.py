@@ -281,6 +281,7 @@ dig_in_channels = hf5.list_nodes('/digital_in')
 dig_in_LFP_nodes = hf5.list_nodes('/Parsed_LFP')
 
 if split_response == 0:
+    add_node_number = easygui.integerbox(msg='You have ' +str(len(dig_in_nodes)) + ' digital input channels, how many will you add?', default='4',lowerbound=0,upperbound=10)
     trial_split = easygui.multenterbox(
             msg = "Put in the number of trials to parse from each of "\
                     "the LFP arrays (only integers)", 
@@ -289,16 +290,27 @@ if split_response == 0:
 
     #Convert all values to integers
     trial_split = list(map(int,trial_split))
-    total_sessions = int(total_trials/int(trial_split[0]))
-
-    #Create dictionary of all parsed LFP arrays
-    LFP_data = [np.array(dig_in_LFP_nodes[node][:,0:trial_split[node],:]) \
-            for node in range(len(dig_in_LFP_nodes))]
     
+        # Grab array information for each digital input channel, split into first and last sections, place in corresponding digitial input group array
+    for node in range(len(dig_in_nodes)):
+        exec("full_array = hf5.root.Parsed_LFP.dig_in_%i_LFPs[:] " % node)
+        hf5.remove_node('/Parsed_LFP/dig_in_%s_LFPs' % str(node), recursive = True)
+        hf5.create_array('/Parsed_LFP', 'dig_in_%s_LFPs' % str(node), np.array(full_array[:,0:trial_split[node],:]))
+
+    total_sessions = int(total_trials/int(trial_split[0]))
+	    
+    #Reset nodes
+    dig_in_LFP_nodes = hf5.list_nodes('/Parsed_LFP')
+	
+	#Create dictionary of all parsed LFP arrays
+    LFP_data = [np.array(dig_in_LFP_nodes[node][:]) \
+            for node in range(len(dig_in_LFP_nodes))]
+	
 else:    
     total_sessions = 1
     trial_split = list(map(int,[total_trials for node in dig_in_LFP_nodes]))
     #Create dictionary of all parsed LFP arrays
+    
     LFP_data = [np.array(dig_in_LFP_nodes[node][:]) \
             for node in range(len(dig_in_LFP_nodes))]
     
@@ -386,5 +398,6 @@ for taste in range(len(LFP_data)):
 # ==============================
 print("If you want to compress the file to release disk space, " + \
         "run 'blech_hdf5_repack.py' upon completion.")
+hf5.flush()
 hf5.close()
 
