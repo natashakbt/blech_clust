@@ -150,23 +150,28 @@ dig_in = np.array(dig_in)
 # Get the stimulus delivery times - 
 # take the end of the stimulus pulse as the time of delivery
 
-dig_on = []
-for i in range(len(dig_in)):
-    dig_on.append(np.where(dig_in[i,:] == 1)[0])
-change_points = []
-for on_times in dig_on:
-    changes = []
-    for j in range(len(on_times) - 1):
-        if np.abs(on_times[j] - on_times[j+1]) > 30:
-            changes.append(on_times[j])
-    try:
-        # append the last trial which will be missed by this method
-        changes.append(on_times[-1]) 
-    except:
-        # Continue without appending anything if this port wasn't on at all
-        pass 
-    change_points.append(changes)
+#dig_on = []
+#for i in range(len(dig_in)):
+#    dig_on.append(np.where(dig_in[i,:] == 1)[0])
+#change_points = []
+#for on_times in dig_on:
+#    changes = []
+#    for j in range(len(on_times) - 1):
+#        if np.abs(on_times[j] - on_times[j+1]) > 30:
+#            changes.append(on_times[j])
+#    try:
+#        # append the last trial which will be missed by this method
+#        changes.append(on_times[-1]) 
+#    except:
+#        # Continue without appending anything if this port wasn't on at all
+#        pass 
+#    change_points.append(changes)
 
+# The tail end of the pulse generates a negative value when passed through diff
+# This method removes the need for a for loop
+diff_points = np.where(np.diff(dig_in) == -1)
+change_points = [diff_points[1][diff_points[0]==this_dig_in] \
+                for this_dig_in in range(len(dig_in))]
 
 # Show the user the number of trials on each digital 
 #input channel, and ask them to confirm
