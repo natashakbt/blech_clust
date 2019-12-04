@@ -29,11 +29,11 @@ emg_filt = np.zeros(emg_data.shape[1:])
 env = np.zeros(emg_data.shape[1:])
 for i in range(emg_data.shape[1]):
 	for j in range(emg_data.shape[2]):
-        if check:
-            emg_filt[i, j, :] = filtfilt(m, n, emg_data[0, i, j, :] - emg_data[1, i, j, :])
-        else:
-            emg_filt[i, j, :] = filtfilt(m, n, emg_data[0, i, j, :])
-        env[i, j, :] = filtfilt(c, d, np.abs(emg_filt[i, j, :]))    
+		if check:
+			emg_filt[i, j, :] = filtfilt(m, n, emg_data[0, i, j, :] - emg_data[1, i, j, :])
+		else:
+			emg_filt[i, j, :] = filtfilt(m, n, emg_data[0, i, j, :])
+		env[i, j, :] = filtfilt(c, d, np.abs(emg_filt[i, j, :]))    
 			
 # Get mean and std of baseline emg activity, and use it to select trials that have significant post stimulus activity
 sig_trials = np.zeros((emg_data.shape[1], emg_data.shape[2]))
