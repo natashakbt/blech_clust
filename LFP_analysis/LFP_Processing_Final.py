@@ -10,7 +10,7 @@ import os
 import glob
 import matplotlib.pyplot as plt
 import re
-from tqdm import trange
+from tqdm import tqdm, trange
 #Import specific functions in order to filter the data file
 from scipy.signal import butter
 from scipy.signal import filtfilt
@@ -36,11 +36,11 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 #(shown as repeated number in unit_descriptor); 
 #Remove these duplicates within array
 
-electrodegroup = np.unique(hf5.root.unit_descriptor[:]['electrode_number'])
+#electrodegroup = np.unique(hf5.root.unit_descriptor[:]['electrode_number'])
 
 ## List all appropriate dat files
 Raw_Electrodefiles = np.sort(glob.glob('*amp*dat*'))
-#electrodegroup = np.arange(len(Raw_Electrodefiles))
+electrodegroup = np.arange(len(Raw_Electrodefiles))
 Raw_Electrodefiles = Raw_Electrodefiles[electrodegroup]
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -232,6 +232,12 @@ trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
 # Run through the tastes if user said there are more than 1 trial
 if trial_check == "Yes":
+
+    total_trials = hf5.root.Parsed_LFP.dig_in_1_LFPs[:].shape[1]
+    # Ask about subplotting
+    msg   = "Do you want saved outputs (channel check plots) for each tastant?"
+    subplot_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+
     for i in range(len(dig_in_channels)):
             num_electrodes = len(lfp_nodes) 
             num_trials = len(change_points[dig_in_channel_nums[i]])
@@ -254,6 +260,8 @@ if trial_check == "Yes":
             hf5.flush()
         
 if trial_check == "No":
+    total_trials = 1
+
     num_electrodes = len(lfp_nodes) 
     num_trials = len(change_points[dig_in_channel_nums[0]])-1
     this_taste_LFPs = np.zeros(
@@ -292,29 +300,18 @@ hf5.flush()
 
 #Ask if file needs to be split, if yes, split it
 split_response = easygui.indexbox(
-        msg='Do you need to split these trials?', 
+        msg='Do you need to split these trials? e.g. if you have uneven numbers of trials', 
         title='Split trials', choices=('Yes', 'No'), 
         image=None, default_choice='Yes', cancel_choice='No')
-
-# Ask if this analysis is looking at more than 1 trial and/or taste
-msg   = "Do you want to perform LFP analyses for more than ONE trial" \
-                    "(ie. Do you have several tastes) ?"
-trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
-
-if trial_check == "Yes":
-    total_trials = hf5.root.Parsed_LFP.dig_in_1_LFPs[:].shape[1]
-    # Ask about subplotting
-    msg   = "Do you want saved outputs for each tastant?"
-    subplot_check = easygui.buttonbox(msg,choices = ["Yes","No"])
-
-if trial_check == "No":
-    total_trials = 1
 
 dig_in_channels = hf5.list_nodes('/digital_in')
 dig_in_LFP_nodes = hf5.list_nodes('/Parsed_LFP')
 
 if split_response == 0:
-    add_node_number = easygui.integerbox(msg='You have ' +str(len(dig_in_nodes)) + ' digital input channels, how many will you add?', default='4',lowerbound=0,upperbound=10)
+    add_node_number = easygui.integerbox(msg='You have ' +\
+            str(len(dig_in_nodes)) + \
+            ' digital input channels, how many will you add?', \
+            default='4',lowerbound=0,upperbound=10)
     trial_split = easygui.multenterbox(
             msg = "Put in the number of trials to parse from each of "\
                     "the LFP arrays (only integers)", 
@@ -376,29 +373,29 @@ else:
     # Ask if this analysis is an average of normalization 
     taste_params = easygui.multenterbox(
                 ncols=1,sharex=True, sharey=False,figsize=(12, 8), squeeze=False)
-        fig.text(0.5, 0.05, 'Milliseconds', ha='center',fontsize=15)
-        axes_list = [item for sublist in axes for item in sublist]
-        
-        for ax, chan in zip(axes.flatten(),range(np.size(channel_data,axis=1))):
-        
-                ax = axes_list.pop(0)
-                ax.set_yticks([])
-                ax.plot(t, channel_data[:,chan])
-                h = ax.set_ylabel('Channel %s' %(chan))
-                h.set_rotation(0)
-                ax.vlines(x=pre_stim, ymin=np.min(channel_data[:,chan]),
-                        ymax=np.max(channel_data[:,chan]), linewidth=4, color='r')
-                
-        fig.subplots_adjust(hspace=0,wspace = -0.15)
-        fig.suptitle('Dig in {} - '.format(taste) + \
-                '%s - Channel Check: %s' %(taste_params[taste], 
-                hdf5_name[0:4])+'\n' + 'Raw LFP Traces; Date: %s' \
-                                %(re.findall(r'_(\d{6})', 
-                hdf5_name)[0]),size=16,fontweight='bold')
-        fig.savefig('./LFP_channel_check/' + hdf5_name[0:4] + \
-                '_dig_in{}'.format(taste) + \
-                '_ %s_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0],
-                    taste_params[taste]) + '_channelcheck.png')   
+    fig.text(0.5, 0.05, 'Milliseconds', ha='center',fontsize=15)
+    axes_list = [item for sublist in axes for item in sublist]
+
+    for ax, chan in zip(axes.flatten(),range(np.size(channel_data,axis=1))):
+
+            ax = axes_list.pop(0)
+            ax.set_yticks([])
+            ax.plot(t, channel_data[:,chan])
+            h = ax.set_ylabel('Channel %s' %(chan))
+            h.set_rotation(0)
+            ax.vlines(x=pre_stim, ymin=np.min(channel_data[:,chan]),
+                    ymax=np.max(channel_data[:,chan]), linewidth=4, color='r')
+            
+    fig.subplots_adjust(hspace=0,wspace = -0.15)
+    fig.suptitle('Dig in {} - '.format(taste) + \
+            '%s - Channel Check: %s' %(taste_params[taste], 
+            hdf5_name[0:4])+'\n' + 'Raw LFP Traces; Date: %s' \
+                            %(re.findall(r'_(\d{6})', 
+            hdf5_name)[0]),size=16,fontweight='bold')
+    fig.savefig('./LFP_channel_check/' + hdf5_name[0:4] + \
+            '_dig_in{}'.format(taste) + \
+            '_ %s_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0],
+                taste_params[taste]) + '_channelcheck.png')   
 
 # ==============================
 # Close Out 
