@@ -263,10 +263,12 @@ split_response = easygui.indexbox(
         title='Split trials', choices=('Yes', 'No'), 
         image=None, default_choice='Yes', cancel_choice='No')
 
-# Ask if this analysis is looking at more than 1 trial and/or taste
-msg   = "Do you want to perform LFP analyses for more than ONE trial" \
-                    "(ie. Do you have several tastes) ?"
-trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+# =============================================================================
+# # Ask if this analysis is looking at more than 1 trial and/or taste
+# msg   = "Do you want to perform LFP analyses for more than ONE trial" \
+#                     "(ie. Do you have several tastes) ?"
+# trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+# =============================================================================
 
 if trial_check == "Yes":
     total_trials = hf5.root.Parsed_LFP.dig_in_1_LFPs[:].shape[1]
@@ -324,8 +326,14 @@ if trial_check == "No":
                     'Signal Window (ms)', 
                     'Window Overlap (ms; default 90%)'], 
             values = ['0','1200000','1000','1000','900'])
-        
-    #create timing variables
+    
+    taste_params = easygui.buttonbox('Select condition:',choices = ["Experimental (e.g. LiCl)","Control (e.g. Saline)"])    
+    if taste_params == 'Experimental (e.g. LiCl)':
+        taste_params = 'Experimental'
+    else:
+        taste_params = 'Control'
+	
+	#create timing variables
     pre_stim = 0
 
 else:    
@@ -337,6 +345,11 @@ else:
                     'Taste array end time (ms)'], 
             values = ['2000','5000','0','2500'])
     
+    taste_params = easygui.multenterbox(
+            msg = 'Input condition identity:', 
+            fields = ['Condition'],
+            values = ['NaCl','Sucrose','Citric Acid','QHCl'])
+
     #create timing variables
     pre_stim = int(durations[0])
 
