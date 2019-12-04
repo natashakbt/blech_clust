@@ -35,10 +35,12 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 #Some electrodes may record from more than one neuron 
 #(shown as repeated number in unit_descriptor); 
 #Remove these duplicates within array
+
 electrodegroup = np.unique(hf5.root.unit_descriptor[:]['electrode_number'])
 
 ## List all appropriate dat files
 Raw_Electrodefiles = np.sort(glob.glob('*amp*dat*'))
+#electrodegroup = np.arange(len(Raw_Electrodefiles))
 Raw_Electrodefiles = Raw_Electrodefiles[electrodegroup]
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -98,17 +100,41 @@ hf5.create_group('/', 'raw_LFP')
 #Loop through each neuron-recording electrode (from .dat files), 
 #filter data, and create array in new LFP node
 for i in trange(len(Raw_Electrodefiles)):
-
     #Read and filter data
     data = np.fromfile(Raw_Electrodefiles[i], dtype = np.dtype('int16'))
     filt_el = get_filtered_electrode(data = data,
                                     low_pass = freqparam[0],
                                     high_pass = freqparam[1],
                                     sampling_rate = freqparam[2])
-
-    hf5.create_array('/raw_LFP','electrode%i' % electrodegroup[i], filt_el)
+    # Zero padding to 3 digits because code get screwy with sorting electrodes
+    # if that isn't done
+    hf5.create_array('/raw_LFP','electrode{:0>3}'.format(electrodegroup[i]), filt_el)
     hf5.flush()
     del filt_el, data
+
+##################
+# Downsample LFP to 1000Hz to speed up processing
+##################
+#Check if LFP data is already within file and remove node if so. 
+#Create new raw LFP group within H5 file. 
+try:
+    hf5.remove_node('/raw_LFP_1000Hz', recursive = True)
+except:
+    pass
+hf5.create_group('/', 'raw_LFP_1000Hz')
+
+#Loop through each neuron-recording electrode (from .dat files), 
+#filter data, and create array in new LFP node
+final_sample_freq = 1000 # Hz
+new_sample_interval = freqparam[2]/final_sample_freq
+raw_LFP_nodes = hf5.list_nodes('/raw_LFP') 
+
+for channel_num, channel in tqdm(enumerate(raw_LFP_nodes)): 
+    #Read and filter data
+    
+    hf5.create_array('/raw_LFP_1000Hz','electrode{:0>3}'.format(electrodegroup[channel_num]), 
+                    channel[np.arange(0, len(channel), int(new_sample_interval))])
+    hf5.flush()
 
 # Grab the names of the arrays containing digital inputs, 
 # and pull the data into a numpy array
@@ -123,6 +149,7 @@ dig_in = np.array(dig_in)
 
 # Get the stimulus delivery times - 
 # take the end of the stimulus pulse as the time of delivery
+
 dig_on = []
 for i in range(len(dig_in)):
     dig_on.append(np.where(dig_in[i,:] == 1)[0])
@@ -139,6 +166,7 @@ for on_times in dig_on:
         # Continue without appending anything if this port wasn't on at all
         pass 
     change_points.append(changes)
+
 
 # Show the user the number of trials on each digital 
 #input channel, and ask them to confirm
@@ -263,12 +291,10 @@ split_response = easygui.indexbox(
         title='Split trials', choices=('Yes', 'No'), 
         image=None, default_choice='Yes', cancel_choice='No')
 
-# =============================================================================
-# # Ask if this analysis is looking at more than 1 trial and/or taste
-# msg   = "Do you want to perform LFP analyses for more than ONE trial" \
-#                     "(ie. Do you have several tastes) ?"
-# trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
-# =============================================================================
+# Ask if this analysis is looking at more than 1 trial and/or taste
+msg   = "Do you want to perform LFP analyses for more than ONE trial" \
+                    "(ie. Do you have several tastes) ?"
+trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
 if trial_check == "Yes":
     total_trials = hf5.root.Parsed_LFP.dig_in_1_LFPs[:].shape[1]
@@ -326,14 +352,8 @@ if trial_check == "No":
                     'Signal Window (ms)', 
                     'Window Overlap (ms; default 90%)'], 
             values = ['0','1200000','1000','1000','900'])
-    
-    taste_params = easygui.buttonbox('Select condition:',choices = ["Experimental (e.g. LiCl)","Control (e.g. Saline)"])    
-    if taste_params == 'Experimental (e.g. LiCl)':
-        taste_params = 'Experimental'
-    else:
-        taste_params = 'Control'
-	
-	#create timing variables
+        
+    #create timing variables
     pre_stim = 0
 
 else:    
@@ -345,42 +365,11 @@ else:
                     'Taste array end time (ms)'], 
             values = ['2000','5000','0','2500'])
     
-    taste_params = easygui.multenterbox(
-            msg = 'Input condition identity:', 
-            fields = ['Condition'],
-            values = ['NaCl','Sucrose','Citric Acid','QHCl'])
-
     #create timing variables
     pre_stim = int(durations[0])
 
     # Ask if this analysis is an average of normalization 
     taste_params = easygui.multenterbox(
-            msg = 'Input taste identities:', 
-            fields = ['Taste 1 (dig_in_1)', 
-                    'Taste 2 (dig_in_2)',
-                    'Taste 3 (dig_in_3)',
-                    'Taste 4 (dig_in_4)'],
-            values = ['NaCl','Sucrose','Citric Acid','QHCl'])
-
-
-# =============================================================================
-# #Channel Check
-# =============================================================================
-# Make directory to store the LFP trace plots. Delete and remake the directory if it exists
-try:
-        os.system('rm -r '+'./LFP_channel_check')
-except:
-        pass
-os.mkdir('./LFP_channel_check')
-
-#Check to make sure LFPs are "normal" and allow user to remove any that are not
-for taste in range(len(LFP_data)):
-        #Set data
-        channel_data = np.mean(LFP_data[taste],axis=1).T
-        t=np.array(list(range(0,np.size(channel_data,axis=0))))
-        
-        #Create figure
-        fig,axes = plt.subplots(nrows=np.size(channel_data,axis=1), 
                 ncols=1,sharex=True, sharey=False,figsize=(12, 8), squeeze=False)
         fig.text(0.5, 0.05, 'Milliseconds', ha='center',fontsize=15)
         axes_list = [item for sublist in axes for item in sublist]
