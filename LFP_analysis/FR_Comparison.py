@@ -254,26 +254,74 @@ for animal in range(len(dirs_1)):
 held_df = held_df.rename(columns={"time":"spike_count"})
 held_df = held_df.replace({'comp_time': {0: 'Pre', 1: 'Post'}})		
 
-conditional_list = list(product(tuple(held_df.comp_time.unique()),tuple(held_df.Condition.unique())))
-
 #Set formating colors
-pal = {'LiCl':"seagreen", 'Saline':"gray"}
+pal = {conditions[0]:"seagreen", conditions[1]:"gray"}
 for animal in range(len(held_df.Animal.unique())):
 	animal_name = sorted(grouped_df.Animal.unique())[animal]
 			
 	g = sns.FacetGrid(held_df.query('Animal == @animal_name'), col = 'held_unit', row = 'taste',
              sharey=True)
+	g = g.map(sns.swarmplot, 'comp_time', 'spike_count', 'Condition', order=['Pre','Post'],dodge=True,color = 'black',alpha=0.3)	
 	g = (g.map(sns.barplot, 'comp_time', 'spike_count', 'Condition', palette=pal,order=['Pre','Post']).add_legend())
-		
+	
 	plt.savefig('./Grouped_FR_analyses/' + \
             '/{}_Conditional_FRs.png'.format(animal_name))	
 	plt.close()
 
+#Create dataframe to store only held data information
+Phase_df = pd.DataFrame()
 
+for animal in range(len(dirs_1)):
+	animal_name = sorted(grouped_df.Animal.unique())[animal]
+	
+	for unit in range(len(all_day1[animal])):
+		#Extract appropriate held cell for further analyses
+		held_unit_1 = all_day1[animal][unit]
+		held_unit_2 = all_day2[animal][unit]
 
+		Phase_df_query1 = grouped_df.query(
+						'Animal == @animal_name and unit ==@held_unit_1 and '\
+						'Condition == @conditions[0]')
+		Phase_df_query1['held_unit'] = unit
+		Phase_df_query2 = grouped_df.query(
+								'Animal == @animal_name and unit ==@held_unit_2 and '\
+								'Condition == @conditions[1]')
+		Phase_df_query2['held_unit'] = unit
+		
+		
+		Phase_df = pd.concat([Phase_df,Phase_df_query1],sort=False)
+		Phase_df = pd.concat([Phase_df,Phase_df_query2],sort=False)
 
-
-
+# =============================================================================
+# #Perform grouping
+# Phase_df = grouped_df.groupby(['Animal','trial','unit','taste','Condition','comp_time']).count()
+# Phase_df = Phase_df.reset_index()
+# 
+# =============================================================================
+for animal in range(len(held_df.Animal.unique())):
+	animal_name = sorted(grouped_df.Animal.unique())[animal]
+			
+	g = sns.FacetGrid(Phase_df.query('Animal == @animal_name and comp_time == 1'), col = 'held_unit', row = 'band',
+             sharey=True)
+	g = g.map(sns.violinplot, 'taste', 'phase', 'Condition', dodge=True)	
+	g = (g.map(sns.violinplot, 'taste', 'phase', 'Condition', palette=pal).add_legend())
+		
+	plt.savefig('./Grouped_FR_analyses/' + \
+            '/{}_Conditional_Phasic_Hists.png'.format(animal_name))	
+	plt.close()
+	
+# =============================================================================
+# 	
+# 	g = sns.FacetGrid(Phase_df.query('Animal == @animal_name and comp_time == 1 and taste == 0'), col = 'held_unit', row = 'band',
+#              subplot_kws=dict(projection='polar'), hue="phase", despine=False,sharey=True)
+# 	
+# 	g = g.map(plt.scatter,'phase', 'time')
+# 	
+# 	df1 = pd.melt(Phase_df.query('Animal == @animal_name and comp_time == 1 and taste == 0'), id_vars=['phase'], var_name='phase', value_name='band')
+# 	
+# 
+# 
+# =============================================================================
 
 
 
