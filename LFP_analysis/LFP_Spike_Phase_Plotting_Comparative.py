@@ -236,6 +236,13 @@ freq_bands = np.array(freq_dframe.iloc[:][0]).astype(str).\
         reshape(np.array(freq_dframe.iloc[:][0]).size,1)
 freq_vals = freq_dframe.to_dict('index')
 
+#Ask about group comparisons
+msg   = "Would you like to compare between cohorts (e.g. Experimental versus Control)?"
+comp_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+
+#make list for storing change_score outputs
+change_outputs = 2*[[[ [] for col in range(len(grouped_df.band.unique()))] for taste in range(len(grouped_df.taste.unique()))]] 
+
 if analysis_check == "Yes":
 	# Make directory to store SPL plots. 
 	# Delete and remake the directory if it exists
@@ -284,7 +291,9 @@ if analysis_check == "Yes":
 			sig_vector =np.array([x[1] for x in chi_stats[taste]]) #find p values
 			sig_vector= np.array([x*(x<=0.05) for x in sig_vector]) #convert all non-sig to 0
 			sig_vector[sig_vector == 0] = 'nan' #convert to nans for plotting
-					
+			
+			#store change_score outputs by band
+			
 	        #Applied a first order gaussian filter to smooth lines
 			p1 = ax.plot(sorted(grouped_df.time_bin.unique()),
 	                gaussian_filter1d(np.array([query_1['time_bin'].value_counts()[x] \
@@ -321,7 +330,8 @@ if analysis_check == "Yes":
 		fig.subplots_adjust(hspace=0.25,wspace = 0.05)
 		plt.suptitle('%s Sig. Spike-Phase Locking\n %s: %i cells,  %s: %i cells' %([x[0] for x in list(freq_vals.values())][band],conditions[0],len(query_1.groupby(['Animal', 'unit'])),conditions[1],len(query_2.groupby(['Animal', 'unit']))),size=18,fontweight="bold")  
 		fig.savefig('./Grouped_Phase_lock_analyses/SPL_Distributions/'+'%s_SPL_N_%i_animals.png' %([x[0] for x in list(freq_vals.values())][band], len(grouped_df.Animal.unique())))   
-		plt.close(fig)		
+		plt.close(fig)
+		
 
 if analysis_check == "No":
 	# Make directory to store SPL plots. 
