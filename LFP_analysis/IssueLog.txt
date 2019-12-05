@@ -1,0 +1,4 @@
+1 - Opened 12/4/19
+    LFP_Processing_Final.py
+        Lines 321 - 355 have multiple instantiations of "taste_params"
+        which are likely overwriting eachother.
