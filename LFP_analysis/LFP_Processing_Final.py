@@ -36,37 +36,11 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 #(shown as repeated number in unit_descriptor); 
 #Remove these duplicates within array
 
-#electrodegroup = np.unique(hf5.root.unit_descriptor[:]['electrode_number'])
+electrodegroup = np.unique(hf5.root.unit_descriptor[:]['electrode_number'])
 
 ## List all appropriate dat files
 Raw_Electrodefiles = np.sort(glob.glob('*amp*dat*'))
-electrodegroup = np.arange(len(Raw_Electrodefiles))
 Raw_Electrodefiles = Raw_Electrodefiles[electrodegroup]
-
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-#======================================
-# This section is not needed till we want to process channels
-# without any cells on them. Removal of EMG electrodes already
-# happens in blech processing.
-#=====================================
-
-## Ask user to specify non-electrode channels
-#non_electrode_channels = easygui.multchoicebox(msg='Select ANY non-electrode channels',
-#                title='Non-electrode channels',
-#                choices=[x[4:9] for x in Raw_Electrodefiles])
-## If any non-electrode channels present
-## convert selected channels to inds for easing processing
-#if non_electrode_channels: 
-#        non_electrode_channels_inds = [ind for ind in range(len(Raw_Electrodefiles)) \
-#                        for noncell_channel in non_electrode_channels \
-#                        if re.search(noncell_channel,Raw_Electrodefiles[ind]) \
-#                        is not None]
-#        # Remove channels which are not electrodes
-#        Raw_Electrodefiles = [Raw_Electrodefiles[x] for x in range(len(Raw_Electrodefiles)) \
-#                        if x not in non_electrode_channels_inds]
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 
 # ==============================
 # Extract Raw Data 
@@ -124,7 +98,7 @@ for node in dig_in_nodes:
 dig_in = np.array(dig_in)
 
 # The tail end of the pulse generates a negative value when passed through diff
-# This method removes the need for a for loop
+# This method removes the need for a "for" loop
 
 diff_points = np.where(np.diff(dig_in) == -1)
 change_points = [diff_points[1][diff_points[0]==this_dig_in] \
@@ -194,6 +168,8 @@ if trial_check == "Yes":
     msg   = "Do you want saved outputs (channel check plots) for each tastant?"
     subplot_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
+    # Store downsample LFP in Parsed_LFP
+    # Taking the average of every 30 points to reduce sampling rate to 1000Hz
     for i in range(len(dig_in_channels)):
             num_electrodes = len(lfp_nodes) 
             num_trials = len(change_points[dig_in_channel_nums[i]])
@@ -291,14 +267,14 @@ if split_response == 0:
                         np.array(full_array[:,0:trial_split[node],:]))
 
     total_sessions = int(total_trials/int(trial_split[0]))
-	    
+ 
     #Reset nodes
     dig_in_LFP_nodes = hf5.list_nodes('/Parsed_LFP')
-	
-	#Create dictionary of all parsed LFP arrays
+
+    #Create dictionary of all parsed LFP arrays
     LFP_data = [np.array(dig_in_LFP_nodes[node][:]) \
             for node in range(len(dig_in_LFP_nodes))]
-	
+
 else:    
     total_sessions = 1
     trial_split = list(map(int,[total_trials for node in dig_in_LFP_nodes]))
