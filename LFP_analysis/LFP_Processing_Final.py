@@ -100,7 +100,19 @@ dig_in = np.array(dig_in)
 # The tail end of the pulse generates a negative value when passed through diff
 # This method removes the need for a "for" loop
 
-diff_points = np.where(np.diff(dig_in) == -1)
+# Ask use whether they would like to extract LFPs from the
+# start or end of the taste delivery signal
+taste_signal_choice = \
+                easygui.buttonbox('Should trials be marked using the START or END of the taste'\
+                ' delivery pulse?', 'Please select', choices = ['Start', 'End'])
+print('Marking trials from {} of taste delivery pulse'.format(taste_signal_choice.upper()))
+
+if taste_signal_choice is 'Start':
+        diff_val = 1
+elif taste_signal_choice is 'End':
+        diff_val = -1
+
+diff_points = np.where(np.diff(dig_in) == diff_val)
 change_points = [diff_points[1][diff_points[0]==this_dig_in] \
                 for this_dig_in in range(len(dig_in))]
 
