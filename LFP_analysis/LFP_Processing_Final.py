@@ -14,7 +14,6 @@ from tqdm import tqdm, trange
 #Import specific functions in order to filter the data file
 from scipy.signal import butter
 from scipy.signal import filtfilt
-import time
 
 #Get name of directory where the data files and hdf5 file sits, 
 #and change to that directory for processing
@@ -84,21 +83,8 @@ hf5.create_group('/', 'raw_LFP_1000Hz')
 final_sampling_rate = 1000
 new_intersample_interval = freqparam[2]/final_sampling_rate
 
-start = time.time()
-for i in trange(len(Raw_Electrodefiles)):
-    #Read and filter data
-    data = np.fromfile(Raw_Electrodefiles[i], dtype = np.dtype('int16'))
-    filt_el = get_filtered_electrode(data = data,
-                                    low_pass = freqparam[0],
-                                    high_pass = freqparam[1],
-                                    sampling_rate = freqparam[2])
-
-    hf5.create_array('/raw_LFP','electrode{:0>3}'.format(electrodegroup[i]), filt_el)
-    hf5.flush()
-    del filt_el, data
-print(time.time() - start)
-
-start = time.time()
+# Pull out signal for each electrode, down_sample, bandpass filter and store in HDF5
+print('Extracting raw LFPs')
 for i in trange(len(Raw_Electrodefiles)):
     data = np.fromfile(Raw_Electrodefiles[i], dtype = np.dtype('int16'))
     data_down = np.mean(data.reshape((-1, int(new_intersample_interval))), axis = -1)
@@ -109,10 +95,9 @@ for i in trange(len(Raw_Electrodefiles)):
 
     # Zero padding to 3 digits because code get screwy with sorting electrodes
     # if that isn't done
-    hf5.create_array('/raw_LFP_1000Hz','electrode{:0>3}'.format(electrodegroup[i]), filt_el_down)
+    hf5.create_array('/raw_LFP','electrode{:0>3}'.format(electrodegroup[i]), filt_el_down)
     hf5.flush()
     del data, data_down, filt_el_down
-print(time.time() - start)
 
 # Grab the names of the arrays containing digital inputs, 
 # and pull the data into a numpy array
@@ -124,9 +109,6 @@ for node in dig_in_nodes:
     exec("dig_in.append(hf5.root.digital_in.%s[:])" \
                 % dig_in_pathname[-1].split('/')[-1])
 dig_in = np.array(dig_in)
-
-# The tail end of the pulse generates a negative value when passed through diff
-# This method removes the need for a "for" loop
 
 # Ask use whether they would like to extract LFPs from the
 # start or end of the taste delivery signal
@@ -140,13 +122,12 @@ if taste_signal_choice is 'Start':
 elif taste_signal_choice is 'End':
         diff_val = -1
 
-diff_points = np.where(np.diff(dig_in) == diff_val)
-change_points = [diff_points[1][diff_points[0]==this_dig_in] \
-                for this_dig_in in range(len(dig_in))]
+# The tail end of the pulse generates a negative value when passed through diff
+# This method removes the need for a "for" loop
 
-diff_points_down = list(np.where(np.diff(dig_in) == diff_val))
-diff_points_down[1] = diff_points_down[1]//30
-change_points_down = [diff_points_down[1][diff_points_down[0]==this_dig_in] \
+diff_points = list(np.where(np.diff(dig_in) == diff_val))
+diff_points[1] = diff_points[1]//30
+change_points = [diff_points[1][diff_points[0]==this_dig_in] \
                 for this_dig_in in range(len(dig_in))]
 
 # Show the user the number of trials on each digital 
@@ -193,7 +174,6 @@ for i in range(len(durations)):
 
 # Grab the names of the arrays containing LFP recordings
 lfp_nodes = hf5.list_nodes('/raw_LFP')
-lfp_nodes_down = hf5.list_nodes('/raw_LFP_1000Hz')
 
 # Make the Parsed_LFP node in the hdf5 file if it doesn't exist, else move on
 try:
@@ -201,14 +181,6 @@ try:
 except:
     pass
 hf5.create_group('/', 'Parsed_LFP')
-
-# Make the Parsed_LFP node in the hdf5 file if it doesn't exist, else move on
-try:
-    hf5.remove_node('/Parsed_LFP_abu', recursive = True)
-except:
-    pass
-hf5.create_group('/', 'Parsed_LFP_abu')
-
 
 # Create array marking which channel were chosen for further analysis
 # Made in root folder for backward compatibility of code
@@ -230,19 +202,19 @@ if trial_check == "Yes":
     msg   = "Do you want saved outputs (channel check plots) for each tastant?"
     subplot_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
-    start = time.time()
     # Remove dig_ins which are not relevant
-    change_points_down_fin = [change_points_down[x] for x in range(len(change_points_down))\
+    change_points_fin = [change_points[x] for x in range(len(change_points))\
                     if x in dig_in_channel_nums]
     
     # Make markers to slice trials for every dig_on
     all_trial_markers = [[(x-durations[0],x+durations[1]) \
                     for x in this_dig_in_markers] \
-                    for this_dig_in_markers in change_points_down_fin]
+                    for this_dig_in_markers in change_points_fin]
     
     # Extract trials for every channel for every dig_in
+    print('Parsing LFPs')
     all_channel_trials = []
-    for channel in tqdm(lfp_nodes_down):
+    for channel in tqdm(lfp_nodes):
             this_channel_trials = [ np.asarray([channel[marker_tuple[0]:marker_tuple[1]] \
                             for marker_tuple in this_dig_in]) \
                             for this_dig_in in all_trial_markers]
@@ -255,37 +227,9 @@ if trial_check == "Yes":
                             channel[dig_in] for channel in all_channel_trials])
     
             # Put the LFP data for this taste in hdf5 file under /Parsed_LFP
-            hf5.create_array('/Parsed_LFP_abu', 'dig_in_%i_LFPs' \
+            hf5.create_array('/Parsed_LFP', 'dig_in_%i_LFPs' \
                         % (dig_in), this_taste_LFP)
             hf5.flush()
-
-    print(time.time() - start)
-
-    start = time.time()
-    # Store downsample LFP in Parsed_LFP
-    # Taking the average of every 30 points to reduce sampling rate to 1000Hz
-    for i in range(len(dig_in_channels)):
-            num_electrodes = len(lfp_nodes) 
-            num_trials = len(change_points[dig_in_channel_nums[i]])
-            this_taste_LFPs = np.zeros((
-                    num_electrodes, num_trials, durations[0] + durations[1]))
-            for electrode in range(num_electrodes):
-                for j in range(len(change_points[dig_in_channel_nums[i]])):
-                    this_taste_LFPs[electrode, j, :] =\
-                        np.mean(
-                            lfp_nodes[electrode]\
-                            [change_points[dig_in_channel_nums[i]][j] -\
-                            durations[0]*30:change_points[dig_in_channel_nums[i]][j] \
-                            + durations[1]*30].reshape((-1, 30)), axis = 1)
-            
-            print (float(i)/len(dig_in_channels)) #Shows progress   
-        
-            # Put the LFP data for this taste in hdf5 file under /Parsed_LFP
-            hf5.create_array('/Parsed_LFP', 'dig_in_%i_LFPs' \
-                        % (dig_in_channel_nums[i]), this_taste_LFPs)
-            hf5.flush()
-    
-    print(time.time() - start)
         
 if trial_check == "No":
 
