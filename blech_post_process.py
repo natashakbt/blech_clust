@@ -94,6 +94,10 @@ while True:
         # Get cluster choices from the chosen solution
         clusters = easygui.multchoicebox(msg = 'Which clusters do you want to choose?', choices = tuple([str(i) for i in range(int(np.max(predictions) + 1))]))
         
+        # Print out selections
+        print('Electrode {}, Solution {}, Cluster {}'.\
+                format(electrode_num, num_clusters, clusters))
+
         # Re-show images of neurons so dumb people like Abu can make sure they
         # picked the right ones
         fig, ax = plt.subplots(len(clusters), 2)
