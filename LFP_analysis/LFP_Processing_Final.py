@@ -71,12 +71,6 @@ except:
     pass
 hf5.create_group('/', 'raw_LFP')
 
-try:
-    hf5.remove_node('/raw_LFP_1000Hz', recursive = True)
-except:
-    pass
-hf5.create_group('/', 'raw_LFP_1000Hz')
-
 #Loop through each neuron-recording electrode (from .dat files), 
 #filter data, and create array in new LFP node
 
