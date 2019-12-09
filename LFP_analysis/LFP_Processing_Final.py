@@ -15,10 +15,51 @@ from tqdm import tqdm, trange
 from scipy.signal import butter
 from scipy.signal import filtfilt
 
+# ==============================
+# Define Functions 
+# ==============================
+
+def get_filtered_electrode(data, low_pass, high_pass, sampling_rate):
+    el = 0.195*(data)
+    m, n = butter(
+            2, 
+            [2.0*int(low_pass)/sampling_rate, 2.0*int(high_pass)/sampling_rate], 
+            btype = 'bandpass')
+    filt_el = filtfilt(m, n, el)
+    return filt_el
+
+# ==============================
+# Collect user input needed for later processing 
+# ==============================
+
 #Get name of directory where the data files and hdf5 file sits, 
 #and change to that directory for processing
 dir_name = easygui.diropenbox()
 os.chdir(dir_name)
+
+#Specify filtering parameters (linear-phase finite impulse response filter) 
+#to define filter specificity across electrodes
+Boxes = ['low','high','Sampling Rate']
+freqparam = list(map(int,easygui.multenterbox(
+    'Specify LFP bandpass filtering paramters and sampling rate',
+    'Low-Frequency Cut-off (Hz)', 
+    Boxes, [1,300,30000]))) 
+
+# Ask use whether they would like to extract LFPs from the
+# start or end of the taste delivery signal
+taste_signal_choice = \
+                easygui.buttonbox('Should trials be marked using the START or END of the taste'\
+                ' delivery pulse?', 'Please select', choices = ['Start', 'End'])
+print('Marking trials from {} of taste delivery pulse'.format(taste_signal_choice.upper()))
+
+if taste_signal_choice is 'Start':
+        diff_val = 1
+elif taste_signal_choice is 'End':
+        diff_val = -1
+
+# ==============================
+# Open HDF5 File 
+# ==============================
 
 #Look for the hdf5 file in the directory
 hdf5_name = glob.glob('**.h5')[0]
@@ -45,23 +86,6 @@ Raw_Electrodefiles = Raw_Electrodefiles[electrodegroup]
 # ==============================
 # Extract Raw Data 
 # ==============================
-
-#Specify filtering parameters (linear-phase finite impulse response filter) 
-#to define filter specificity across electrodes
-Boxes = ['low','high','Sampling Rate']
-freqparam = list(map(int,easygui.multenterbox(
-    'Specify LFP bandpass filtering paramters and sampling rate',
-    'Low-Frequency Cut-off (Hz)', 
-    Boxes, [1,300,30000]))) 
-
-def get_filtered_electrode(data, low_pass, high_pass, sampling_rate):
-    el = 0.195*(data)
-    m, n = butter(
-            2, 
-            [2.0*int(low_pass)/sampling_rate, 2.0*int(high_pass)/sampling_rate], 
-            btype = 'bandpass')
-    filt_el = filtfilt(m, n, el)
-    return filt_el
 
 #Check if LFP data is already within file and remove node if so. 
 #Create new raw LFP group within H5 file. 
@@ -103,18 +127,6 @@ for node in dig_in_nodes:
     exec("dig_in.append(hf5.root.digital_in.%s[:])" \
                 % dig_in_pathname[-1].split('/')[-1])
 dig_in = np.array(dig_in)
-
-# Ask use whether they would like to extract LFPs from the
-# start or end of the taste delivery signal
-taste_signal_choice = \
-                easygui.buttonbox('Should trials be marked using the START or END of the taste'\
-                ' delivery pulse?', 'Please select', choices = ['Start', 'End'])
-print('Marking trials from {} of taste delivery pulse'.format(taste_signal_choice.upper()))
-
-if taste_signal_choice is 'Start':
-        diff_val = 1
-elif taste_signal_choice is 'End':
-        diff_val = -1
 
 # The tail end of the pulse generates a negative value when passed through diff
 # This method removes the need for a "for" loop
