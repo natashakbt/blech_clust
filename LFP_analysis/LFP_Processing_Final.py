@@ -10,6 +10,7 @@ import os
 import glob
 import matplotlib.pyplot as plt
 import re
+import sys
 from tqdm import tqdm, trange
 #Import specific functions in order to filter the data file
 from scipy.signal import butter
@@ -38,11 +39,6 @@ if len(sys.argv)>1:
     dir_name = sys.argv[1]
 else:
     dir_name = easygui.diropenbox()
-os.chdir(dir_name)
-
-#Get name of directory where the data files and hdf5 file sits, 
-#and change to that directory for processing
-dir_name = easygui.diropenbox()
 os.chdir(dir_name)
 
 #Specify filtering parameters (linear-phase finite impulse response filter) 
