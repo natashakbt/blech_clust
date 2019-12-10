@@ -34,6 +34,14 @@ def get_filtered_electrode(data, low_pass, high_pass, sampling_rate):
 
 #Get name of directory where the data files and hdf5 file sits, 
 #and change to that directory for processing
+if len(sys.argv)>1:
+    dir_name = sys.argv[1]
+else:
+    dir_name = easygui.diropenbox()
+os.chdir(dir_name)
+
+#Get name of directory where the data files and hdf5 file sits, 
+#and change to that directory for processing
 dir_name = easygui.diropenbox()
 os.chdir(dir_name)
 
