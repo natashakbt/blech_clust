@@ -28,7 +28,7 @@ msg   = "Have you performed directory set-up before '\
 dir_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
 if dir_check == "No":
-    # Ask for the directory where to store the directory file
+        # Ask for the directory where to store the directory file
         save_name = easygui.diropenbox(\
                 msg = 'Choose where you want to save directory output file to...')
         
@@ -43,8 +43,8 @@ if dir_check == "No":
                 except:
                         break   
 
-    #Dump the directory names into chosen output location for each condition
-    #condition 1
+        #Dump the directory names into chosen output location for each condition
+        #condition 1
         completeName = os.path.join(save_name, 'Taste_dirs.dir') 
         f = open(completeName, 'w')
         for item in dirs:
@@ -55,8 +55,7 @@ if dir_check == "Yes":
         # Ask for the directory where to store the directory file
         dir_folder = easygui.diropenbox(msg = 'Choose where directory output file is...')
                 
-    #establish directories to flip through
-    #condition 1
+        #establish directories to flip through condition 1
         dirs_path = os.path.join(dir_folder, 'Taste_dirs.dir')
         dirs_file = open(dirs_path,'r')
         dirs = dirs_file.read().splitlines()
@@ -89,7 +88,8 @@ for dir_name in dirs:
         
         #Import necessary data
         try:
-                spike_times = np.array(f['Whole_session_spikes/all_spikes']) #by unit
+                #by unit
+                spike_times = np.array(f['Whole_session_spikes/all_spikes']) 
                 #ordered by dig_in
                 delivery_times = \
                         np.array(f['/Whole_session_spikes/delivery_times/block0_values'])
