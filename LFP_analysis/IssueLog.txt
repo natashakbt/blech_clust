@@ -3,4 +3,11 @@ LFP_Processing_Final.py
             -Lines 321 - 355 have multiple instantiations of "taste_params"
                 which are likely overwriting eachother.
     2 - Opened 12/6/19
-        - Move all user input dialogs to start of script to streamline workflow
+            - Move all user input dialogs to start of script to streamline workflow
+    3 - Opened 1/17/20
+            - Handling of affective session removed in newer code, re-add *URGENT*
+
+LFP_Spike_Phase_Plotting.py
+    1 - Opened 1/17/20
+            - Phase locking raster plot (time-series of spike phases) producing
+                  flat lines
