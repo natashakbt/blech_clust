@@ -358,11 +358,6 @@ else:
                     'Taste array end time (ms)'], 
             values = ['2000','5000','0','2500'])
     
-    taste_params = easygui.multenterbox(
-            msg = 'Input condition identity:', 
-            fields = ['Condition'],
-            values = ['NaCl','Sucrose','Citric Acid','QHCl'])
-
     #create timing variables
     pre_stim = int(durations[0])
 
