@@ -15,3 +15,9 @@ LFP_Spike_Phase_Plotting.py
    *1 - Opened 1/17/20
             - Phase locking raster plot (time-series of spike phases) producing
                   flat lines
+
+LFP_Spike_Phase_Stats.py
+    *1 - Opened 1/23/19
+            - Stats computation can be made faster by using groupby and
+              iterating over groups rather than using for loop and running query
+              to extract relevant section of dataframe.
