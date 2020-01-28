@@ -393,9 +393,11 @@ if subplot_check is "Yes":
                 channel_data = np.array(LFP_data)
                 t = (np.arange(channel_data.shape[-1]))[np.newaxis,:]
             
+            mean_val = np.mean(channel_data.flatten())
+            std_val = np.std(channel_data.flatten())
             #Create figure
             fig,axes = plt.subplots(nrows=np.size(channel_data,axis=1), 
-                    ncols=1,sharex=True, sharey=False,figsize=(12, 8), squeeze=False)
+                    ncols=1,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
             fig.text(0.5, 0.05, 'Milliseconds', ha='center',fontsize=15)
             axes_list = [item for sublist in axes for item in sublist]
             
@@ -404,6 +406,7 @@ if subplot_check is "Yes":
                     ax = axes_list.pop(0)
                     ax.set_yticks([])
                     ax.plot(np.squeeze(t), np.squeeze(channel_data[:,chan]))
+                    ax.set_ylim([mean_val - 3*std_val, mean_val + 3*std_val])
                     h = ax.set_ylabel('Channel %s' %(chan))
                     h.set_rotation(0)
                     ax.vlines(x=pre_stim, ymin=np.min(channel_data[:,chan]),
