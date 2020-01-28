@@ -109,7 +109,17 @@ def get_delivery_times(hdf5_name):
 
 # All HDF5 files need to be in the same folder
 # Load files and make sure the order is right
-dir_name = '/media/bigdata/brads_data/Brad_LFP_ITI_analyses/BS23'
+#dir_name = '/media/bigdata/brads_data/Brad_LFP_ITI_analyses/BS23'
+
+# Ask user for all relevant files
+file_list = []
+while True:
+    file_name = easygui.fileopenbox(msg = 'Please select files to extract'\
+            ' data from')
+    if file_name is not None:
+        file_list.append(file_name)
+    else:
+        break
 
 #final_confirmation = 'n'
 #while 'y' not in final_confirmation:
@@ -134,10 +144,11 @@ dir_name = '/media/bigdata/brads_data/Brad_LFP_ITI_analyses/BS23'
 #            format("".join(final_selection_list))
 #    final_confirmation = input(final_selection_string)
 
-hdf5_name = glob.glob(
-        os.path.join(dir_name, '**.h5'))
+#hdf5_name = glob.glob(
+#        os.path.join(dir_name, '**.h5'))
 file_order = [2, 4, 3, 0, 1]
-final_list = [hdf5_name[x] for x in file_order]
+#final_list = [hdf5_name[x] for x in file_order]
+final_list = [hdf5_name[x] for x in file_list]
 
 
 affective_recordings = [0,1,3]
