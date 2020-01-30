@@ -77,8 +77,7 @@ def getFlaggedLFPs(hf5_name):
                 query('Dig_In == {} and Error_Flag == 0'.format(dig_in))['Channel']) \
                 for dig_in in range(len(lfps_dig_in))]
     else:
-        good_channel_list = [list(flag_frame.\
-                query('Dig_In == {}'.format(dig_in))['Channel']) \
+        good_channel_list = [list(np.arange(lfps_dig_in[dig_in][:].shape[0])) \
                 for dig_in in range(len(lfps_dig_in))]
 
     # Load LFPs and remove flagged channels if present
@@ -94,13 +93,14 @@ def getFlaggedLFPs(hf5_name):
 # =============================================================================
 #specify frequency bands
 iter_freqs = [
-        ('Theta', 4, 7),
-        ('Alpha', 7, 12),
-        ('Beta', 13, 25),
-        ('Gamma', 30, 45)]
+        (0, 4, 7),
+        (1, 7, 12),
+        (2, 13, 25),
+        (3, 30, 45)]
 
 #Covert to dframe for storing
 freq_dframe = pd.DataFrame.from_dict(iter_freqs)
+freq_dframe.columns = ['band_num','low_freq','high_freq']
 
 colors = plt.get_cmap('winter_r')(np.linspace(0, 1, len(iter_freqs)))
 
@@ -237,10 +237,17 @@ final_phase_frame = pd.merge(spikes_frame,phase_frame,how='inner')
 # \___/ \__,_|\__| .__/ \__,_|\__|
 #                |_|              
 
-#Save dframes into node within HdF5 file
-final_phase_frame.to_hdf(hdf5_name,'Spike_Phase_Dframe/dframe')
-freq_dframe.to_hdf(hdf5_name,'Spike_Phase_Dframe/freq_keys')
-
 #Flush and close file
 hf5.flush()
 hf5.close()
+
+# Delete Spike_Phase_Dframe node so it can be re-written
+with tables.open_file(hdf5_name,'r+') as hf5:
+    if '/Spike_Phase_Dframe' in hf5:
+        print('Removing last instance of Spike_Phase_Dframe')
+        hf5.remove_node('/Spike_Phase_Dframe',recursive=True)
+
+#Save dframes into node within HdF5 file
+final_phase_frame.to_hdf(hdf5_name,'Spike_Phase_Dframe/dframe', mode = 'a')
+freq_dframe.to_hdf(hdf5_name,'Spike_Phase_Dframe/freq_keys', mode = 'a')
+
