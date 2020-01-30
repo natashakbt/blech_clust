@@ -128,11 +128,12 @@ iti_duration = 9 #second before taste delivery won't be extracted
 Fs = 1000 # Sampling frequency
 
 # (trials x channels x time)
-iti_array_list = np.asarray(\
-        [[lfp_array[:,(x+(time_after_delivery*Fs)):(x+((time_after_delivery+iti_duration)*Fs))]\
-        for x in delivery_times] \
-        for delivery_times,lfp_array in \
-        zip(delivery_time_list,taste_whole_lfp)])
+iti_array_list = \
+        [np.asarray(
+            [lfp_array[:,(x+(time_after_delivery*Fs)):(x+((time_after_delivery+iti_duration)*Fs))]\
+                for x in delivery_times]) \
+                for delivery_times,lfp_array in \
+                zip(delivery_time_list,taste_whole_lfp)]
 
 # Write ITI arrays back to files
 for file_num, this_file in enumerate(file_list):
@@ -450,6 +451,33 @@ g.map(sns.pointplot, 'chronological', 'raw_power')
 g.savefig(os.path.join(fin_output_dir,'{}_chronological_iti_power.png'.format(fin_animal_name)))
 
 ########################################
+# Plot Average power for ITI for every band
+########################################
+
+zscore_iti_lfp_amplitude = [np.array([zscore(dat,axis=None) for dat in this_file]) \
+        for this_file in mean_channel_iti_lfp_amplitude]
+for dat_num, dat in enumerate(zscore_iti_lfp_amplitude):
+    dat[:,bad_trials[dat_num]] = 0
+
+for num, data in enumerate(zscore_iti_lfp_amplitude):
+    fig,ax = plt.subplots(1,data.shape[0], sharey=True, figsize = (10,10))
+    for band in range(len(data)):
+        plt.sca(ax[band])
+        im = plt.imshow(data[band],
+                interpolation='nearest',aspect='auto',
+                cmap = 'jet',vmin=-3,vmax=3, origin = 'lower')
+    plt.suptitle(os.path.basename(file_list[num]) + '\nZscoring for each band individually'\
+            '\n Each plot: x = Time (ms), y = Trials')
+    fig.subplots_adjust(bottom = 0.2)
+    cbar_ax = fig.add_axes([0.15,0.05,0.7,0.02])
+    plt.colorbar(im, cax = cbar_ax,orientation = 'horizontal', pad = 0.2)
+    fig.text(0.5, 0.1, 'Bands', ha='center')
+    fig.savefig(
+            os.path.join(
+                fin_output_dir,
+                '{}_band_iti_power.png'.format(fin_animal_name + '_' + str(num))))
+
+########################################
 # Plot Average power for ITI (taste x band)
 ########################################
 taste_band_power = [np.asarray([\
@@ -479,9 +507,9 @@ for num,data in enumerate(zscore_taste_band_power):
             plt.sca(ax[taste,band])
             im = plt.imshow(data[taste,band],
                     interpolation='nearest',aspect='auto',
-                    cmap = 'jet',vmin=-3,vmax=3)
-            #im.cmap.set_over('k')
-    plt.suptitle(os.path.basename(file_list[num]) + '\n Each plot: x = Time (ms), y = Trials')
+                    cmap = 'jet',vmin=-3,vmax=3, origin = 'lower')
+    plt.suptitle(os.path.basename(file_list[num]) + '\nZscoring for each band individually'\
+            '\n Each plot: x = Time (ms), y = Trials')
     fig.subplots_adjust(bottom = 0.2)
     cbar_ax = fig.add_axes([0.15,0.05,0.7,0.02])
     plt.colorbar(im, cax = cbar_ax,orientation = 'horizontal', pad = 0.2)
