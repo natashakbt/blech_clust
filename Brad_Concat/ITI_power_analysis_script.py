@@ -7,6 +7,7 @@ Edits:
         to make new trial bins which don't rely on tastes
     X Save output plots
     X Save extracted ITIs to HDF5 file
+    X Plots resized to be large
 """
 
 # ___                            _   
@@ -92,22 +93,25 @@ while True:
         break
 
 # Ask user for directory to save plots in
-plot_dir = easygui.diropenbox(msg = \
-        'Please select directory to save plots in', default = last_dir)
+output_dir = easygui.diropenbox(msg = \
+        'Please select PARENT directory to save plots in \n'\
+        'Another directory will be created for the analysis within', default = last_dir)
 animal_names = [os.path.basename(x).split('_')[0] for x in file_list]
 if animal_names[0] == animal_names[1]:
     fin_animal_name = animal_names[0]
 else:
     fin_animal_name = easygui.multenterbox('Please enter animal name' \
-            '("_ITI_Plot" will be concatenated automatically',
+            '("_ITI_analysis_output" will be concatenated automatically',
             'Enter animal name',['Animal Name'])
-fin_plot_dir = os.path.join(plot_dir, fin_animal_name + '_ITI_Plot')
+fin_output_dir = os.path.join(output_dir, fin_animal_name + '_ITI_analysis_output')
 
 # If plot dir exists, delete and recreate, otherwise just make
-if os.path.exists(fin_plot_dir):
-    shutil.rmtree(fin_plot_dir)
-os.makedirs(fin_plot_dir)
+if os.path.exists(fin_output_dir):
+    shutil.rmtree(fin_output_dir)
+os.makedirs(fin_output_dir)
 
+# Generate name for the output HDF5 file
+output_hf5_name = os.path.join(fin_output_dir,fin_animal_name + '_iti_analysis.h5')
 
 # Extract LFP from all sessions
 taste_whole_lfp = [get_whole_session_lfp(file_name) \
@@ -245,7 +249,7 @@ bad_trials = [np.unique(np.where(zscore_trials_power[num] > bad_trial_threshes[n
 
 # Replot trials with threshold and marked trials
 # Plot zscore trial averaged power
-fig, ax = plt.subplots(len(zscore_trials_power),1,sharex=True)
+fig, ax = plt.subplots(len(zscore_trials_power),1,sharex=True, figsize= (10,8))
 for num, this_ax in enumerate(ax):
    this_ax.plot(zscore_trials_power[num].T,'x')
    this_ax.plot(np.arange(zscore_trials_power[num].shape[-1])[bad_trials[num]],
@@ -255,7 +259,7 @@ for num, this_ax in enumerate(ax):
            format(bad_trial_threshes[num],os.path.basename(file_list[num])))
    this_ax.set_xlabel('Trial num');this_ax.set_ylabel('Zscore mean power')
 plt.tight_layout()
-fig.savefig(os.path.join(fin_plot_dir,'{}_trial_removal.png'.format(fin_animal_name)))
+fig.savefig(os.path.join(fin_output_dir,'{}_trial_removal.png'.format(fin_animal_name)))
 plt.show()
 
 #    _    _   _  _____     ___    
@@ -355,9 +359,11 @@ taste_trial_anova_df = [ [\
             for file_num, file in enumerate(taste_trial_anova)]
 
 taste_trial_anova_df = pd.concat(list(chain(*taste_trial_anova_df)))
+# Write output to HDF5 file
+taste_trial_anova_df.to_hdf(output_hf5_name, '/taste_trial_two_way_anova') 
 
 # Show statistically significant values
-taste_trial_anova_df.loc[taste_trial_anova_df['p-unc'] < 0.01]
+#taste_trial_anova_df.loc[taste_trial_anova_df['p-unc'] < 0.01]
 
 ########################################
 ### Perform comparison across days
@@ -383,8 +389,11 @@ session_trial_anova_df = pd.concat([\
                         'np2' : band['np2']})
             for band_num,band in enumerate(session_trial_anova)])
 
+# Write output to HDF5 file
+session_trial_anova_df.to_hdf(output_hf5_name, '/across_session_one_way_anova') 
+
 # Check which bands have significant differences
-session_trial_anova_df.loc[session_trial_anova_df['p-unc'] < 0.01]
+#session_trial_anova_df.loc[session_trial_anova_df['p-unc'] < 0.01]
 
 ########################################
 ### Pairwise comparisons
@@ -407,9 +416,11 @@ pairwise_session_ttest_frame = pd.concat(
                 'p_val' : dat['p-unc']}
             )
         for ind,dat in zip(pairwise_comparisons_list,pairwise_session_trial_ttests)])
+# Write output to HDF5 file
+pairwise_session_ttest_frame.to_hdf(output_hf5_name, '/band_trial_pairwise_ttests') 
 
 # Report significant values
-pairwise_session_ttest_frame.loc[pairwise_session_ttest_frame.p_val < 0.01]
+#pairwise_session_ttest_frame.loc[pairwise_session_ttest_frame.p_val < 0.01]
 
 # ____  _       _       
 #|  _ \| | ___ | |_ ___ 
@@ -428,7 +439,7 @@ plt.subplots_adjust(top=0.8)
 title_str = ['{})'.format(num) + os.path.basename(name) + '\n' for num,name in enumerate(file_list)]
 title_str = ''.join(title_str)
 g.fig.suptitle(title_str)
-g.savefig(os.path.join(fin_plot_dir,'{}_trialbin_iti_power.png'.format(fin_animal_name)))
+g.savefig(os.path.join(fin_output_dir,'{}_trialbin_iti_power.png'.format(fin_animal_name)))
 
 ########################################
 # Plot mean power chronologically for both days overlayed
@@ -436,7 +447,7 @@ g.savefig(os.path.join(fin_plot_dir,'{}_trialbin_iti_power.png'.format(fin_anima
 g = sns.FacetGrid(data = mean_band_df_cat_dataset, 
         row = 'band', hue='dataset',sharey=False, size = 4, aspect = 3)
 g.map(sns.pointplot, 'chronological', 'raw_power')
-g.savefig(os.path.join(fin_plot_dir,'{}_chronological_iti_power.png'.format(fin_animal_name)))
+g.savefig(os.path.join(fin_output_dir,'{}_chronological_iti_power.png'.format(fin_animal_name)))
 
 ########################################
 # Plot Average power for ITI (taste x band)
@@ -462,7 +473,7 @@ for dat_num, dat in enumerate(zscore_taste_band_power):
 
 # Plot shit
 for num,data in enumerate(zscore_taste_band_power):
-    fig,ax = plt.subplots(data.shape[0],data.shape[1],sharex=True,sharey=True)
+    fig,ax = plt.subplots(data.shape[0],data.shape[1],sharex=True,sharey=True, figsize = (10,10))
     for taste in range(data.shape[0]):
         for band in range(data.shape[1]):
             plt.sca(ax[taste,band])
@@ -470,7 +481,7 @@ for num,data in enumerate(zscore_taste_band_power):
                     interpolation='nearest',aspect='auto',
                     cmap = 'jet',vmin=-3,vmax=3)
             #im.cmap.set_over('k')
-    plt.suptitle(os.path.basename(file_list[num]))
+    plt.suptitle(os.path.basename(file_list[num]) + '\n Each plot: x = Time (ms), y = Trials')
     fig.subplots_adjust(bottom = 0.2)
     cbar_ax = fig.add_axes([0.15,0.05,0.7,0.02])
     plt.colorbar(im, cax = cbar_ax,orientation = 'horizontal', pad = 0.2)
@@ -478,5 +489,6 @@ for num,data in enumerate(zscore_taste_band_power):
     fig.text(0.04, 0.5, 'Tastes', va='center', rotation='vertical')
     fig.savefig(
             os.path.join(
-                fin_plot_dir,'{}_taste_band_iti_power.png'.format(fin_animal_name + '_' + str(num))))
+                fin_output_dir,
+                '{}_taste_band_iti_power.png'.format(fin_animal_name + '_' + str(num))))
 
