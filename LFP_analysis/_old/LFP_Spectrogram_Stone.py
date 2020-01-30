@@ -201,7 +201,7 @@ print('analysis will use signals: ' + str(base_time) + 'ms' + \
 #specify frequency bands
 iter_freqs = [
         ('Theta', 4, 7),
-        ('Mu', 7, 12),
+        ('Mu', 8, 12),
         ('Beta', 13, 25),
         ('Gamma', 30, 45)]
 
@@ -252,7 +252,7 @@ for taste in range(len(LFP_data)):
 # =============================================================================
 
 #Ask user to check LFP traces to ensure channels are not shorted/bad in order to remove said channel from further processing
-channel_check =         easygui.multchoicebox(msg = 'Choose the channel numbers that you want to REMOVE from further analyses. Click clear all and ok if all channels are good', choices = tuple([i for i in range(np.size(channel_data,axis=1))]))
+channel_check = easygui.multchoicebox(msg = 'Choose the channel numbers that you want to REMOVE from further analyses. Click clear all and ok if all channels are good', choices = tuple([i for i in range(np.size(channel_data,axis=1))]))
 if channel_check:
         for i in range(len(channel_check)):
                 channel_check[i] = int(channel_check[i])
@@ -382,7 +382,13 @@ for taste in trange(len(df['Taste'].unique()), desc = 'Taste'):
         #Plot tastes together
         plt.subplot(2,2,taste+1)
         plt.title('Taste: %s' %(taste_params[taste]), size=14)
-        z_mesh = (np.log10(gaussian_filter(np.mean(big_mean_P,axis=0),sigma=1)))[f<int(plotting_params[1])]
+		
+        if analysis_type == "Normalize":
+			      z_mesh = (np.log10(gaussian_filter(np.mean(big_norm_P,axis=0),sigma=1)))[f<int(plotting_params[1])]
+        if analysis_type == "Mean":
+			      z_mesh = (np.log10(gaussian_filter(np.mean(big_mean_P,axis=0),sigma=1)))[f<int(plotting_params[1])]
+		
+		#Plot
         im= plt.pcolormesh(x_mesh,y_mesh, z_mesh,cmap=plt.cm.winter); 
         plt.xlabel('Time (s)', size = 16)
         plt.ylabel('Frequency (Hz)', size = 16)
@@ -392,7 +398,7 @@ cbar_ax = fig.add_axes([.91,.3,.03,.4])
 fig.colorbar(im, cax=cbar_ax,label="PSD (dB/Hz)")
 plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.35)
 plt.suptitle('Time-Frequency Profile of Local Field Potential: %s \nHanning: Signal Window = %i ms, Window Overlap= %i ms' %(hdf5_name[0:4],signal_window,window_overlap), size=16)
-fig.savefig(hdf5_name[0:4] + '_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0]) +'_mean_all_tastes_spectrograms_hanning_w_' + f'{np.int((window_overlap/signal_window)*100)}%_overlap.png')                  
+fig.savefig(hdf5_name[0:4] + '_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0]) +'_%s' %(analysis_type) +'_all_tastes_spectrograms_hanning_w_' + f'{np.int((window_overlap/signal_window)*100)}%_overlap.png')                  
 plt.close('all')  
 
 
@@ -424,7 +430,7 @@ for taste in range(len(df['Taste'].unique())):
                 band_filt_sig = butter_bandpass_filter(data = query.iloc[:,2:], 
                                             lowcut = iter_freqs[band][1], 
                                             highcut =  iter_freqs[band][2], 
-                                            fs = 1000)
+                                            fs = 1000,order=2)
                 analytic_signal = hilbert(band_filt_sig)
                 instantaneous_phase = np.angle(analytic_signal)
                 x_power = np.abs(analytic_signal)**2
@@ -448,7 +454,7 @@ for taste in range(len(df['Taste'].unique())):
         plt.suptitle('Hilbert Transform and Instantaneous Power: %s \nTaste: %s; Date: %s' %(hdf5_name[0:4], taste_params[taste],(re.findall(r'_(\d{6})', hdf5_name)[0])),size=16)
         fig.savefig('./LFP_signals/' + hdf5_name[0:4] + '_%s_ %s' %(taste_params[taste],re.findall(r'_(\d{6})', hdf5_name)[0]) + '_HilbertTransform.png')   
         plt.show()
-        plt.close(fig)
+        plt.close('all')  
 
 
 
