@@ -1,27 +1,12 @@
 """
-Script to load all files from Brad's paradigm for a single 
-session and perform the following tests/visualisations:
-    1) Are there differences in taste ITI LFPs between tastes
-        for different bands
-    2) Do changes in sickness persists into the taste delivery period
-        and are they detectable in the LFP during the ITI period
-    3) What are the dynamics of the LFP during the ITI periods
-        and if sickness is noticeable in the LFP, does it rebound
-        towards health
-
-Precise analyses and outputs:
-    1) 
-        - 2 Way ANOVA on ITI LFP Power by taste and time for every band
-        - FacetGrid heatmap output (taste x band) for each ITI LFP power
-    2)
-        - Bandwise timeseries plot of power in affective and whole taste periods
-        - Heatmap for power for Saline and LiCl sessions
-        - Difference in ITI LFP power for taste after Saline or LiCl 
-    3) 
-    *)  Items saved to HDF5 file for animal
-        - Firing rate output for all 5 recordings
-        - Bandwise LFP power output for all 5 recordings
-        -
+Edits:
+    X Clean file loading code
+    X Move code for affective analysis to different script
+    - Fix legends in seaborn plots and add file name to all plots over files
+    X For pairwise t-test over bands and trial bins, use chronological
+        to make new trial bins which don't rely on tastes
+    X Save output plots
+    X Save extracted ITIs to HDF5 file
 """
 
 # ___                            _   
@@ -38,7 +23,7 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 import tables
 import h5py
-#import easygui
+import easygui
 import scipy
 from scipy.signal import spectrogram
 import numpy as np
@@ -53,35 +38,16 @@ import glob
 from collections import namedtuple
 from scipy.signal import convolve
 from itertools import chain
+import shutil
 
 
 ############################
 # Define functions to extract data
 ############################
 
-def get_parsed_lfp(hdf5_name):
-    """
-    Extract parsed lfp arrays from specified HD5 files
-    """
-    with tables.open_file(hdf5_name, 'r+') as hf5: 
-        if 'Parsed_LFP' in hf5.list_nodes('/').__str__():
-            lfp_nodes = [node for node in hf5.list_nodes('/Parsed_LFP')\
-                    if 'dig_in' in node.__str__()]
-            lfp_array = np.asarray([node[:] for node in lfp_nodes])
-            all_lfp_array = \
-                    lfp_array.\
-                        swapaxes(1,2).\
-                        reshape(-1, lfp_array.shape[1],\
-                                lfp_array.shape[-1]).\
-                        swapaxes(0,1)
-        else:
-            raise Exception('Parsed_LFP node absent in HDF5')
-    return all_lfp_array
-
 def get_whole_session_lfp(hdf5_name):
     with tables.open_file(hdf5_name, 'r+') as hf5: 
-        whole_session_lfp_node = hf5.list_nodes('/Whole_session_raw_LFP') 
-        whole_lfp = whole_session_lfp_node[0][:]
+        whole_lfp = hf5.get_node('/Whole_session_raw_LFP/WS_LFP')[:]
     return whole_lfp
 
 def get_delivery_times(hdf5_name):
@@ -99,7 +65,6 @@ def get_delivery_times(hdf5_name):
     delivery_times['chronological'] = np.argsort(delivery_times.delivery_time)
     return delivery_times
 
-
 # _                    _   ____        _        
 #| |    ___   __ _  __| | |  _ \  __ _| |_ __ _ 
 #| |   / _ \ / _` |/ _` | | | | |/ _` | __/ _` |
@@ -109,76 +74,69 @@ def get_delivery_times(hdf5_name):
 
 # All HDF5 files need to be in the same folder
 # Load files and make sure the order is right
-#dir_name = '/media/bigdata/brads_data/Brad_LFP_ITI_analyses/BS23'
 
 # Ask user for all relevant files
 file_list = []
+last_dir = None
 while True:
-    file_name = easygui.fileopenbox(msg = 'Please select files to extract'\
-            ' data from')
+    if last_dir is not None:
+        file_name = easygui.fileopenbox(msg = 'Please select files to extract'\
+                ' data from, CANCEL to stop', default = last_dir)
+    else:
+        file_name = easygui.fileopenbox(msg = 'Please select files to extract'\
+                ' data from, CANCEL to stop')
     if file_name is not None:
         file_list.append(file_name)
+        last_dir = os.path.dirname(file_name)
     else:
         break
 
-#final_confirmation = 'n'
-#while 'y' not in final_confirmation:
-#    hdf5_name = glob.glob(
-#            os.path.join(dir_name, '**.h5'))
-#    selection_list = ['{}) {} \n'.format(num,os.path.basename(file)) \
-#            for num,file in enumerate(hdf5_name)]
-#    selection_string = 'Please enter the number of the HDF5 files in the following'\
-#                ' order \n (as a comma separated string e.g. 2,1,3,4,0):'\
-#                '\n Day1 Saline \n Day1 LiCl \n Day1 Taste \n' \
-#                ' Day3 Saline \n Day3 Taste:\n{}'.\
-#                    format("".join(selection_list))
-#    file_selection = input(selection_string)
-#    file_order = [int(x) for x in file_selection.split(',')]
-#    # Check with user that the order is right
-#    final_list = [hdf5_name[x] for x in file_order]
-#    exp_list = ['Day1 Saline','Day1 LiCl','Day1 Taste',
-#                'Day3 Saline', 'Day3 Taste']
-#    final_selection_list = ['{})\t{}\n'.format(exp,os.path.basename(file)) \
-#            for exp,file in zip(exp_list,final_list)]
-#    final_selection_string = 'Is this order correct (y/n): \n{}'.\
-#            format("".join(final_selection_list))
-#    final_confirmation = input(final_selection_string)
+# Ask user for directory to save plots in
+plot_dir = easygui.diropenbox(msg = \
+        'Please select directory to save plots in', default = last_dir)
+animal_names = [os.path.basename(x).split('_')[0] for x in file_list]
+if animal_names[0] == animal_names[1]:
+    fin_animal_name = animal_names[0]
+else:
+    fin_animal_name = easygui.multenterbox('Please enter animal name' \
+            '("_ITI_Plot" will be concatenated automatically',
+            'Enter animal name',['Animal Name'])
+fin_plot_dir = os.path.join(plot_dir, fin_animal_name + '_ITI_Plot')
 
-#hdf5_name = glob.glob(
-#        os.path.join(dir_name, '**.h5'))
-file_order = [2, 4, 3, 0, 1]
-#final_list = [hdf5_name[x] for x in file_order]
-final_list = [hdf5_name[x] for x in file_list]
+# If plot dir exists, delete and recreate, otherwise just make
+if os.path.exists(fin_plot_dir):
+    shutil.rmtree(fin_plot_dir)
+os.makedirs(fin_plot_dir)
 
-
-affective_recordings = [0,1,3]
-taste_files = [final_list[2], final_list[-1]]
 
 # Extract LFP from all sessions
-whole_lfp = [np.squeeze(get_parsed_lfp(file_name))
-        if recording_num in affective_recordings \
-        else get_whole_session_lfp(file_name) \
-        for recording_num, file_name in tqdm(enumerate(final_list))]
-
-taste_whole_lfp = [whole_lfp[2],whole_lfp[-1]]
-affective_whole_lfp = [whole_lfp[x] for x in [0,1,3]]
+taste_whole_lfp = [get_whole_session_lfp(file_name) \
+        for recording_num, file_name in tqdm(enumerate(file_list))]
 
 # Extract ITI's from taste sessions
 trial_time_data = [get_delivery_times(file_name) \
-        for file_name in taste_files]
+        for file_name in file_list]
 delivery_time_list = [x.delivery_time for x in trial_time_data]
 
 # Define parameters to extract ITI data
-time_before_delivery = 10 #seconds
-padding = 1 #second before taste delivery won't be extracted
+time_after_delivery = 10 #seconds
+iti_duration = 9 #second before taste delivery won't be extracted
 Fs = 1000 # Sampling frequency
 
 # (trials x channels x time)
 iti_array_list = np.asarray(\
-        [[lfp_array[:,(x-(time_before_delivery*Fs)):(x-(padding*Fs))]\
+        [[lfp_array[:,(x+(time_after_delivery*Fs)):(x+((time_after_delivery+iti_duration)*Fs))]\
         for x in delivery_times] \
         for delivery_times,lfp_array in \
         zip(delivery_time_list,taste_whole_lfp)])
+
+# Write ITI arrays back to files
+for file_num, this_file in enumerate(file_list):
+    with tables.open_file(this_file, 'r+') as h5:
+        if '/Whole_session_raw_LFP/ITI_array' in h5:
+            h5.remove_node('/Whole_session_raw_LFP/ITI_array')
+        h5.create_array('/Whole_session_raw_LFP','ITI_array',iti_array_list[file_num])
+        h5.flush()
 
 #    _                _           _     
 #   / \   _ __   __ _| |_   _ ___(_)___ 
@@ -209,26 +167,6 @@ band_freqs = [(1,4),
                 (25,50)]
 
 
-affective_whole_bandpassed = \
-            [np.asarray([
-                    butter_bandpass_filter(
-                        data = data, 
-                        lowcut = band[0],
-                        highcut = band[1],
-                        fs = Fs) \
-                                for band in tqdm(band_freqs)])\
-                for data in affective_whole_lfp]
-
-taste_whole_bandpassed  = \
-            [np.asarray([
-                    butter_bandpass_filter(
-                        data = data, 
-                        lowcut = band[0],
-                        highcut = band[1],
-                        fs = Fs) \
-                                for band in tqdm(band_freqs)])\
-                for data in taste_whole_lfp]
-
 iti_lfp_bandpassed  = \
             [np.asarray([
                     butter_bandpass_filter(
@@ -240,23 +178,18 @@ iti_lfp_bandpassed  = \
                 for data in iti_array_list]
     
 # Remove to preserve memory
-del affective_whole_lfp, taste_whole_lfp, iti_array_list, whole_lfp
+del iti_array_list, taste_whole_lfp
 
 # Calculate Hilbert and amplitude
-affective_whole_hilbert = [hilbert(data) for data in tqdm(affective_whole_bandpassed)]
-taste_whole_hilbert = [hilbert(data) for data in tqdm(taste_whole_bandpassed)]
 iti_lfp_hilbert = [hilbert(data) for data in tqdm(iti_lfp_bandpassed)]
-
-affective_lfp_amplitude = [np.abs(data) for data in tqdm(affective_whole_hilbert)]
-taste_lfp_amplitude = [np.abs(data) for data in taste_whole_hilbert]
 iti_lfp_amplitude = [np.abs(data) for data in tqdm(iti_lfp_hilbert)]
 
-#    _                _           _     
-#   / \   _ __   __ _| |_   _ ___(_)___ 
-#  / _ \ | '_ \ / _` | | | | / __| / __|
-# / ___ \| | | | (_| | | |_| \__ \ \__ \
-#/_/   \_\_| |_|\__,_|_|\__, |___/_|___/
-#                       |___/           
+# ____                                             _             
+#|  _ \ _ __ ___ _ __  _ __ ___   ___ ___  ___ ___(_)_ __   __ _ 
+#| |_) | '__/ _ \ '_ \| '__/ _ \ / __/ _ \/ __/ __| | '_ \ / _` |
+#|  __/| | |  __/ |_) | | | (_) | (_|  __/\__ \__ \ | | | | (_| |
+#|_|   |_|  \___| .__/|_|  \___/ \___\___||___/___/_|_| |_|\__, |
+#               |_|                                        |___/ 
 
 # Create array index identifiers
 # Used to convert array to pandas dataframe
@@ -275,25 +208,27 @@ def make_array_identifiers(array):
 
 # Take average of power across channels
 mean_channel_iti_lfp_amplitude = [np.mean(data,axis=(2)) for data in iti_lfp_amplitude]
-mean_channel_taste_lfp_amplitude = [np.mean(data,axis=(1)) for data in taste_lfp_amplitude]
+# Take average across every ITI
 mean_iti_lfp_amplitude = [np.mean(data,axis=(2)) for data in mean_channel_iti_lfp_amplitude]
 
+########################################
 # Check for outliers
+########################################
 zscore_trials_power = np.asarray([\
         [zscore(band,axis = None) for band in data] for data in mean_iti_lfp_amplitude])
 
-# Plot zscore trial averaged power
+# Plot zscore trial averaged power so 
 fig, ax = plt.subplots(len(zscore_trials_power),1,sharex=True)
 for num, this_ax in enumerate(ax):
    this_ax.plot(zscore_trials_power[num].T,'x')
-   this_ax.title.set_text(os.path.basename(taste_files[num]))
+   this_ax.title.set_text(os.path.basename(file_list[num]))
    this_ax.set_xlabel('Trial num');this_ax.set_ylabel('Zscore mean power')
 plt.tight_layout()
 plt.show()
 
 # Ask user to input threshold zscore to remove bad trials from ANOVA analysis
 file_str = ("".join(['{}) {} \n'.format(file_num,os.path.basename(file_name)) \
-        for file_num,file_name in enumerate(taste_files)]))
+        for file_num,file_name in enumerate(file_list)]))
 thresh_string = 'Please enter threshold zscore for the following files'\
         '\n(separated by commas e.g. 0.6,0.3):\n{}'.format(file_str) 
 user_check = 'n'
@@ -304,6 +239,7 @@ while 'y' not in user_check:
     except:
         raise Exception('Please check the formatting of your string')
 
+# Mark trials which violate the threshold
 bad_trials = [np.unique(np.where(zscore_trials_power[num] > bad_trial_threshes[num])[1]) \
             for num in range(len(bad_trial_threshes))]
 
@@ -316,9 +252,10 @@ for num, this_ax in enumerate(ax):
                 zscore_trials_power[num][:,bad_trials[num]].T,'o',c='r')
    this_ax.hlines(bad_trial_threshes[num],0,zscore_trials_power[num].shape[-1],color='r')
    this_ax.title.set_text('Thresh {} , {}'.\
-           format(bad_trial_threshes[num],os.path.basename(taste_files[num])))
+           format(bad_trial_threshes[num],os.path.basename(file_list[num])))
    this_ax.set_xlabel('Trial num');this_ax.set_ylabel('Zscore mean power')
 plt.tight_layout()
+fig.savefig(os.path.join(fin_plot_dir,'{}_trial_removal.png'.format(fin_animal_name)))
 plt.show()
 
 #    _    _   _  _____     ___    
@@ -328,17 +265,10 @@ plt.show()
 #/_/   \_\_| \_|\___/  \_/_/   \_\
 #                                 
 
-# Average across entire trial
-#mean_zscore_taste_band_power = [np.mean(data,axis=-1) for axis in zscore_taste_band_power]
+# This comparison can be done without using zscored power but it is used here
+# to be consistent with the trials that are removed above
 
-mean_taste_trial_power = [\
-        np.array([\
-        zscore_trials_power[num][:,\
-            trial_time_data[num].loc[\
-                trial_time_data[num].taste == taste].chronological]\
-                    for taste in np.sort(trial_time_data[num].taste.unique())])\
-                    for num in range(len(trial_time_data))]
-
+# Break raw data into tastes
 mean_iti_taste_lfp_amplitude = [\
         np.array([\
         mean_iti_lfp_amplitude[num][:,\
@@ -347,15 +277,26 @@ mean_iti_taste_lfp_amplitude = [\
                     for taste in np.sort(trial_time_data[num].taste.unique())])\
                     for num in range(len(trial_time_data))]
 
-nd_idx = [make_array_identifiers(data) for data in mean_taste_trial_power]
+# Break zscored data into tastes
+zscore_iti_taste_power = [\
+        np.array([\
+        zscore_trials_power[num][:,\
+            trial_time_data[num].loc[\
+                trial_time_data[num].taste == taste].chronological]\
+                    for taste in np.sort(trial_time_data[num].taste.unique())])\
+                    for num in range(len(trial_time_data))]
+
+# Add both to dataframe
+nd_idx = [make_array_identifiers(data) for data in zscore_iti_taste_power]
 mean_band_df = [pd.DataFrame({\
         'taste' : nd_idx[num][0],
         'band' : nd_idx[num][1],
         'trial' : nd_idx[num][2],
         'raw_power' : data[0].flatten(),
         'zscore_power' : data[1].flatten()}) \
-                for num,data in enumerate(zip(mean_iti_taste_lfp_amplitude,mean_taste_trial_power))]
+                for num,data in enumerate(zip(mean_iti_taste_lfp_amplitude,zscore_iti_taste_power))]
 
+# Merge with trial_time_data to have chronological values for each trial
 mean_band_df = [mean_band_df[num].merge(trial_time_data[num],'inner') \
                     for num in range(len(mean_band_df))]
 
@@ -369,39 +310,43 @@ for num, this_ax in enumerate(ax):
            mean_band_df[num].zscore_power[bad_inds],'o',c='r')
     this_ax.hlines(bad_trial_threshes[num],0,zscore_trials_power[num].shape[-1],color='r')
     this_ax.title.set_text('Thresh {} , {}'.\
-           format(bad_trial_threshes[num],os.path.basename(taste_files[num])))
+           format(bad_trial_threshes[num],os.path.basename(file_list[num])))
     this_ax.set_xlabel('Trial num');this_ax.set_ylabel('Zscore mean power')
 plt.tight_layout()
 plt.show()
 
-# Remove "bad trials"
+# Remove "bad trials" from dataframe
 mean_band_df = [mean_band_df[num].loc[~mean_band_df[num].chronological.isin(bad_trials[num])] \
         for num in range(len(mean_band_df))]
 
-mean_band_df[1].to_pickle('test_anova_frame.pkl')
-
-# Cluster trials into bins for anova
-trial_bin_num = 5
+# Cluster trials for every taste into bins for anova
+# Not to be confused with trial_bin_total which cuts trials according to overall
+# chronological order regardless of tastant
+trial_bin_taste_num = 5
 for dat in mean_band_df:
-    dat['trial_bin'] = pd.cut(dat.trial,
-            bins = trial_bin_num, include_lowest = True, labels = range(trial_bin_num))
+    dat['trial_bin_taste'] = pd.cut(dat.trial,
+            bins = trial_bin_taste_num, include_lowest = True, labels = range(trial_bin_taste_num))
 
-# Plot dataframe to visualize
+trial_bin_total_num = 5
 for dat in mean_band_df:
-    g = sns.FacetGrid(data = dat,
-                col = 'band', hue = 'taste', sharey=False)
-    g.map(sns.pointplot, 'trial_bin','zscore_power',ci='sd').add_legend()
-plt.show()
+    dat['trial_bin_total'] = pd.cut(dat.chronological,
+            bins = trial_bin_total_num, include_lowest = True, labels = range(trial_bin_total_num))
 
-# Perform 2-way ANOVA to look at differences in taste and trial_bin
+########################################
+## 2 Way ANOVA
+########################################
+
+# Perform 2-way ANOVA to look at differences in taste and trial_bin_taste
+# for each dataset individually
 taste_trial_anova = [\
     [dat.loc[dat.band == band_num].anova(dv = 'zscore_power', \
-        between= ['trial_bin','taste'])[['Source','p-unc','np2']][:3] \
+        between= ['trial_bin_taste','taste'])[['Source','p-unc','np2']][:3] \
             for band_num in np.sort(dat.band.unique())] \
         for dat in mean_band_df]
 
+# Transform ANOVA output into dataframe
 taste_trial_anova_df = [ [\
-        pd.DataFrame({  'File' : os.path.basename(taste_files[file_num]),
+        pd.DataFrame({  'File' : os.path.basename(file_list[file_num]),
                         'Band' : band_num,
                         'Source' : band['Source'],
                         'p-unc' : band['p-unc'],
@@ -414,17 +359,19 @@ taste_trial_anova_df = pd.concat(list(chain(*taste_trial_anova_df)))
 # Show statistically significant values
 taste_trial_anova_df.loc[taste_trial_anova_df['p-unc'] < 0.01]
 
-# Concatenate datasets to easify further processing
-mean_band_df_cat_dataset = pd.concat([x.assign(dataset=num) for num,x in enumerate(mean_band_df)])
+########################################
+### Perform comparison across days
+########################################
 
-# Plot mean power chronologically for both days overlayed
-g = sns.FacetGrid(data = mean_band_df_cat_dataset, row = 'band', hue='dataset',sharey=False)
-g.map(sns.pointplot, 'chronological', 'raw_power')
-plt.show()
+# Concatenate datasets to easify further processing
+mean_band_df_cat_dataset = pd.concat([x.assign(dataset=num) \
+                                for num,x in enumerate(mean_band_df)])
 
 ##### Comparison must be done on RAW POWER #####
 # Since Zscoring is performed on datasets individually, they can't be compared #
-# ANOVA over trial_bin for every band
+# One way ANOVA to look at differences in LFP power between both datasets
+# for each band separately
+
 session_trial_anova =  [mean_band_df_cat_dataset.loc[mean_band_df_cat_dataset.band == band_num]\
         .anova(dv = 'raw_power', between= ['dataset'])[['Source','p-unc','np2']][:3] \
             for band_num in np.sort(mean_band_df_cat_dataset.band.unique())]
@@ -439,8 +386,12 @@ session_trial_anova_df = pd.concat([\
 # Check which bands have significant differences
 session_trial_anova_df.loc[session_trial_anova_df['p-unc'] < 0.01]
 
-# Perform pairwise comparisons for significant bands
-pairwise_comparisons_list = list(mean_band_df_cat_dataset.groupby(['band','trial_bin']))
+########################################
+### Pairwise comparisons
+########################################
+
+# Perform pairwise comparisons for for each combination of band and trial-bin
+pairwise_comparisons_list = list(mean_band_df_cat_dataset.groupby(['band','trial_bin_total']))
 pairwise_session_trial_ttests = [ pg.pairwise_ttests( 
                                     dv = 'raw_power',
                                     between = ['dataset'], 
@@ -452,13 +403,13 @@ pairwise_session_trial_ttests = [ pg.pairwise_ttests(
 pairwise_session_ttest_frame = pd.concat(
         [pd.DataFrame(
             {   'band' : ind[0][0],
-                'trial_bin' : ind[0][1],
+                'trial_bin_total' : ind[0][1],
                 'p_val' : dat['p-unc']}
             )
         for ind,dat in zip(pairwise_comparisons_list,pairwise_session_trial_ttests)])
 
 # Report significant values
-pairwise_session_ttest_frame.loc[pairwise_session_ttest_frame.p_val < 0.05]
+pairwise_session_ttest_frame.loc[pairwise_session_ttest_frame.p_val < 0.01]
 
 # ____  _       _       
 #|  _ \| | ___ | |_ ___ 
@@ -467,66 +418,65 @@ pairwise_session_ttest_frame.loc[pairwise_session_ttest_frame.p_val < 0.05]
 #|_|   |_|\___/ \__|___/
 #                       
 
-# Plot mean power in all 3 affective recordings to visualize changes
-mean_affective_lfp_amplitude = [np.mean(data,axis=1) for data in affective_lfp_amplitude]
+########################################
+# Plot mean power for trial bins for every band in both datasets 
+########################################
+g = sns.FacetGrid(data = mean_band_df_cat_dataset,
+            row = 'dataset', col = 'band', hue = 'taste', sharey = 'col')
+g.map(sns.pointplot, 'trial_bin_taste','raw_power', ci='sd').add_legend()
+plt.subplots_adjust(top=0.8)
+title_str = ['{})'.format(num) + os.path.basename(name) + '\n' for num,name in enumerate(file_list)]
+title_str = ''.join(title_str)
+g.fig.suptitle(title_str)
+g.savefig(os.path.join(fin_plot_dir,'{}_trialbin_iti_power.png'.format(fin_animal_name)))
 
-fig,ax = plt.subplots(len(band_freqs),len(mean_affective_lfp_amplitude),sharey='row')
-for session_num,session in enumerate(mean_affective_lfp_amplitude):
-    for band_num, band in enumerate(session):
-        ax[band_num,session_num].plot(band)
-plt.show()
+########################################
+# Plot mean power chronologically for both days overlayed
+########################################
+g = sns.FacetGrid(data = mean_band_df_cat_dataset, 
+        row = 'band', hue='dataset',sharey=False, size = 4, aspect = 3)
+g.map(sns.pointplot, 'chronological', 'raw_power')
+g.savefig(os.path.join(fin_plot_dir,'{}_chronological_iti_power.png'.format(fin_animal_name)))
 
-# Side-by-side plots of affective continuing into taste ITIs for both days
-fig,ax = plt.subplots(mean_affective_lfp_amplitude[0].shape[0], 2, sharey='row')
-for band_num in range(ax.shape[0]):
-    ax[band_num,0].plot(mean_affective_lfp_amplitude[1][band_num])
-    ax[band_num,1].plot(mean_channel_taste_lfp_amplitude[0].reshape((ax.shape[0],-1))[band_num])
-plt.show()
-
-fig,ax = plt.subplots(mean_affective_lfp_amplitude[0].shape[0], 2)
-
-# Plot entire taste session with taste delivery times
-fig, ax = plt.subplots(len(mean_channel_taste_lfp_amplitude[0]),1,sharex=True)
-for ax_num, this_ax in enumerate(ax):
-    this_ax.plot(mean_channel_taste_lfp_amplitude[0][ax_num])
-    this_ax.vlines(delivery_time_list[0],
-                np.min(mean_channel_taste_lfp_amplitude[0][ax_num]),
-                np.max(mean_channel_taste_lfp_amplitude[0][ax_num]))
-plt.show()
-
-
-## Plot Average power for ITI (taste x band)
+########################################
+# Plot Average power for ITI (taste x band)
+########################################
 taste_band_power = [np.asarray([\
         data[:,trial_time_data[num].taste == taste,:] \
         for taste in np.sort(trial_time_data[num].taste.unique())])\
-        for num,data in enumerate(mean_iti_lfp_amplitude)]
+        for num,data in enumerate(mean_channel_iti_lfp_amplitude)]
 
-# Set points with values > 3*std as masked
-masked_taste_band_power = [np.asarray(\
-        [np.ma.masked_greater(data[:,band],
-            np.mean(data[:,band],axis=None)+3*\
-                    np.std(data[:,band],axis=None))\
-        for band in range(data.shape[1])]).swapaxes(0,1) \
-        for data in taste_band_power]
-
+# Zscore power to have a consistent colormap across subplots
 zscore_taste_band_power = [np.asarray(\
         [zscore(data[:,band],axis=None) \
         for band in range(data.shape[1])]).swapaxes(0,1)\
-        for data in masked_taste_band_power]
+        for data in taste_band_power]
 
+# Blank out bad trials in data
+# First pull out bad trials
+bad_taste_trials = [dat.loc[dat.chronological.isin(bad_trials[dat_num])][['taste','trial']] \
+                            for dat_num,dat in enumerate(trial_time_data)]
+for dat_num, dat in enumerate(zscore_taste_band_power):
+    for row in range(bad_taste_trials[dat_num].shape[0]):
+        dat[bad_taste_trials[dat_num].iloc[row][0],:,bad_taste_trials[dat_num].iloc[row][1]] = 0
+
+# Plot shit
 for num,data in enumerate(zscore_taste_band_power):
-    fig,ax = plt.subplots(data.shape[0],
-                            data.shape[1])
+    fig,ax = plt.subplots(data.shape[0],data.shape[1],sharex=True,sharey=True)
     for taste in range(data.shape[0]):
         for band in range(data.shape[1]):
             plt.sca(ax[taste,band])
             im = plt.imshow(data[taste,band],
                     interpolation='nearest',aspect='auto',
-                    cmap = 'viridis',vmin=-1,vmax=3)
-            im.cmap.set_over('k')
-    plt.suptitle(os.path.basename(taste_files[num]))
+                    cmap = 'jet',vmin=-3,vmax=3)
+            #im.cmap.set_over('k')
+    plt.suptitle(os.path.basename(file_list[num]))
     fig.subplots_adjust(bottom = 0.2)
-    cbar_ax = fig.add_axes([0.15,0.1,0.7,0.02])
-    plt.colorbar(im, cax = cbar_ax,orientation = 'horizontal', pad = 0.2, extend='max')
-plt.show()
+    cbar_ax = fig.add_axes([0.15,0.05,0.7,0.02])
+    plt.colorbar(im, cax = cbar_ax,orientation = 'horizontal', pad = 0.2)
+    fig.text(0.5, 0.1, 'Bands', ha='center')
+    fig.text(0.04, 0.5, 'Tastes', va='center', rotation='vertical')
+    fig.savefig(
+            os.path.join(
+                fin_plot_dir,'{}_taste_band_iti_power.png'.format(fin_animal_name + '_' + str(num))))
 
