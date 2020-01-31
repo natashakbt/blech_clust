@@ -128,12 +128,14 @@ iti_duration = 9 #second before taste delivery won't be extracted
 Fs = 1000 # Sampling frequency
 
 # (trials x channels x time)
+# Determine start and end times of ITIs
+iti_intervals = [[(x+(time_after_delivery*Fs), x+((time_after_delivery+iti_duration)*Fs)) \
+                    for x in delivery_times] for delivery_times in delivery_time_list]
+
 iti_array_list = \
         [np.asarray(
-            [lfp_array[:,(x+(time_after_delivery*Fs)):(x+((time_after_delivery+iti_duration)*Fs))]\
-                for x in delivery_times]) \
-                for delivery_times,lfp_array in \
-                zip(delivery_time_list,taste_whole_lfp)]
+            [lfp_array[:,interval[0]:interval[1]] for interval in interval_list]) \
+                for interval_list,lfp_array in zip(iti_intervals,taste_whole_lfp)]
 
 # Write ITI arrays back to files
 for file_num, this_file in enumerate(file_list):
@@ -429,6 +431,22 @@ pairwise_session_ttest_frame.to_hdf(output_hf5_name, '/band_trial_pairwise_ttest
 #|  __/| | (_) | |_\__ \
 #|_|   |_|\___/ \__|___/
 #                       
+
+########################################
+# Test plot to confirm correct intervals are being selected from lfp
+########################################
+#mean_taste_whole_lfp = [np.mean(dat,axis=0) for dat in taste_whole_lfp]
+#fig,ax = plt.subplots(2,1)
+#ax[0].plot(mean_taste_whole_lfp[0])
+#ax[0].vlines(delivery_time_list[0], np.min(mean_taste_whole_lfp[0]),np.max(mean_taste_whole_lfp[0])) 
+#for interval in iti_intervals[0]:
+#    ax[0].axvspan(interval[0],interval[1],alpha=0.5,color='r')
+#ax[1].plot(mean_taste_whole_lfp[1])
+#ax[1].vlines(delivery_time_list[1], np.min(mean_taste_whole_lfp[1]),np.max(mean_taste_whole_lfp[1])) 
+#for interval in iti_intervals[1]:
+#    ax[1].axvspan(interval[0],interval[1],alpha=0.5,color='r')
+#plt.show()
+
 
 ########################################
 # Plot mean power for trial bins for every band in both datasets 
