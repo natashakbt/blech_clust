@@ -251,17 +251,23 @@ if trial_check == "No":
     hf5.flush()
 
 # Ask about subplotting
-msg   = "Do you want channel check plots output?" 
-subplot_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+########################################
+# Channel check plots are now made automatically (Abu 2/3/19)
+########################################
+#msg   = "Do you want channel check plots output?" 
+#subplot_check = easygui.buttonbox(msg,choices = ["Yes","No"])
 
 # Ask people if they want to delete rawLFPs or not, that 
 #way we offer the option to run analyses in many different ways. 
 #(ie. First half V back half)
-msg   = "Do you want to delete the Raw LFP data?"
-rawLFPdelete = easygui.buttonbox(msg,choices = ["Yes","No"])
-if rawLFPdelete == "Yes":
-    #Delete data
-    hf5.remove_node('/raw_LFP', recursive = True)
+########################################
+# Raw LFP is now deleted automatically (Abu 2/3/19)
+########################################
+#msg   = "Do you want to delete the Raw LFP data?"
+#rawLFPdelete = easygui.buttonbox(msg,choices = ["Yes","No"])
+#if rawLFPdelete == "Yes":
+#Delete data
+hf5.remove_node('/raw_LFP', recursive = True)
 hf5.flush()
 
 # ================================================
@@ -382,46 +388,49 @@ except:
 os.mkdir('./LFP_channel_check')
 
 #Check to make sure LFPs are "normal" and allow user to remove any that are not
-if subplot_check is "Yes":
-    for taste in range(len(LFP_data)):
+########################################
+# Channel check plots are now made automatically (Abu 2/3/19)
+########################################
+#if subplot_check is "Yes":
+for taste in range(len(LFP_data)):
 
-            #Set data
-            if trial_check is 'Yes':
-                channel_data = np.mean(LFP_data[taste],axis=1).T
-                t=np.array(list(range(0,np.size(channel_data,axis=0))))
-            else:
-                channel_data = np.array(LFP_data)
-                t = (np.arange(channel_data.shape[-1]))[np.newaxis,:]
-            
-            mean_val = np.mean(channel_data.flatten())
-            std_val = np.std(channel_data.flatten())
-            #Create figure
-            fig,axes = plt.subplots(nrows=np.size(channel_data,axis=1), 
-                    ncols=1,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
-            fig.text(0.5, 0.05, 'Milliseconds', ha='center',fontsize=15)
-            axes_list = [item for sublist in axes for item in sublist]
-            
-            for ax, chan in zip(axes.flatten(),range(np.size(channel_data,axis=1))):
-            
-                    ax = axes_list.pop(0)
-                    ax.set_yticks([])
-                    ax.plot(np.squeeze(t), np.squeeze(channel_data[:,chan]))
-                    ax.set_ylim([mean_val - 3*std_val, mean_val + 3*std_val])
-                    h = ax.set_ylabel('Channel %s' %(chan))
-                    h.set_rotation(0)
-                    ax.vlines(x=pre_stim, ymin=np.min(channel_data[:,chan]),
-                            ymax=np.max(channel_data[:,chan]), linewidth=4, color='r')
-                    
-            fig.subplots_adjust(hspace=0,wspace = -0.15)
-            fig.suptitle('Dig in {} - '.format(taste) + \
-                    '%s - Channel Check: %s' %(taste_params[taste], 
-                    hdf5_name[0:4])+'\n' + 'Raw LFP Traces; Date: %s' \
-                                    %(re.findall(r'_(\d{6})', 
-                    hdf5_name)[0]),size=16,fontweight='bold')
-            fig.savefig('./LFP_channel_check/' + hdf5_name[0:4] + \
-                    '_dig_in{}'.format(taste) + \
-                    '_ %s_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0],
-                        taste_params[taste]) + '_channelcheck.png')   
+        #Set data
+        if trial_check is 'Yes':
+            channel_data = np.mean(LFP_data[taste],axis=1).T
+            t=np.array(list(range(0,np.size(channel_data,axis=0))))
+        else:
+            channel_data = np.array(LFP_data)
+            t = (np.arange(channel_data.shape[-1]))[np.newaxis,:]
+        
+        mean_val = np.mean(channel_data.flatten())
+        std_val = np.std(channel_data.flatten())
+        #Create figure
+        fig,axes = plt.subplots(nrows=np.size(channel_data,axis=1), 
+                ncols=1,sharex=True, sharey=True,figsize=(12, 8), squeeze=False)
+        fig.text(0.5, 0.05, 'Milliseconds', ha='center',fontsize=15)
+        axes_list = [item for sublist in axes for item in sublist]
+        
+        for ax, chan in zip(axes.flatten(),range(np.size(channel_data,axis=1))):
+        
+                ax = axes_list.pop(0)
+                ax.set_yticks([])
+                ax.plot(np.squeeze(t), np.squeeze(channel_data[:,chan]))
+                ax.set_ylim([mean_val - 3*std_val, mean_val + 3*std_val])
+                h = ax.set_ylabel('Channel %s' %(chan))
+                h.set_rotation(0)
+                ax.vlines(x=pre_stim, ymin=np.min(channel_data[:,chan]),
+                        ymax=np.max(channel_data[:,chan]), linewidth=4, color='r')
+                
+        fig.subplots_adjust(hspace=0,wspace = -0.15)
+        fig.suptitle('Dig in {} - '.format(taste) + \
+                '%s - Channel Check: %s' %(taste_params[taste], 
+                hdf5_name[0:4])+'\n' + 'Raw LFP Traces; Date: %s' \
+                                %(re.findall(r'_(\d{6})', 
+                hdf5_name)[0]),size=16,fontweight='bold')
+        fig.savefig('./LFP_channel_check/' + hdf5_name[0:4] + \
+                '_dig_in{}'.format(taste) + \
+                '_ %s_%s' %(re.findall(r'_(\d{6})', hdf5_name)[0],
+                    taste_params[taste]) + '_channelcheck.png')   
 
 # ==============================
 # Close Out 
