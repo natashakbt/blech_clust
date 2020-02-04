@@ -53,7 +53,7 @@ freqparam = list(map(int,easygui.multenterbox(
 # start or end of the taste delivery signal
 taste_signal_choice = \
                 easygui.buttonbox('Should trials be marked using the START or END of the taste'\
-                ' delivery pulse?', 'Please select', choices = ['Start', 'End'])
+                ' delivery pulse?', 'Please select', choices = ['Start', 'End'], default_choice = 'Start')
 print('Marking trials from {} of taste delivery pulse'.format(taste_signal_choice.upper()))
 
 if taste_signal_choice is 'Start':
@@ -147,7 +147,8 @@ check = easygui.ynbox(
                 '\n' + 'No. of trials: ' + str([len(changes) \
                 for changes in change_points]), 
                 title = 'Check and confirm the number of ' + \
-                'trials detected on digital input channels')
+                'trials detected on digital input channels', 
+                default_choice = 'Yes')
 
 # Go ahead only if the user approves by saying yes
 if check:
@@ -189,14 +190,18 @@ if "/Parsed_LFP_channels" in hf5:
         hf5.remove_node('/Parsed_LFP_channels')
 else:
     hf5.create_array('/', 'Parsed_LFP_channels', electrodegroup)
+    hf5.flush()
 
 # Ask if this analysis is looking at more than 1 trial and/or taste
-msg   = "Do you want to create LFPs for more than " + \
-        "ONE trial (i.e. did you do taste trials and not affective) ?"
-trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+#msg   = "Do you want to create LFPs for more than " + \
+#        "ONE trial (i.e. did you do taste trials and not affective) ?"
+#trial_check = easygui.buttonbox(msg,choices = ["Yes","No"])
+
+trial_check = easygui.buttonbox('Please select the experimental paradigm',
+        choices = ['Affective','Taste'], default_choice = 'Taste')
 
 # Run through the tastes if user said there are more than 1 trial
-if trial_check == "Yes":
+if trial_check == "Taste":
 
     # Ask the user for the pre and post stimulus durations to 
     #be pulled out, and convert to integers
@@ -237,7 +242,7 @@ if trial_check == "Yes":
                         % (dig_in), this_taste_LFP)
             hf5.flush()
         
-if trial_check == "No":
+if trial_check == "Affective":
     # There's no trials so just a big recording chunk
     num_electrodes = len(lfp_nodes) 
     this_taste_LFPs = np.array(
@@ -285,11 +290,11 @@ hf5.flush()
 split_response = easygui.indexbox(
         msg='Do you need to split these trials? e.g. if you have uneven numbers of trials', 
         title='Split trials', choices=('Yes', 'No'), 
-        image=None, default_choice='Yes', cancel_choice='No')
+        image=None, default_choice='No', cancel_choice='No')
 
-if trial_check == "Yes":
+if trial_check == "Taste":
     total_trials = hf5.root.Parsed_LFP.dig_in_1_LFPs[:].shape[1]
-elif trial_check == "No":
+elif trial_check == "Affective":
     total_trials = 1
 
 dig_in_channels = hf5.list_nodes('/digital_in')
@@ -336,7 +341,7 @@ else:
             for node in range(len(dig_in_LFP_nodes))]
     
 #Establish timing parameters
-if trial_check == "No":
+if trial_check == "Affective":
     analysis_params = easygui.multenterbox(
             msg = 'Input analysis paramters:', 
             fields = ['Taste array start time (ms)', 
@@ -395,7 +400,7 @@ os.mkdir('./LFP_channel_check')
 for taste in range(len(LFP_data)):
 
         #Set data
-        if trial_check is 'Yes':
+        if trial_check is 'Taste':
             channel_data = np.mean(LFP_data[taste],axis=1).T
             t=np.array(list(range(0,np.size(channel_data,axis=0))))
         else:
