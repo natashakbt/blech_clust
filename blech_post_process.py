@@ -177,9 +177,15 @@ while True:
 
                 plt.show()
                 # Ask the user for the split clusters they want to choose
-                chosen_split = easygui.multchoicebox(msg = 'Which split cluster do you want to choose? Hit cancel to exit', choices = tuple([str(i) for i in range(n_clusters)]))
+                choice_list = tuple([str(i) for i in range(n_clusters)]) 
+                chosen_split = easygui.multchoicebox(msg = 'Which split cluster'\
+                        ' do you want to choose? Hit cancel to exit', 
+                        choices = choice_list)
                 try:
-                        chosen_split = int(chosen_split[0])
+                        #chosen_split = int(chosen_split[0])
+                        chosen_split = [int(num) for num,val in \
+                                enumerate(choice_list) if val in chosen_split]
+                        print('Selected split clusters: {}'.format(chosen_split))
                 except:
                         continue
 
@@ -208,9 +214,14 @@ while True:
         if re_cluster:
                 hf5.create_group('/sorted_units', unit_name)
                 unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]       # Waveforms of originally chosen cluster
-                unit_waveforms = unit_waveforms[np.where(split_predictions == chosen_split)[0], :]      # Subsetting this set of waveforms to include only the chosen split
+                unit_waveforms = np.concatenate(\
+                        [unit_waveforms[np.where(split_predictions == this_split)[0], :] \
+                                    for this_split in chosen_split])
+                # Subsetting this set of waveforms to include only the chosen split
                 unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]                  # Do the same thing for the spike times
-                unit_times = unit_times[np.where(split_predictions == chosen_split)[0]]
+                unit_times = np.concatenate(\
+                        [unit_times[np.where(split_predictions == this_split)[0]] \
+                                    for this_split in chosen_split])
                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
                 unit_description['electrode_number'] = electrode_num
