@@ -62,6 +62,7 @@ class unit_descriptor(tables.IsDescription):
         single_unit = tables.Int32Col()
         regular_spiking = tables.Int32Col()
         fast_spiking = tables.Int32Col()
+        waveform_count = tables.Int32Col()
 
 # Make a table under /sorted_units describing the sorted units. If unit_descriptor already exists, just open it up in the variable table
 try:
@@ -224,6 +225,7 @@ while True:
                                     for this_split in chosen_split])
                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
                 single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
                 unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
@@ -245,6 +247,7 @@ while True:
                 unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
                 single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
                 unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
@@ -292,6 +295,7 @@ while True:
                                 hf5.create_group('/sorted_units', unit_name)
                                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
                                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                                unit_description['waveform_count'] = int(len(unit_times))
                                 unit_description['electrode_number'] = electrode_num
                                 single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
                                 unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
@@ -315,6 +319,7 @@ while True:
                                 unit_times = spike_times[np.where(predictions == int(cluster))[0]]
                                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
                                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                                unit_description['waveform_count'] = int(len(unit_times))
                                 unit_description['electrode_number'] = electrode_num
                                 single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that electrode: %i cluster: %i is a beautiful single unit (True = Yes, False = No)' % (electrode_num, int(cluster)), choices = ('True', 'False'))
                                 unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
