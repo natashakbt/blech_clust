@@ -42,7 +42,8 @@ if os.path.isdir('./clustering_results/electrode'+str(electrode_num)):
 
 # Then make all these directories
 os.mkdir('./Plots/'+str(electrode_num))
-os.mkdir('./Plots/%i/Plots' % electrode_num)
+#os.mkdir('./Plots/%i/Plots' % electrode_num)
+#os.mkdir('./Plots/%i' % electrode_num)
 os.mkdir('./spike_waveforms/electrode'+str(electrode_num))
 os.mkdir('./spike_times/electrode'+str(electrode_num))
 os.mkdir('./clustering_results/electrode'+str(electrode_num))
@@ -115,7 +116,7 @@ plt.plot((recording_cutoff, recording_cutoff), (np.min(np.mean(test_el, axis = 1
 plt.xlabel('Recording time (secs)')
 plt.ylabel('Average voltage recorded per sec (microvolts)')
 plt.title('Recording cutoff time (indicated by the black horizontal line)')
-fig.savefig('./Plots/%i/Plots/cutoff_time.png' % electrode_num, bbox_inches='tight')
+fig.savefig('./Plots/%i/cutoff_time.png' % electrode_num, bbox_inches='tight')
 plt.close("all")
 
 # Then cut the recording accordingly
@@ -157,7 +158,7 @@ plt.plot(x, explained_variance_ratio)
 plt.title('Variance ratios explained by PCs')
 plt.xlabel('PC #')
 plt.ylabel('Explained variance ratio')
-fig.savefig('./Plots/%i/Plots/pca_variance.png' % electrode_num, bbox_inches='tight')
+fig.savefig('./Plots/%i/pca_variance.png' % electrode_num, bbox_inches='tight')
 plt.close("all")
 
 # Make an array of the data to be used for clustering, and delete pca_slices, scaled_slices, energy and amplitudes
@@ -194,7 +195,7 @@ for i in range(max_clusters-1):
 	np.save('./clustering_results/electrode%i/clusters%i/bic.npy' % (electrode_num, i+2), bic)
 
 	# Plot the graphs, for this set of clusters, in the directory made for this electrode
-	os.mkdir('./Plots/%i/Plots/%i_clusters' % (electrode_num, i+2))
+	os.mkdir('./Plots/%i/%i_clusters' % (electrode_num, i+2))
 	colors = cm.rainbow(np.linspace(0, 1, i+2))
 
 	for feature1 in range(len(data[0])):
@@ -211,7 +212,7 @@ for i in range(max_clusters-1):
 				# Produce figure legend
 				plt.legend(tuple(plt_names), tuple("Cluster %i" % cluster for cluster in range(i+2)), scatterpoints = 1, loc = 'lower left', ncol = 3, fontsize = 8)
 				plt.title("%i clusters" % (i+2))
-				fig.savefig('./Plots/%i/Plots/%i_clusters/feature%ivs%i.png' % (electrode_num, i+2, feature2, feature1))
+				fig.savefig('./Plots/%i/%i_clusters/feature%ivs%i.png' % (electrode_num, i+2, feature2, feature1))
 				plt.close("all")
 
 	for cluster in range(i+2):
@@ -233,13 +234,13 @@ for i in range(max_clusters-1):
 		plt.ylabel('Frequency')
 		plt.legend(loc = 'upper right', fontsize = 8)
 		plt.title('Mahalanobis distance of Cluster %i from all other clusters' % cluster)
-		fig.savefig('./Plots/%i/Plots/%i_clusters/Mahalonobis_cluster%i.png' % (electrode_num, i+2, cluster))
+		fig.savefig('./Plots/%i/%i_clusters/Mahalonobis_cluster%i.png' % (electrode_num, i+2, cluster))
 		plt.close("all")
 	
 	
 	# Create file, and plot spike waveforms for the different clusters. Plot 10 times downsampled dejittered/smoothed waveforms.
 	# Additionally plot the ISI distribution of each cluster 
-	os.mkdir('./Plots/%i/Plots/%i_clusters_waveforms_ISIs' % (electrode_num, i+2))
+	os.mkdir('./Plots/%i/%i_clusters_waveforms_ISIs' % (electrode_num, i+2))
 	x = np.arange(len(slices_dejittered[0])/10) + 1
 	for cluster in range(i+2):
 		cluster_points = np.where(predictions[:] == cluster)[0]
@@ -255,7 +256,7 @@ for i in range(max_clusters-1):
 		ax.set_xlabel('Sample ({:d} samples per ms)'.format(int(sampling_rate/1000)))
 		ax.set_ylabel('Voltage (microvolts)')
 		ax.set_title('Cluster%i' % cluster)
-		fig.savefig('./Plots/%i/Plots/%i_clusters_waveforms_ISIs/Cluster%i_waveforms' % (electrode_num, i+2, cluster))
+		fig.savefig('./Plots/%i/%i_clusters_waveforms_ISIs/Cluster%i_waveforms' % (electrode_num, i+2, cluster))
 		plt.close("all")
 		
 		fig = plt.figure()
@@ -265,7 +266,7 @@ for i in range(max_clusters-1):
 		plt.hist(ISIs, bins = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, np.max(ISIs)])
 		plt.xlim([0.0, 10.0])
 		plt.title("2ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 2.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 2.0)[0]), len(cluster_times)) + '\n' + "1ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 1.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
-		fig.savefig('./Plots/%i/Plots/%i_clusters_waveforms_ISIs/Cluster%i_ISIs' % (electrode_num, i+2, cluster))
+		fig.savefig('./Plots/%i/%i_clusters_waveforms_ISIs/Cluster%i_ISIs' % (electrode_num, i+2, cluster))
 		plt.close("all")		
 
 # Make file for dumping info about memory usage
