@@ -93,11 +93,11 @@ else:
 # Read in clustering parameters
 clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for clustering (using a GMM)', fields = ['Maximum number of clusters', 'Maximum number of iterations (1000 is more than enough)', 'Convergence criterion (usually 0.0001)', 'Number of random restarts for GMM (10 is more than enough)'])
 # Read in data cleaning parameters (to account for cases when the headstage fell off mid-experiment)
-data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)', 'Intra-cluster waveform amplitude SD cutoff - larger waveforms will be thrown out (3 would be a good number)'])
+data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)', 'Intra-cluster waveform amplitude SD cutoff - larger waveforms will be thrown out (3 would be a good number)'], values = [1500,0.2,10,20,3])
 # Ask the user for the bandpass filter frequencies for pulling out spikes
-bandpass_params = easygui.multenterbox(msg = "Fill in the lower and upper frequencies for the bandpass filter for spike sorting", fields = ['Lower frequency cutoff (Hz)', 'Upper frequency cutoff (Hz)'])
+bandpass_params = easygui.multenterbox(msg = "Fill in the lower and upper frequencies for the bandpass filter for spike sorting", fields = ['Lower frequency cutoff (Hz)', 'Upper frequency cutoff (Hz)']),values = [300,3000]
 # Ask the user for the size of the spike snapshot to be used for sorting
-spike_snapshot = easygui.multenterbox(msg = "Fill in the size of the spike snapshot you want to use for sorting (use steps of 0.5ms - like 0.5, 1, 1.5, ..)", fields = ['Time before spike minimum (ms)', 'Time after spike minimum (ms)'])
+spike_snapshot = easygui.multenterbox(msg = "Fill in the size of the spike snapshot you want to use for sorting (use steps of 0.5ms - like 0.5, 1, 1.5, ..)", fields = ['Time before spike minimum (ms)', 'Time after spike minimum (ms)'], values - [1,1.5])
 # And print them to a blech_params file
 f = open(hdf5_name[-1]+'.params', 'w')
 for i in clustering_params:
