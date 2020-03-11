@@ -6,10 +6,18 @@ import tables
 import numpy as np
 import os
 import easygui
+import sys
 
-# Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+# Get name of directory with the data files
+if sys.argv[1] != '':
+    dir_name = sys.argv[1]
+cont = 'a'
+while cont not in ['y','n']:
+    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
+if dir_name == 'n':
+    sys.exit('Incorrect dir')
 os.chdir(dir_name)
+
 
 # Look for the hdf5 file in the directory
 file_list = os.listdir('./')
@@ -34,8 +42,8 @@ num_electrodes = [int(f[-7:-4]) for f in file_list if f[:3] == 'amp']
 num_electrodes = np.max(num_electrodes) + 1
 
 # Ask the user how many common average groups there are in the data. Group = set of electrodes put in together in the same place in the brain (that work).
-num_groups = easygui.multenterbox(msg = "How many common average groups do you have in the dataset?", fields = ["Number of CAR groups"])
-num_groups = int(num_groups[0])
+#num_groups = easygui.multenterbox(msg = "How many common average groups do you have in the dataset?", fields = ["Number of CAR groups"])
+num_groups = int(input('How many CAR groups in dataset? \n ::'))
 
 # Ask the user to choose the port number and electrodes for each of the groups
 group_ports = []
@@ -126,28 +134,3 @@ os.system("rm " + hdf5_name)
 
 # And rename the new file with the same old name
 os.system("mv tmp.h5 " + hdf5_name)
-	
-
-	
-
-
-
-
-
-
-
-
-
-			
-
-
-
-
-	
-
-
-
-
-
-
-

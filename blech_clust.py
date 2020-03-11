@@ -10,10 +10,18 @@ import multiprocessing
 import read_file
 
 # Get name of directory with the data files
-dir_name = easygui.diropenbox()
+if sys.argv[1] != '':
+    dir_name = sys.argv[1]
+cont = 'a'
+while cont not in ['y','n']:
+    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
+if cont == 'n':
+    sys.exit('Incorrect dir')
+#dir_name = easygui.diropenbox()
 
 # Get the type of data files (.rhd or .dat)
-file_type = easygui.multchoicebox(msg = 'What type of files am I dealing with?', choices = ('one file per channel', '.dat', '.rhd'))
+#file_type = easygui.multchoicebox(msg = 'What type of files am I dealing with?', choices = ('one file per channel', '.dat', '.rhd'))
+file_type = ['one file per channel']
 
 # Change to that directory
 os.chdir(dir_name)
@@ -22,7 +30,8 @@ os.chdir(dir_name)
 file_list = os.listdir('./')
 
 # Grab directory name to create the name of the hdf5 file
-hdf5_name = str.split(dir_name, '/')
+#hdf5_name = str.split(dir_name, '/')
+hdf5_name = str(os.path.dirname(dir_name)).split('/')
 
 # Create hdf5 file, and make groups for raw data, raw emgs, digital outputs and digital inputs, and close
 hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
@@ -31,12 +40,14 @@ hf5.create_group('/', 'raw_emg')
 hf5.create_group('/', 'digital_in')
 hf5.create_group('/', 'digital_out')
 hf5.close()
+print('Created nodes in HF5')
 
 # Create directories to store waveforms, spike times, clustering results, and plots
 os.mkdir('spike_waveforms')
 os.mkdir('spike_times')
 os.mkdir('clustering_results')
 os.mkdir('Plots')
+print('Created dirs in data folder')
 
 # Get the amplifier ports used
 ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
@@ -54,24 +65,32 @@ sampling_rate = np.fromfile('info.rhd', dtype = np.dtype('float32'))
 sampling_rate = int(sampling_rate[2])	
 
 # Check with user to see if the right ports, inputs and sampling rate were identified. Screw user if something was wrong, and terminate blech_clust
-check = easygui.ynbox(msg = 'Ports used: ' + str(ports) + '\n' + 'Sampling rate: ' + str(sampling_rate) + ' Hz' + '\n' + 'Digital inputs on Intan board: ' + str(dig_in), title = 'Check parameters from your recordings!')
+#check = easygui.ynbox(msg = 'ports used: ' + str(ports) + '\n' + 'sampling rate: ' + str(sampling_rate) + ' hz' + '\n' + 'digital inputs on intan board: ' + str(dig_in), title = 'check parameters from your recordings!')
+
+cont = 'a'
+while cont not in ['y','n']:
+    cont = input('ports used: ' + str(ports) + '\n' + 'sampling rate: ' + str(sampling_rate) + ' hz' + '\n' + 'digital inputs on intan board: ' + str(dig_in) + '\n All good? (y/n) \n ::')
+if cont == 'n':
+    sys.exit('Incorrect dir')
 
 # Go ahead only if the user approves by saying yes
-if check:
-	pass
-else:
-	print("Well, if you don't agree, blech_clust can't do much!")
-	sys.exit()
+#if check:
+#	pass
+#else:
+#	print("Well, if you don't agree, blech_clust can't do much!")
+#	sys.exit()
 
 # Get the emg electrode ports and channel numbers from the user
 # If only one amplifier port was used in the experiment, that's the emg_port. Else ask the user to specify
 emg_port = ''
-if len(ports) == 1:
-	emg_port = list(ports[0])
-else:
-	emg_port = easygui.multchoicebox(msg = 'Which amplifier port were the EMG electrodes hooked up to? Just choose any amplifier port if you did not hook up an EMG at all.', choices = tuple(ports))
-# Now get the emg channel numbers, and convert them to integers
-emg_channels = easygui.multchoicebox(msg = 'Choose the channel numbers for the EMG electrodes. Click clear all and ok if you did not use an EMG electrode', choices = tuple([i for i in range(32)]))
+#if len(ports) == 1:
+#	emg_port = list(ports[0])
+#else:
+#	emg_port = easygui.multchoicebox(msg = 'Which amplifier port were the EMG electrodes hooked up to? Just choose any amplifier port if you did not hook up an EMG at all.', choices = tuple(ports))
+## Now get the emg channel numbers, and convert them to integers
+#emg_channels = easygui.multchoicebox(msg = 'Choose the channel numbers for the EMG electrodes. Click clear all and ok if you did not use an EMG electrode', choices = tuple([i for i in range(32)]))
+emg_port = 'A'
+emg_channels = []
 if emg_channels:
 	for i in range(len(emg_channels)):
 		emg_channels[i] = int(emg_channels[i])
@@ -91,14 +110,20 @@ else:
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
 
 # Read in clustering parameters
-clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for clustering (using a GMM)', fields = ['Maximum number of clusters', 'Maximum number of iterations (1000 is more than enough)', 'Convergence criterion (usually 0.0001)', 'Number of random restarts for GMM (10 is more than enough)'])
-# Read in data cleaning parameters (to account for cases when the headstage fell off mid-experiment)
-data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)', 'Intra-cluster waveform amplitude SD cutoff - larger waveforms will be thrown out (3 would be a good number)'], values = [1500,0.2,10,20,3])
-# Ask the user for the bandpass filter frequencies for pulling out spikes
-bandpass_params = easygui.multenterbox(msg = "Fill in the lower and upper frequencies for the bandpass filter for spike sorting", fields = ['Lower frequency cutoff (Hz)', 'Upper frequency cutoff (Hz)']),values = [300,3000]
-# Ask the user for the size of the spike snapshot to be used for sorting
-spike_snapshot = easygui.multenterbox(msg = "Fill in the size of the spike snapshot you want to use for sorting (use steps of 0.5ms - like 0.5, 1, 1.5, ..)", fields = ['Time before spike minimum (ms)', 'Time after spike minimum (ms)'], values - [1,1.5])
+#clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for clustering (using a GMM)', fields = ['Maximum number of clusters', 'Maximum number of iterations (1000 is more than enough)', 'Convergence criterion (usually 0.0001)', 'Number of random restarts for GMM (10 is more than enough)'])
+## Read in data cleaning parameters (to account for cases when the headstage fell off mid-experiment)
+#data_params = easygui.multenterbox(msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', fields = ['Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 'Maximum rate of cutoff breaches per sec (something like 0.2 is good if 1500 microV is the cutoff)', 'Maximum number of allowed seconds with at least 1 cutoff breach (10 is good for a 30-60 min recording)', 'Maximum allowed average number of cutoff breaches per sec (20 is a good number)', 'Intra-cluster waveform amplitude SD cutoff - larger waveforms will be thrown out (3 would be a good number)'], values = [1500,0.2,10,20,3])
+## Ask the user for the bandpass filter frequencies for pulling out spikes
+#bandpass_params = easygui.multenterbox(msg = "Fill in the lower and upper frequencies for the bandpass filter for spike sorting", fields = ['Lower frequency cutoff (Hz)', 'Upper frequency cutoff (Hz)'],values = [300,3000])
+## Ask the user for the size of the spike snapshot to be used for sorting
+#spike_snapshot = easygui.multenterbox(msg = "Fill in the size of the spike snapshot you want to use for sorting (use steps of 0.5ms - like 0.5, 1, 1.5, ..)", fields = ['Time before spike minimum (ms)', 'Time after spike minimum (ms)'], values = [1,1.5])
+
 # And print them to a blech_params file
+clustering_params = [7,1000, 0.0001,10]
+data_params = [1500,0.2,10,20,3]
+bandpass_params = [300,3000]
+spike_snapshot = [1,1.5]
+
 f = open(hdf5_name[-1]+'.params', 'w')
 for i in clustering_params:
 	print(i, file=f)
@@ -118,7 +143,8 @@ os.mkdir('memory_monitor_clustering')
 #queue = easygui.multchoicebox(msg = 'Which HPC queue do you want to use?', choices = ('neuro.q', 'dk.q'))
 
 # Grab Brandeis unet username
-username = easygui.multenterbox(msg = 'Enter your Brandeis/Jetstream/personal computer id', fields = ['unet username'])
+#username = easygui.multenterbox(msg = 'Enter your Brandeis/Jetstream/personal computer id', fields = ['unet username'])
+username = ['abuzarmahmood']
 
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
