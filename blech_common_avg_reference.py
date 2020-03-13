@@ -10,7 +10,7 @@ import sys
 
 # Get name of directory with the data files
 if sys.argv[1] != '':
-    dir_name = sys.argv[1]
+    dir_name = os.path.abspath(sys.argv[1])
 cont = 'a'
 while cont not in ['y','n']:
     cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
@@ -43,31 +43,47 @@ num_electrodes = np.max(num_electrodes) + 1
 
 # Ask the user how many common average groups there are in the data. Group = set of electrodes put in together in the same place in the brain (that work).
 #num_groups = easygui.multenterbox(msg = "How many common average groups do you have in the dataset?", fields = ["Number of CAR groups"])
-num_groups = int(input('How many CAR groups in dataset? \n ::'))
+#num_groups = int(input('How many CAR groups in dataset? \n ::'))
+num_groups = 2
+print('Assuming 2 CAR groups')
+
+group_ports = ports
+group_ports.sort()
+if len(ports)>1:
+    print('Defaulting : 2 Boards, ALL channels for each board averaged')
+    average_electrodes = [list(range(32)) for port in range(len(group_ports))]
+else:
+    print('Defaulting : 1 Boards, SPLIT half by side')
+    average_electrodes = [list(range(8))+list(range(24,32)),range(8,24)]
+print('Ports : {}\nElectrode Groups:'\
+        '{}\n{}\n'.format(group_ports,average_electrodes[0],\
+                                        average_electrodes[1]))
 
 # Ask the user to choose the port number and electrodes for each of the groups
-group_ports = []
-average_electrodes = []
-for i in range(num_groups):
-	group_ports.append(easygui.multchoicebox(msg = 'Choose the port for common average reference group {:d}'.format(i+1), choices = tuple(ports)))
-	average_electrodes.append(easygui.multchoicebox(msg = 'Choose the ELECTRODES TO AVERAGE ACROSS in the common average reference group {:d}. Remember to DESELECT the EMG electrodes'.format(i+1), choices = ([el for el in range(num_electrodes)])))
-
+#group_ports = []
+#average_electrodes = []
+#for i in range(num_groups):
+#	group_ports.append(easygui.multchoicebox(msg = 'Choose the port for common average reference group {:d}'.format(i+1), choices = tuple(ports)))
+#	average_electrodes.append(easygui.multchoicebox(msg = 'Choose the ELECTRODES TO AVERAGE ACROSS in the common average reference group {:d}. Remember to DESELECT the EMG electrodes'.format(i+1), choices = ([el for el in range(num_electrodes)])))
+#
 # Get the emg electrode ports and channel numbers from the user
 # If only one amplifier port was used in the experiment, that's the emg_port. Else ask the user to specify
-emg_port = ''
-if len(ports) == 1:
-	emg_port = list(ports[0])
-else:
-	emg_port = easygui.multchoicebox(msg = 'Which amplifier port were the EMG electrodes hooked up to? Just choose any amplifier port if you did not hook up an EMG at all.', choices = tuple(ports))
-# Now get the emg channel numbers, and convert them to integers
-emg_channels = easygui.multchoicebox(msg = 'Choose the CHANNEL NUMBERS FOR THE EMG ELECTRODES. Click clear all and ok if you did not use an EMG electrode', choices = tuple([i for i in range(32)]))
-if emg_channels:
-	for i in range(len(emg_channels)):
-		emg_channels[i] = int(emg_channels[i])
-# set emg_channels to an empty list if no channels were chosen
-if emg_channels is None:
-	emg_channels = []
-emg_channels.sort()
+emg_port = 'A'
+emg_channels = []
+#emg_port = ''
+#if len(ports) == 1:
+#	emg_port = list(ports[0])
+#else:
+#	emg_port = easygui.multchoicebox(msg = 'Which amplifier port were the EMG electrodes hooked up to? Just choose any amplifier port if you did not hook up an EMG at all.', choices = tuple(ports))
+## Now get the emg channel numbers, and convert them to integers
+#emg_channels = easygui.multchoicebox(msg = 'Choose the CHANNEL NUMBERS FOR THE EMG ELECTRODES. Click clear all and ok if you did not use an EMG electrode', choices = tuple([i for i in range(32)]))
+#if emg_channels:
+#	for i in range(len(emg_channels)):
+#		emg_channels[i] = int(emg_channels[i])
+## set emg_channels to an empty list if no channels were chosen
+#if emg_channels is None:
+#	emg_channels = []
+#emg_channels.sort()
 
 # Now convert the electrode numbers to be averaged across to the absolute scale (0-63 if there are 2 ports with 32 recordings each with no EMG)
 CAR_electrodes = []
