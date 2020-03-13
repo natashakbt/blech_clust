@@ -104,11 +104,11 @@ while True:
         fig, ax = plt.subplots(len(clusters), 2)
         for cluster_num, cluster in enumerate(clusters):
             isi_plot = mpimg.imread(
-                                    './Plots/{}/Plots/{}_clusters_waveforms_ISIs/'\
+                                    './Plots/{}/{}_clusters_waveforms_ISIs/'\
                                     'Cluster{}_ISIs.png'\
                                     .format(electrode_num, num_clusters, cluster)) 
             waveform_plot =  mpimg.imread(
-                                    './Plots/{}/Plots/{}_clusters_waveforms_ISIs/'\
+                                    './Plots/{}/{}_clusters_waveforms_ISIs/'\
                                     'Cluster{}_waveforms.png'\
                                     .format(electrode_num, num_clusters, cluster)) 
             if len(clusters) < 2:
@@ -136,7 +136,12 @@ while True:
         chosen_split = 0
         if re_cluster: 
                 # Get clustering parameters from user
-                clustering_params = easygui.multenterbox(msg = 'Fill in the parameters for re-clustering (using a GMM)', fields = ['Number of clusters', 'Maximum number of iterations (1000 is more than enough)', 'Convergence criterion (usually 0.0001)', 'Number of random restarts for GMM (10 is more than enough)'])
+                clustering_params = easygui.multenterbox(msg = 'Fill in the'\
+                        'parameters for re-clustering (using a GMM)', fields =\
+                        ['Number of clusters', 'Maximum number of iterations'\
+                        '(1000 is more than enough)', 'Convergence criterion'\
+                        '(usually 0.0001)', 'Number of random restarts for GMM'\
+                        '(10 is more than enough)'], values = [5,100,0.001,10])
                 n_clusters = int(clustering_params[0])
                 n_iter = int(clustering_params[1])
                 thresh = float(clustering_params[2])
