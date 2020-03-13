@@ -11,7 +11,13 @@ import read_file
 
 # Get name of directory with the data files
 if sys.argv[1] != '':
-    dir_name = sys.argv[1]
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+
+
 cont = 'a'
 while cont not in ['y','n']:
     cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
