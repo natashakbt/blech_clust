@@ -293,6 +293,7 @@ for dir_name in dirs:
 	merged_hf5.create_array('/%s/%s' %(animal,"_".join(filename_stripped.split("_", 3)[2:])), 'unscaled_neural_response', unscaled_response)
 	merged_hf5.create_array('/%s/%s' %(animal,"_".join(filename_stripped.split("_", 3)[2:])), 'params', params)
 	merged_hf5.create_array('/%s/%s' %(animal,"_".join(filename_stripped.split("_", 3)[2:])), 'pre_stim', np.array(pre_stim))		
+	merged_hf5.create_array('/%s/%s' %(animal,"_".join(filename_stripped.split("_", 3)[2:])), 'all_spike_trains', np.array(np.squeeze(np.asarray([spikes.spike_array[:] for spikes in trains_dig_in])[:,0,:,:],axis=0)))
 	
 	if shared_parms == "No":
 	    if filename_stripped in group_animals:
