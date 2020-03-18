@@ -271,9 +271,11 @@ for i in range(max_clusters-1):
                 cluster_times = times_dejittered[cluster_points]
                 ISIs = np.ediff1d(np.sort(cluster_times))
                 ISIs = ISIs/30.0
-                max_ISI_val = 100
-                hist_obj = plt.hist(ISIs, bins = np.arange(max_ISI_val)) #[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, np.max(ISIs)])
-                plt.xlim([0.0, max_ISI_val])
+                max_ISI_val = 20
+                bin_count = 100
+                neg_pos_ISI = np.concatenate((-1*ISIs,ISIs),axis=-1)
+                hist_obj = plt.hist(neg_pos_ISI, bins = np.linspace(-max_ISI_val,max_ISI_val,bin_count)) 
+                plt.xlim([-max_ISI_val, max_ISI_val])
                 # Scale y-lims by all but the last value
                 plt.ylim([0,np.max(hist_obj[0][:-1])])
                 plt.title("2ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 2.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 2.0)[0]), len(cluster_times)) + '\n' + "1ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 1.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
