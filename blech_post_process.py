@@ -111,17 +111,6 @@ while True:
         else:
             break
 
-        #electrode_num = input('Please enter electrode number :: ')
-        # Break if wrong input/cancel command was given
-        #try:
-        #        electrode_num = int(electrode_num[0])
-        #except:
-        #        break
-        #
-        # Get the number of clusters in the chosen solution
-
-        
-        #num_clusters = input('Please enter solution number :: ')
         num_clusters_str, continue_bool = entry_checker(\
                 msg = 'Please enter solution number :: ',
                 check_func = lambda x: (str.isdigit(x) and (1<int(x)<=7)),
@@ -130,11 +119,6 @@ while True:
             num_clusters = int(num_clusters_str)
         else:
             break
-
-        #num_clusters = easygui.multenterbox(\
-        #        msg = 'Which solution do you want to choose for electrode %i?' % electrode_num, 
-        #       fields = ['Number of clusters in the solution'])
-        #num_clusters = int(num_clusters[0])
 
         print('Loading data for solution')
         # Load data from the chosen electrode and solution
@@ -146,10 +130,6 @@ while True:
         amplitudes = np.load('./spike_waveforms/electrode%i/spike_amplitudes.npy' % electrode_num)
         predictions = np.load('./clustering_results/electrode%i/clusters%i/predictions.npy' \
                 % (electrode_num, num_clusters))
-
-        # Get cluster choices from the chosen solution
-        #clusters = easygui.multchoicebox(msg = 'Which clusters do you want to choose?', \
-                # choices = tuple([str(i) for i in range(int(np.max(predictions) + 1))]))
 
         def cluster_check(x):
             clusters = re.findall('[0-9]+',x)
@@ -166,7 +146,7 @@ while True:
             break
         
         # Print out selections
-        print('Electrode {}, Solution {}, Cluster {}'.\
+        print('||| Electrode {}, Solution {}, Cluster {} |||'.\
                 format(electrode_num, num_clusters, clusters))
 
         # Re-show images of neurons so dumb people like Abu can make sure they
@@ -210,16 +190,6 @@ while True:
             else:
                 break
 
-            #while merge_msg not in ['y','n']: 
-            #    merge_msg = input('I want to MERGE these clusters (y/n) :: ')
-            #    if merge_msg == 'y': 
-            #        merge = True
-            #    elif merge_msg == 'n': 
-            #        merge = False
-            #    else:
-            #        print('Please enter a valid option')
-                #merge = easygui.multchoicebox(msg = 'I want to merge these clusters into one unit (True = Yes, False = No)', choices = ('True', 'False'))
-                #merge = ast.literal_eval(merge[0])
         else:
             split_msg, continue_bool = entry_checker(\
                     msg = 'SPLIT this cluster? (y/n)',
@@ -233,16 +203,6 @@ while True:
             else:
                 break
 
-            #while merge_msg not in ['y','n']: 
-            #    re_cluster_msg = input('I want to SPLIT these clusters (y/n) :: ')
-            #    if re_cluster_msg == 'y': 
-            #        re_cluster = True
-            #    elif re_cluster_msg == 'n': 
-            #        re_cluster = False
-            #    else:
-            #        print('Please enter a valid option')
-                #re_cluster = easygui.multchoicebox(msg = 'I want to split this cluster (True = Yes, False = No)', choices = ('True', 'False'))
-                #re_cluster = ast.literal_eval(re_cluster[0])
 
         # If the user asked to split/re-cluster, ask them for the clustering parameters and perform clustering
         split_predictions = []
@@ -262,7 +222,12 @@ while True:
                         check_func = lambda x: x in ['y','n'],
                         fail_response = 'Please enter (y/n)')
                 if continue_bool:
-                    if edit_bool_msg == 'n': 
+                    if edit_bool_msg == 'y':
+                        n_iter = values[0] 
+                        thresh = values[1] 
+                        n_restarts = values[2] 
+
+                    elif edit_bool_msg == 'n': 
                         clustering_params = easygui.multenterbox(msg = 'Fill in the'\
                                 'parameters for re-clustering (using a GMM)', 
                                 fields  = fields, values = values)
@@ -271,15 +236,6 @@ while True:
                         n_restarts = int(clustering_params[3]) 
                 else:
                     break
-                #while edit_bool not in ['y','n']:
-                #    edit_bool = input('Use these parameters? (y/n) :: ')
-                #if edit_bool == 'n':
-                #    clustering_params = easygui.multenterbox(msg = 'Fill in the'\
-                #            'parameters for re-clustering (using a GMM)', 
-                #            fields  = fields, values = values)
-                #    n_iter = int(clustering_params[1])
-                #    thresh = float(clustering_params[2])
-                #    n_restarts = int(clustering_params[3]) 
 
                 # Make data array to be put through the GMM - 5 components: 
                 # 3 PCs, scaled energy, amplitude
@@ -316,20 +272,13 @@ while True:
                                 violations2 = 100.0*float(np.sum(ISIs < 2.0)/split_points.shape[0])
                                 fig, ax = blech_waveforms_datashader.waveforms_datashader(\
                                         slices_dejittered[split_points, :], x)
-                                # plt.plot(x-15, slices_dejittered[split_points, :].T, 
-                                #                   linewidth = 0.01, color = 'red')
                                 ax.set_xlabel('Sample (30 samples per ms)')
                                 ax.set_ylabel('Voltage (microvolts)')
-                                print_str = (f'Split cluster {cluster} '
-                                    f'has {violations2:.1f} % (<2ms) '
-                                    f'and {violations1:.1f} % (<1ms) ISI out of '
+                                print_str = (f'\nSplit Cluster {cluster} \n'
+                                    f'{violations2:.1f} % (<2ms),'
+                                    f'{violations1:.1f} % (<1ms),'
                                     f'{split_points.shape[0]} total waveforms. \n') 
-                                #ax.set_title(\
-                                #        "Split Cluster{:d}, 2ms ISI violations={:.1f} percent".\
-                                #        format(cluster, violations2) + "\n" + \
-                                #        "1ms ISI violations={:.1f}%, \
-                                #        Number of waveforms={:d}".\
-                                #        format(violations1, split_points.shape[0]))
+                                ax.set_title(print_str)
                 else:
                         print("Solution did not converge "\
                                 "- try again with higher number of iterations "\
@@ -337,38 +286,21 @@ while True:
                         continue
 
                 plt.show()
+
                 # Ask the user for the split clusters they want to choose
                 choice_list = tuple([str(i) for i in range(n_clusters)]) 
 
-                clusters_msg, continue_bool = entry_checker(\
+                chosen_msg, continue_bool = entry_checker(\
                         msg = f'Please select from {choice_list} (anything separated) ::',
                         check_func = cluster_check,
                         fail_response = 'Please enter integers')
                 if continue_bool:
-                    clusters = re.findall('[0-9]+',clusters_msg)
-                    clusters = [int(x) for x in clusters]
+                    chosen_clusters = re.findall('[0-9]+',chosen_msg)
+                    chosen_split = [int(x) for x in chosen_clusters]
+                    print(f'Chosen splits {chosen_split}')
                 else:
                     break
 
-                #check_bool = 0
-                #while not check_bool:
-                #    cluster_msg = input(f'Please enter cluster numbers (anything'
-                #            'separated) \n {choice_list} \n :: ')
-                #    clusters = re.findall('[0-9]+',cluster_msg)
-                #    if sum([(x in choice_list) for x in clusters]) == len(clusters):
-                #        check_bool = 1
-                #clusters = [int(x) for x in clusters]
-
-                #chosen_split = easygui.multchoicebox(msg = 'Which split cluster'\
-                #        ' do you want to choose? Hit cancel to exit', 
-                #        choices = choice_list)
-                try:
-                        #chosen_split = int(chosen_split[0])
-                        chosen_split = [int(num) for num,val in \
-                                enumerate(choice_list) if val in chosen_split]
-                        print('Selected split clusters: {}'.format(chosen_split))
-                except:
-                        continue
 
         # Get list of existing nodes/groups under /sorted_units
         node_list = hf5.list_nodes('/sorted_units')
@@ -423,18 +355,6 @@ while True:
                 else:
                     break
 
-                #single_unit_msg = 'a'
-                #while single_unit_msg not in ['y','n']:
-                #    single_unit_msg = input('Single-unit? (y/n) : ')
-                #if single_unit_msg == 'y':
-                #    single_unit = True 
-                #else:
-                #    single_unit = False
-                #single_unit = easygui.multchoicebox(\
-                #        msg = 'I am almost-SURE that this is a beautiful single', 
-                #        'unit (True = Yes, False = No)', 
-                #        choices = ('True', 'False'))
-                #unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
                 unit_description['single_unit'] = int(single_unit)
                 # If the user says that this is a single unit, 
                 # ask them whether its regular or fast spiking
@@ -454,36 +374,42 @@ while True:
                     else:
                         break
 
-                    unit_description[unit_type[0]] = 1              
+                    unit_description[unit_type] = 1              
                     unit_description.append()
 
-                #if single_unit:
-                #    unit_type_msg = 'a'
-                #    while unit_type_msg not in ['r','f']:
-                #        unit_type_msg = input('Unit type? (r/f) : ')
-                #    if unit_type_msg == 'r':
-                #        unit_type = 'regular_spiking'
-                #    else:
-                #        unit_type = 'fast_spiking'
-                #if int(ast.literal_eval(single_unit[0])):
-                        #unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
-                #unit_description[unit_type[0]] = 1              
                 table.flush()
                 hf5.flush()
                 
 
-        # If only 1 cluster was chosen (and it wasn't split), add that as a new unit in /sorted_units. Ask if the isolated unit is an almost-SURE single unit
+        # If only 1 cluster was chosen (and it wasn't split), 
+        # add that as a new unit in /sorted_units. 
+        # Ask if the isolated unit is an almost-SURE single unit
         elif len(clusters) == 1:
                 hf5.create_group('/sorted_units', unit_name)
                 unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]
                 unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
-                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
+                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
+                        'waveforms', unit_waveforms)
                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
-                single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
-                unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
-                # If the user says that this is a single unit, ask them whether its regular or fast spiking
+
+                single_unit_msg, continue_bool = entry_checker(\
+                        msg = 'Single-unit? (y/n)',
+                        check_func = lambda x: x in ['y','n'],
+                        fail_response = 'Please enter (y/n)')
+                if continue_bool:
+                    if single_unit_msg == 'y': 
+                        single_unit = True
+                    elif single_unit_msg == 'n': 
+                        single_unit = False
+                else:
+                    break
+
+                unit_description['single_unit'] = int(single_unit) 
+
+                # If the user says that this is a single unit, 
+                # ask them whether its regular or fast spiking
                 unit_description['regular_spiking'] = 0
                 unit_description['fast_spiking'] = 0
                 if single_unit:
@@ -499,17 +425,8 @@ while True:
                     else:
                         break
 
-                    #unit_type_msg = 'a'
-                    #while unit_type_msg not in ['r','f']:
-                    #    unit_type_msg = input('Unit type? (r/f) : ')
-                    #if unit_type_msg == 'r':
-                    #    unit_type = 'regular_spiking'
-                    #else:
-                        unit_type = 'fast_spiking'
-                #if int(ast.literal_eval(single_unit[0])):
-                        #unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
-                        #unit_description[unit_type[0]] = 1              
-                    unit_description[unit_type[0]] = 1              
+                    unit_description[unit_type] = 1              
+
                 unit_description.append()
                 table.flush()
                 hf5.flush()
@@ -521,11 +438,13 @@ while True:
                         unit_times = []
                         for cluster in clusters:
                                 if unit_waveforms == []:
-                                        unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]                   
+                                        unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :] 
                                         unit_times = spike_times[np.where(predictions == int(cluster))[0]]
                                 else:
-                                        unit_waveforms = np.concatenate((unit_waveforms, spike_waveforms[np.where(predictions == int(cluster))[0], :]))
-                                        unit_times = np.concatenate((unit_times, spike_times[np.where(predictions == int(cluster))[0]]))
+                                        unit_waveforms = np.concatenate((unit_waveforms, 
+                                            spike_waveforms[np.where(predictions == int(cluster))[0], :]))
+                                        unit_times = np.concatenate((unit_times, 
+                                            spike_times[np.where(predictions == int(cluster))[0]]))
 
                         # Show the merged cluster to the user, and ask if they still want to merge
                         x = np.arange(len(unit_waveforms[0])/10) + 1
@@ -540,10 +459,11 @@ while True:
                         ISIs = np.ediff1d(np.sort(unit_times))/30.0
                         violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
                         violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
-                        print_str = (f'My merged cluster has {violations1:.1f} % (<2ms) '
-                            f'and {violations2:.1f} % (<1ms) ISI out of '
-                            f'{len(unit_times)} total waveforms. \n' 
-                            'I want to still merge these clusters into one unit (y/n) :: ')
+                        print_str = (f':: Merged cluster \n'
+                            f':: {violations1:.1f} % (<2ms)\n'
+                            f':: {violations2:.1f} % (<1ms)\n'
+                            f':: {len(unit_times)} Total Waveforms \n' 
+                            ':: I want to still merge these clusters into one unit (y/n) :: ')
                         proceed_msg, continue_bool = entry_checker(\
                                 msg = print_str, 
                                 check_func = lambda x: x in ['y','n'],
@@ -555,25 +475,18 @@ while True:
                                 proceed = False
                         else:
                             break
-                        #proceed_msg = 'a'
-                        #while proceed_msg not in ['y','n']:
-                        #    proceed_msg = input(print_str)
-                        #if proceed_msg == 'y':
-                        #    proceed = True
-                        #else:
-                        #    proceed = False
-                        #proceed = easygui.multchoicebox(msg=print_str, choices = ('True', 'False'))
-                        #proceed = ast.literal_eval(proceed[0])
 
-                        # Create unit if the user agrees to proceed, else abort and go back to start of the loop 
+                        # Create unit if the user agrees to proceed, 
+                        # else abort and go back to start of the loop 
                         if proceed:     
                                 hf5.create_group('/sorted_units', unit_name)
-                                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-                                times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
+                                        'waveforms', unit_waveforms)
+                                times = hf5.create_array('/sorted_units/%s' % unit_name, 
+                                        'times', unit_times)
                                 unit_description['waveform_count'] = int(len(unit_times))
                                 unit_description['electrode_number'] = electrode_num
 
-                                if single_unit:
                                 single_unit_msg, continue_bool = entry_checker(\
                                         msg = 'Single-unit? (y/n)',
                                         check_func = lambda x: x in ['y','n'],
@@ -586,12 +499,13 @@ while True:
                                 else:
                                     break
 
-                                #single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that this is a beautiful single unit (True = Yes, False = No)', choices = ('True', 'False'))
-                                #unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
-                                # If the user says that this is a single unit, ask them whether its regular or fast spiking
+                                unit_description['single_unit'] = int(single_unit)
+
+                                # If the user says that this is a single unit, 
+                                # ask them whether its regular or fast spiking
                                 unit_description['regular_spiking'] = 0
                                 unit_description['fast_spiking'] = 0
-                                if single_unit
+                                if single_unit:
                                     unit_type_msg, continue_bool = entry_checker(\
                                             msg = 'Regular or fast spiking? (r/f)',
                                             check_func = lambda x: x in ['r','f'],
@@ -604,10 +518,7 @@ while True:
                                     else:
                                         break
 
-                                #if int(ast.literal_eval(single_unit[0])):
-                                #        unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
                                         unit_description[unit_type] = 1
-                                        #unit_description[unit_type[0]] = 1
                                 unit_description.append()
                                 table.flush()
                                 hf5.flush()
@@ -620,8 +531,10 @@ while True:
                                 hf5.create_group('/sorted_units', unit_name)
                                 unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
                                 unit_times = spike_times[np.where(predictions == int(cluster))[0]]
-                                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 'waveforms', unit_waveforms)
-                                times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
+                                        'waveforms', unit_waveforms)
+                                times = hf5.create_array('/sorted_units/%s' % unit_name, 
+                                        'times', unit_times)
                                 unit_description['waveform_count'] = int(len(unit_times))
                                 unit_description['electrode_number'] = electrode_num
 
@@ -637,11 +550,10 @@ while True:
                                 else:
                                     break
 
-                                #single_unit = easygui.multchoicebox(msg = 'I am almost-SURE that electrode: %i cluster: %i is a beautiful single unit (True = Yes, False = No)' % (electrode_num, int(cluster)), choices = ('True', 'False'))
 
                                 unit_description['single_unit'] = int(single_unit)
-                                #unit_description['single_unit'] = int(ast.literal_eval(single_unit[0]))
-                                # If the user says that this is a single unit, ask them whether its regular or fast spiking
+                                # If the user says that this is a single unit, 
+                                # ask them whether its regular or fast spiking
                                 unit_description['regular_spiking'] = 0
                                 unit_description['fast_spiking'] = 0
 
@@ -658,10 +570,7 @@ while True:
                                     else:
                                         break
 
-                                #if int(ast.literal_eval(single_unit[0])):
-                                #        unit_type = easygui.multchoicebox(msg = 'What type of unit is this (Regular spiking = Pyramidal cells, Fast spiking = PV+ interneurons)?', choices = ('regular_spiking', 'fast_spiking'))
                                         unit_description[unit_type] = 1
-                                        #unit_description[unit_type[0]] = 1
                                 unit_description.append()
                                 table.flush()
                                 hf5.flush()                             
@@ -673,6 +582,7 @@ while True:
                                 # Get a new unit_descriptor table row for this new unit
                                 unit_description = table.row
 
+        print('==== Iteration Ended ===\n')
 # Close the hdf5 file
 hf5.close()
          
