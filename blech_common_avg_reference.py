@@ -12,6 +12,8 @@ from tqdm import tqdm
 # Get name of directory with the data files
 if sys.argv[1] != '':
     dir_name = os.path.abspath(sys.argv[1])
+else:
+    dir_name = easygui.diropenbox('Please select data directory')
 cont = 'a'
 while cont not in ['y','n']:
     cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
@@ -38,12 +40,16 @@ ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
 # Sort the ports in alphabetical order
 ports.sort()
 
-# Count the number of electrodes on one of the ports (assume all ports have equal number of electrodes)
+# Count the number of electrodes on one of the ports 
+# (assume all ports have equal number of electrodes)
 num_electrodes = [int(f[-7:-4]) for f in file_list if f[:3] == 'amp']
 num_electrodes = np.max(num_electrodes) + 1
 
-# Ask the user how many common average groups there are in the data. Group = set of electrodes put in together in the same place in the brain (that work).
-#num_groups = easygui.multenterbox(msg = "How many common average groups do you have in the dataset?", fields = ["Number of CAR groups"])
+# Ask the user how many common average groups there are in the data. 
+# Group = set of electrodes put in together in the same place in the brain (that work).
+#num_groups = easygui.multenterbox(\
+#        msg = "How many common average groups do you have in the dataset?", 
+#        fields = ["Number of CAR groups"])
 #num_groups = int(input('How many CAR groups in dataset? \n ::'))
 num_groups = 2
 print('Assuming 2 CAR groups')
@@ -55,7 +61,8 @@ if len(ports)>1:
     average_electrodes = [list(range(32)) for port in range(len(group_ports))]
 else:
     print('Defaulting : 1 Boards, SPLIT half by side')
-    average_electrodes = [list(range(8))+list(range(24,32)),range(8,24)]
+    group_ports = group_ports * num_groups
+    average_electrodes = [list(range(8)) + list(range(24,32)), list(range(8,24))]
 print('Ports : {}\nElectrode Groups:'\
         '{}\n{}\n'.format(group_ports,average_electrodes[0],\
                                         average_electrodes[1]))
@@ -86,68 +93,89 @@ emg_channels = []
 #       emg_channels = []
 #emg_channels.sort()
 
-# Now convert the electrode numbers to be averaged across to the absolute scale (0-63 if there are 2 ports with 32 recordings each with no EMG)
+# Now convert the electrode numbers to be averaged across to the absolute 
+# scale (0-63 if there are 2 ports with 32 recordings each with no EMG)
 CAR_electrodes = []
 # Run through the common average groups
 for group in range(num_groups):
-        # Now run through the electrodes and port chosen for that group, and convert to the absolute scale
+        # Now run through the electrodes and port chosen for that group, 
+        # and convert to the absolute scale
         this_group_electrodes = []
         for electrode in average_electrodes[group]:
                 if len(emg_channels) == 0:
-                        this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]))
+                        this_group_electrodes.append(int(electrode) + \
+                                num_electrodes*ports.index(group_ports[group][0]))
                 else:
                         if group_ports[group] == emg_port and int(electrode) < emg_channels[0]:
-                                this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]))
+                                this_group_electrodes.append(int(electrode) + \
+                                        num_electrodes*ports.index(group_ports[group][0]))
                         else:
-                                this_group_electrodes.append(int(electrode) + num_electrodes*ports.index(group_ports[group][0]) - len(emg_channels))
+                                this_group_electrodes.append(int(electrode) + \
+                                        num_electrodes*ports.index(group_ports[group][0]) \
+                                        - len(emg_channels))
         CAR_electrodes.append(this_group_electrodes)
 
 # Pull out the raw electrode nodes of the HDF5 file
 raw_electrodes = hf5.list_nodes('/raw')
+# Sort electrodes (just in case) so we can index them directly
+sort_order = np.argsort([x.__str__() for x in raw_electrodes])
+raw_electrodes = [raw_electrodes[i] for i in sort_order]
 
 # First get the common average references by averaging across the electrodes picked for each group
 print("Calculating common average reference for {:d} groups".format(num_groups))
-common_average_reference = np.zeros((num_groups, hf5.root.raw.electrode0[:].shape[0]))
+common_average_reference = np.zeros((num_groups, raw_electrodes[0][:].shape[0]))
 print('Calculating mean values')
 for group in range(num_groups):
         print('Processing Group {}'.format(group))
-        # Stack up the voltage data from all the electrodes that need to be averaged across in this CAR group   
-        # In hindsight, don't stack up all the data, it is a huge memory waste. Instead first add up the voltage values from each electrode to the same array, and divide by number of electrodes to get the average    
+        # Stack up the voltage data from all the electrodes that need 
+        # to be averaged across in this CAR group   
+        # In hindsight, don't stack up all the data, it is a huge memory waste. 
+        # Instead first add up the voltage values from each electrode to the same array, 
+        # and divide by number of electrodes to get the average    
         for electrode in tqdm(CAR_electrodes[group]):
-                exec("common_average_reference[group, :] += hf5.root.raw.electrode{:d}[:]".format(electrode))
+                #exec("common_average_reference[group, :] "\
+                #        "+= hf5.root.raw.electrode{electrode:02}[:]")
+                common_average_reference[group,:] += raw_electrodes[electrode][:]
 
-        # Average the voltage data across electrodes by dividing by the number of electrodes in this group
+
+        # Average the voltage data across electrodes by dividing by the number 
+        # of electrodes in this group
         common_average_reference[group, :] /= float(len(CAR_electrodes[group]))
 
 print("Common average reference for {:d} groups calculated".format(num_groups))
 
-# Now run through the raw electrode data and subtract the common average reference from each of them
+# Now run through the raw electrode data and 
+# subtract the common average reference from each of them
 print('Performing background subtraction')
 for electrode in tqdm(raw_electrodes):
         electrode_num = int(str.split(electrode._v_pathname, 'electrode')[-1])
         # Get the common average group number that this electrode belongs to
-        # We assume that each electrode belongs to only 1 common average reference group - IMPORTANT!
+        # IMPORTANT!
+        # We assume that each electrode belongs to only 1 common average reference group 
         group = int([i for i in range(num_groups) if electrode_num in CAR_electrodes[i]][0])
 
-        # Subtract the common average reference for that group from the voltage data of the electrode
+        # Subtract the common average reference for that group from the 
+        # voltage data of the electrode
         referenced_data = electrode[:] - common_average_reference[group]
 
         # First remove the node with this electrode's data
-        hf5.remove_node("/raw/electrode{:d}".format(electrode_num))
+        hf5.remove_node(f"/raw/electrode{electrode_num:02}")
 
         # Now make a new array replacing the node removed above with the referenced data
-        hf5.create_array("/raw", "electrode{:d}".format(electrode_num), referenced_data)
+        hf5.create_array("/raw", f"electrode{electrode_num:02}", referenced_data)
         hf5.flush()
 
         del referenced_data
 
 hf5.close()
-print("Modified electrode arrays written to HDF5 file after subtracting the common average reference")
+print("Modified electrode arrays written to HDF5 file after "\
+        "subtracting the common average reference")
 
 # Compress the file to clean up all the deleting and creating of arrays
 print("Compressing the modified HDF5 file to save up on space")
 # Use ptrepack to save a clean and fresh copy of the hdf5 file as tmp.hf5
-os.system("ptrepack --chunkshape=auto --propindexes --complevel=9 --complib=blosc " + hdf5_name + " " +  "tmp.h5")
+os.system("ptrepack --chunkshape=auto --propindexes --complevel=9 --complib=blosc " \
+        + hdf5_name + " " +  "tmp.h5")
 
 # Delete the old hdf5 file
 os.system("rm " + hdf5_name)
