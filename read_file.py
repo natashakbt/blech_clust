@@ -14,13 +14,14 @@ def create_hdf_arrays(file_name, ports, dig_in, emg_port, emg_channels):
         for i in dig_in:
                 dig_inputs = hf5.create_earray('/digital_in', 'dig_in_%i' % i, atom, (0,))
 
-        # Create arrays for neural electrodes, and make directories to store stuff coming out from blech_process
+        # Create arrays for neural electrodes, and make directories to store 
+        # stuff coming out from blech_process
         for i in range(n_electrodes - len(emg_channels)):
-                el = hf5.create_earray('/raw', 'electrode%i' % i, atom, (0,))
+            el = hf5.create_earray('/raw', f'electrode{i:02}', atom, (0,))
                 
         # Create arrays for EMG electrodes
         for i in range(len(emg_channels)):
-                el = hf5.create_earray('/raw_emg', 'emg%i' % i, atom, (0,))
+            el = hf5.create_earray('/raw_emg', f'emg{i:02}', atom, (0,))
 
         # Close the hdf5 file 
         hf5.close()     
@@ -41,13 +42,14 @@ def read_files(hdf5_name, ports, dig_in, emg_port, emg_channels):
         for port in ports:
                 print('Reading channels from Port {}'.format(port))
                 for channel in tqdm.tqdm(range(32)):
-                        data = np.fromfile('amp-' + port + '-%03d'%channel + '.dat', dtype = np.dtype('int16'))
+                        data = np.fromfile('amp-' + port + '-%03d'%channel + '.dat', 
+                                dtype = np.dtype('int16'))
                         if port == emg_port[0] and channel in emg_channels:
-                                exec("hf5.root.raw_emg.emg%i.append(data[:])" % emg_counter)
-                                emg_counter += 1
+                            exec(f"hf5.root.raw_emg.emg{emg_counter:02}.append(data[:])")
+                            emg_counter += 1
                         else:
-                                exec("hf5.root.raw.electrode%i.append(data[:])" % el_counter)
-                                el_counter += 1
+                            exec(f"hf5.root.raw.electrode{el_counter:02}.append(data[:])")
+                            el_counter += 1
                 hf5.flush()
 
         hf5.close()
