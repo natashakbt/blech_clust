@@ -10,7 +10,7 @@ import multiprocessing
 import read_file
 
 # Get name of directory with the data files
-if sys.argv[1] != '':
+if len(sys.argv) > 1:
     dir_name = os.path.abspath(sys.argv[1])
     if dir_name[-1] != '/':
         dir_name += '/'
@@ -217,9 +217,10 @@ f.close()
 num_cpu = multiprocessing.cpu_count()
 # Then produce the file generating the parallel command
 f = open('blech_clust_jetstream_parallel.sh', 'w')
-print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed '\
-        '--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}"\
-        .format(int(num_cpu//2), dir_name, int(len(ports)*32-len(emg_channels))), file = f)
+print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
+        "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}"\
+        .format(int(num_cpu//2), dir_name, int(len(ports)*32-len(emg_channels)))
+        , file = f)
 f.close()
 # Then produce the file that runs blech_process.py
 f = open('blech_clust_jetstream_parallel1.sh', 'w')

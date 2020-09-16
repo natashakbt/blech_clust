@@ -102,7 +102,7 @@ while True:
 
         # Get electrode number from user
         electrode_num_str, continue_bool = entry_checker(\
-                msg = 'Please enter electrode number :: ',
+                msg = 'Electrode number :: ',
                 check_func = str.isdigit,
                 fail_response = 'Please enter an interger')
 
@@ -112,7 +112,7 @@ while True:
             break
 
         num_clusters_str, continue_bool = entry_checker(\
-                msg = 'Please enter solution number :: ',
+                msg = 'Solution number :: ',
                 check_func = lambda x: (str.isdigit(x) and (1<int(x)<=7)),
                 fail_response = 'Please enter an interger')
         if continue_bool:
@@ -120,23 +120,12 @@ while True:
         else:
             break
 
-        print('Loading data for solution')
-        # Load data from the chosen electrode and solution
-        spike_waveforms = np.load('./spike_waveforms/electrode%i/spike_waveforms.npy' \
-                % electrode_num)
-        spike_times = np.load('./spike_times/electrode%i/spike_times.npy' % electrode_num)
-        pca_slices = np.load('./spike_waveforms/electrode%i/pca_waveforms.npy' % electrode_num)
-        energy = np.load('./spike_waveforms/electrode%i/energy.npy' % electrode_num)
-        amplitudes = np.load('./spike_waveforms/electrode%i/spike_amplitudes.npy' % electrode_num)
-        predictions = np.load('./clustering_results/electrode%i/clusters%i/predictions.npy' \
-                % (electrode_num, num_clusters))
-
         def cluster_check(x):
             clusters = re.findall('[0-9]+',x)
             return sum([i.isdigit() for i in clusters]) == len(clusters)
 
         clusters_msg, continue_bool = entry_checker(\
-                msg = 'Please enter cluster numbers (anything separated) ::',
+                msg = 'Cluster numbers (anything separated) ::',
                 check_func = cluster_check,
                 fail_response = 'Please enter integers')
         if continue_bool:
@@ -148,6 +137,36 @@ while True:
         # Print out selections
         print('||| Electrode {}, Solution {}, Cluster {} |||'.\
                 format(electrode_num, num_clusters, clusters))
+
+
+        # Load data from the chosen electrode and solution
+        #loading_paths = [\
+        #    f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy',
+        #    f'./spike_times/electrode{electrode_num:02}/spike_times.npy',
+        #    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy',
+        #    f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
+        #    f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy',
+        #    f'./clustering_results/electrode{electrode_num:02}/'\
+        #            'clusters{num_clusters}/predictions.npy',
+        #    f'./spike_waveforms/electrode{electrode_num:02}/spike_autocorrelation.npy']
+
+        loading_paths = [\
+            f'./spike_waveforms/electrode{electrode_num}/spike_waveforms.npy',
+            f'./spike_times/electrode{electrode_num}/spike_times.npy',
+            f'./spike_waveforms/electrode{electrode_num}/pca_waveforms.npy',
+            f'./spike_waveforms/electrode{electrode_num}/energy.npy',
+            f'./spike_waveforms/electrode{electrode_num}/spike_amplitudes.npy',
+            f'./clustering_results/electrode{electrode_num}/'\
+                    f'clusters{num_clusters}/predictions.npy',
+            f'./spike_waveforms/electrode{electrode_num}/pca_waveform_autocorrelation.npy']
+
+        spike_waveforms = np.load(loading_paths[0]) 
+        spike_times = np.load(loading_paths[1])
+        pca_slices = np.load(loading_paths[2])
+        energy = np.load(loading_paths[3])
+        amplitudes = np.load(loading_paths[4])
+        predictions  = np.load(loading_paths[5])
+        autocorrs  = np.load(loading_paths[6])
 
         # Re-show images of neurons so dumb people like Abu can make sure they
         # picked the right ones
@@ -204,103 +223,119 @@ while True:
                 break
 
 
-        # If the user asked to split/re-cluster, ask them for the clustering parameters and perform clustering
+        # If the user asked to split/re-cluster, 
+        # ask them for the clustering parameters and perform clustering
         split_predictions = []
         chosen_split = 0
         if re_cluster: 
-                # Get clustering parameters from user
-                n_clusters = int(input('Number of clusters (default=5): ') or "5")
-                fields = ['Maximum number of iterations (1000 is more than enough)', 
-                        'Convergence criterion (usually 0.0001)', 
-                        'Number of random restarts for GMM (10 is more than enough)']
-                values = [100,0.001,10]
-                for x in zip(fields, values):
-                    print(str(x)) 
-                edit_bool = 'a'
-                edit_bool_msg, continue_bool = entry_checker(\
-                        msg = 'Use these parameters? (y/n)',
-                        check_func = lambda x: x in ['y','n'],
-                        fail_response = 'Please enter (y/n)')
-                if continue_bool:
-                    if edit_bool_msg == 'y':
-                        n_iter = values[0] 
-                        thresh = values[1] 
-                        n_restarts = values[2] 
+            # Get clustering parameters from user
+            n_clusters = int(input('Number of clusters (default=5): ') or "5")
+            values = [100,0.001,10]
+            fields_str = (
+                    f':: Max iterations (1000 is plenty) : {values[0]} \n' 
+                    f':: Convergence criterion (usually 0.0001) : {values[1]} \n' 
+                    f':: Number of random restarts (10 is plenty) : {values[2]}')
+            print(fields_str) 
+            edit_bool = 'a'
+            edit_bool_msg, continue_bool = entry_checker(\
+                    msg = 'Use these parameters? (y/n)',
+                    check_func = lambda x: x in ['y','n'],
+                    fail_response = 'Please enter (y/n)')
+            if continue_bool:
+                if edit_bool_msg == 'y':
+                    n_iter = values[0] 
+                    thresh = values[1] 
+                    n_restarts = values[2] 
 
-                    elif edit_bool_msg == 'n': 
-                        clustering_params = easygui.multenterbox(msg = 'Fill in the'\
-                                'parameters for re-clustering (using a GMM)', 
-                                fields  = fields, values = values)
-                        n_iter = int(clustering_params[1])
-                        thresh = float(clustering_params[2])
-                        n_restarts = int(clustering_params[3]) 
-                else:
-                    break
+                elif edit_bool_msg == 'n': 
+                    clustering_params = easygui.multenterbox(msg = 'Fill in the'\
+                            'parameters for re-clustering (using a GMM)', 
+                            fields  = fields, values = values)
+                    n_iter = int(clustering_params[1])
+                    thresh = float(clustering_params[2])
+                    n_restarts = int(clustering_params[3]) 
+            else:
+                break
 
-                # Make data array to be put through the GMM - 5 components: 
-                # 3 PCs, scaled energy, amplitude
-                this_cluster = np.where(predictions == int(clusters[0]))[0]
-                n_pc = 3
-                data = np.zeros((len(this_cluster), n_pc + 2))  
-                data[:,2:] = pca_slices[this_cluster,:n_pc]
-                data[:,0] = energy[this_cluster]/np.max(energy[this_cluster])
-                data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
+            # Make data array to be put through the GMM - 5 components: 
+            # 3 PCs, scaled energy, amplitude
+            this_cluster = np.where(predictions == int(clusters[0]))[0]
+            n_pc = 3
+            data = np.zeros((len(this_cluster), n_pc + 3))  
+            #data = np.zeros((len(this_cluster), n_pc + 2))  
+            data[:,3:] = pca_slices[this_cluster,:n_pc]
+            #data[:,2:] = pca_slices[this_cluster,:n_pc]
+            data[:,0] = energy[this_cluster]/np.max(energy[this_cluster])
+            data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
+            data = np.concatenate((data,autocorrs[this_cluster,:3]),axis=-1)
+            #data[:,2] = autocorrs[this_cluster]/np.max(autocorrs[this_cluster])
 
-                # Cluster the data
-                g = GaussianMixture(
-                        n_components = n_clusters, 
-                        covariance_type = 'full', 
-                        tol = thresh, 
-                        max_iter = n_iter, 
-                        n_init = n_restarts)
-                g.fit(data)
+            # Cluster the data
+            g = GaussianMixture(
+                    n_components = n_clusters, 
+                    covariance_type = 'full', 
+                    tol = thresh, 
+                    max_iter = n_iter, 
+                    n_init = n_restarts)
+            g.fit(data)
         
-                # Show the cluster plots if the solution converged
-                if g.converged_:
-                        split_predictions = g.predict(data)
-                        x = np.arange(len(spike_waveforms[0])/10) + 1
-                        for cluster in range(n_clusters):
-                                split_points = np.where(split_predictions == cluster)[0]                                
-                                # plt.figure(cluster)
-                                # Waveforms and times from the chosen cluster
-                                slices_dejittered = spike_waveforms[this_cluster, :]            
-                                times_dejittered = spike_times[this_cluster]
-                                # Waveforms and times from the chosen split of the chosen cluster
-                                times_dejittered = times_dejittered[split_points]               
-                                ISIs = np.ediff1d(np.sort(times_dejittered))/30.0
-                                violations1 = 100.0*float(np.sum(ISIs < 1.0)/split_points.shape[0])
-                                violations2 = 100.0*float(np.sum(ISIs < 2.0)/split_points.shape[0])
-                                fig, ax = blech_waveforms_datashader.waveforms_datashader(\
-                                        slices_dejittered[split_points, :], x)
-                                ax.set_xlabel('Sample (30 samples per ms)')
-                                ax.set_ylabel('Voltage (microvolts)')
-                                print_str = (f'\nSplit Cluster {cluster} \n'
-                                    f'{violations2:.1f} % (<2ms),'
-                                    f'{violations1:.1f} % (<1ms),'
-                                    f'{split_points.shape[0]} total waveforms. \n') 
-                                ax.set_title(print_str)
-                else:
-                        print("Solution did not converge "\
-                                "- try again with higher number of iterations "\
-                                "or lower convergence criterion")
-                        continue
+            # Show the cluster plots if the solution converged
+            if g.converged_:
+                split_predictions = g.predict(data)
+                x = np.arange(len(spike_waveforms[0])/10) + 1
+                #fig, ax = gen_square_subplots(n_clusters,sharex=True,sharey=True)
+                for cluster in range(n_clusters):
+                    split_points = np.where(split_predictions == cluster)[0]
+                    # Waveforms and times from the chosen cluster
+                    slices_dejittered = spike_waveforms[this_cluster, :]            
+                    times_dejittered = spike_times[this_cluster]
+                    # Waveforms and times from the chosen split of the chosen cluster
+                    times_dejittered = times_dejittered[split_points]               
+                    ISIs = np.ediff1d(np.sort(times_dejittered))/30.0
+                    violations1 = 100.0*float(np.sum(ISIs < 1.0)/split_points.shape[0])
+                    violations2 = 100.0*float(np.sum(ISIs < 2.0)/split_points.shape[0])
+                    fig, ax = blech_waveforms_datashader.waveforms_datashader(\
+                            slices_dejittered[split_points, :], x)
+                    ax.set_xlabel('Sample (30 samples per ms)')
+                    ax.set_ylabel('Voltage (microvolts)')
+                    print_str = (f'\nSplit Cluster {cluster} \n'
+                        f'{violations2:.1f} % (<2ms),'
+                        f'{violations1:.1f} % (<1ms),'
+                        f'{split_points.shape[0]} total waveforms. \n') 
+                    ax.set_title(print_str)
+            else:
+                print("Solution did not converge "\
+                        "- try again with higher number of iterations "\
+                        "or lower convergence criterion")
+                continue
 
-                plt.show()
+            plt.show()
 
-                # Ask the user for the split clusters they want to choose
-                choice_list = tuple([str(i) for i in range(n_clusters)]) 
+            # Ask the user for the split clusters they want to choose
+            choice_list = tuple([str(i) for i in range(n_clusters)]) 
 
-                chosen_msg, continue_bool = entry_checker(\
-                        msg = f'Please select from {choice_list} (anything separated) ::',
-                        check_func = cluster_check,
-                        fail_response = 'Please enter integers')
-                if continue_bool:
-                    chosen_clusters = re.findall('[0-9]+',chosen_msg)
-                    chosen_split = [int(x) for x in chosen_clusters]
-                    print(f'Chosen splits {chosen_split}')
-                else:
-                    break
+            chosen_msg, continue_bool = entry_checker(\
+                    msg = f'Please select from {choice_list} (anything separated) '\
+                    ':: "111" for all ::',
+                    check_func = cluster_check,
+                    fail_response = 'Please enter integers')
+            if continue_bool:
+                chosen_clusters = re.findall('[0-9]+|-[0-9]+',chosen_msg)
+                chosen_split = [int(x) for x in chosen_clusters]
+                negative_vals = re.findall('-[0-9]+',chosen_msg)
+                # If 111, select all
+                if 111 in chosen_split:
+                    chosen_split = range(n_clusters)
+                # If any are negative, go into removal mode
+                elif len(negative_vals) > 0:
+                    remove_these = [int(x) for x in negative_vals]
+                    chosen_split = [x for x in range(n_clusters) \
+                            if x not in remove_these]
+                print(f'Chosen splits {chosen_split}')
+            else:
+                break
 
+##################################################
 
         # Get list of existing nodes/groups under /sorted_units
         node_list = hf5.list_nodes('/sorted_units')
@@ -380,6 +415,7 @@ while True:
                 table.flush()
                 hf5.flush()
                 
+##################################################
 
         # If only 1 cluster was chosen (and it wasn't split), 
         # add that as a new unit in /sorted_units. 
@@ -432,165 +468,156 @@ while True:
                 hf5.flush()
 
         else:
-                # If the chosen units are going to be merged, merge them
-                if merge:
-                        unit_waveforms = []
-                        unit_times = []
-                        for cluster in clusters:
-                                if unit_waveforms == []:
-                                        unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :] 
-                                        unit_times = spike_times[np.where(predictions == int(cluster))[0]]
-                                else:
-                                        unit_waveforms = np.concatenate((unit_waveforms, 
-                                            spike_waveforms[np.where(predictions == int(cluster))[0], :]))
-                                        unit_times = np.concatenate((unit_times, 
-                                            spike_times[np.where(predictions == int(cluster))[0]]))
+            # If the chosen units are going to be merged, merge them
+            if merge:
+                unit_waveforms = []
+                unit_times = []
+                for cluster in clusters:
+                    if unit_waveforms == []:
+                        unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
+                        unit_times = spike_times[np.where(predictions == int(cluster))[0]]
+                    else:
+                        unit_waveforms = np.concatenate((unit_waveforms, 
+                            spike_waveforms[np.where(predictions == int(cluster))[0], :]))
+                        unit_times = np.concatenate((unit_times, 
+                            spike_times[np.where(predictions == int(cluster))[0]]))
 
-                        # Show the merged cluster to the user, and ask if they still want to merge
-                        x = np.arange(len(unit_waveforms[0])/10) + 1
-                        fig, ax = blech_waveforms_datashader.waveforms_datashader(unit_waveforms, x)
-                        # plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
-                        ax.set_xlabel('Sample (30 samples per ms)')
-                        ax.set_ylabel('Voltage (microvolts)')
-                        ax.set_title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
-                        plt.show()
+                # Show the merged cluster to the user, and ask if they still want to merge
+                x = np.arange(len(unit_waveforms[0])/10) + 1
+                fig, ax = blech_waveforms_datashader.waveforms_datashader(unit_waveforms, x)
+                # plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+                ax.set_xlabel('Sample (30 samples per ms)')
+                ax.set_ylabel('Voltage (microvolts)')
+                ax.set_title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
+                plt.show()
  
-                        # Warn the user about the frequency of ISI violations in the merged unit
-                        ISIs = np.ediff1d(np.sort(unit_times))/30.0
-                        violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
-                        violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
-                        print_str = (f':: Merged cluster \n'
-                            f':: {violations1:.1f} % (<2ms)\n'
-                            f':: {violations2:.1f} % (<1ms)\n'
-                            f':: {len(unit_times)} Total Waveforms \n' 
-                            ':: I want to still merge these clusters into one unit (y/n) :: ')
-                        proceed_msg, continue_bool = entry_checker(\
-                                msg = print_str, 
-                                check_func = lambda x: x in ['y','n'],
-                                fail_response = 'Please enter (y/n)')
+                # Warn the user about the frequency of ISI violations in the merged unit
+                ISIs = np.ediff1d(np.sort(unit_times))/30.0
+                violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
+                violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
+                print_str = (f':: Merged cluster \n'
+                    f':: {violations1:.1f} % (<2ms)\n'
+                    f':: {violations2:.1f} % (<1ms)\n'
+                    f':: {len(unit_times)} Total Waveforms \n' 
+                    ':: I want to still merge these clusters into one unit (y/n) :: ')
+                proceed_msg, continue_bool = entry_checker(\
+                        msg = print_str, 
+                        check_func = lambda x: x in ['y','n'],
+                        fail_response = 'Please enter (y/n)')
+                if continue_bool:
+                    if proceed_msg == 'y': 
+                        proceed = True
+                    elif proceed_msg == 'n': 
+                        proceed = False
+                else:
+                    break
+
+                # Create unit if the user agrees to proceed, 
+                # else abort and go back to start of the loop 
+                if proceed:     
+                    hf5.create_group('/sorted_units', unit_name)
+                    waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
+                            'waveforms', unit_waveforms)
+                    times = hf5.create_array('/sorted_units/%s' % unit_name, 
+                            'times', unit_times)
+                    unit_description['waveform_count'] = int(len(unit_times))
+                    unit_description['electrode_number'] = electrode_num
+
+                    single_unit_msg, continue_bool = entry_checker(\
+                            msg = 'Single-unit? (y/n)',
+                            check_func = lambda x: x in ['y','n'],
+                            fail_response = 'Please enter (y/n)')
+                    if continue_bool:
+                        if single_unit_msg == 'y': 
+                            single_unit = True
+                        elif single_unit_msg == 'n': 
+                            single_unit = False
+                    else:
+                        break
+
+                    unit_description['single_unit'] = int(single_unit)
+
+                    # If the user says that this is a single unit, 
+                    # ask them whether its regular or fast spiking
+                    unit_description['regular_spiking'] = 0
+                    unit_description['fast_spiking'] = 0
+                    if single_unit:
+                        unit_type_msg, continue_bool = entry_checker(\
+                                msg = 'Regular or fast spiking? (r/f)',
+                                check_func = lambda x: x in ['r','f'],
+                                fail_response = 'Please enter (r/f)')
                         if continue_bool:
-                            if proceed_msg == 'y': 
-                                proceed = True
-                            elif proceed_msg == 'n': 
-                                proceed = False
+                            if unit_type_msg == 'r': 
+                                unit_type = 'regular_spiking'
+                            elif unit_type_msg == 'f': 
+                                unit_type = 'fast_spiking'
                         else:
                             break
 
-                        # Create unit if the user agrees to proceed, 
-                        # else abort and go back to start of the loop 
-                        if proceed:     
-                                hf5.create_group('/sorted_units', unit_name)
-                                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
-                                        'waveforms', unit_waveforms)
-                                times = hf5.create_array('/sorted_units/%s' % unit_name, 
-                                        'times', unit_times)
-                                unit_description['waveform_count'] = int(len(unit_times))
-                                unit_description['electrode_number'] = electrode_num
-
-                                single_unit_msg, continue_bool = entry_checker(\
-                                        msg = 'Single-unit? (y/n)',
-                                        check_func = lambda x: x in ['y','n'],
-                                        fail_response = 'Please enter (y/n)')
-                                if continue_bool:
-                                    if single_unit_msg == 'y': 
-                                        single_unit = True
-                                    elif single_unit_msg == 'n': 
-                                        single_unit = False
-                                else:
-                                    break
-
-                                unit_description['single_unit'] = int(single_unit)
-
-                                # If the user says that this is a single unit, 
-                                # ask them whether its regular or fast spiking
-                                unit_description['regular_spiking'] = 0
-                                unit_description['fast_spiking'] = 0
-                                if single_unit:
-                                    unit_type_msg, continue_bool = entry_checker(\
-                                            msg = 'Regular or fast spiking? (r/f)',
-                                            check_func = lambda x: x in ['r','f'],
-                                            fail_response = 'Please enter (r/f)')
-                                    if continue_bool:
-                                        if unit_type_msg == 'r': 
-                                            unit_type = 'regular_spiking'
-                                        elif unit_type_msg == 'f': 
-                                            unit_type = 'fast_spiking'
-                                    else:
-                                        break
-
-                                        unit_description[unit_type] = 1
-                                unit_description.append()
-                                table.flush()
-                                hf5.flush()
-                        else:
-                                continue
-
-                # Otherwise include each cluster as a separate unit
+                            unit_description[unit_type] = 1
+                    unit_description.append()
+                    table.flush()
+                    hf5.flush()
                 else:
-                        for cluster in clusters:
-                                hf5.create_group('/sorted_units', unit_name)
-                                unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
-                                unit_times = spike_times[np.where(predictions == int(cluster))[0]]
-                                waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
-                                        'waveforms', unit_waveforms)
-                                times = hf5.create_array('/sorted_units/%s' % unit_name, 
-                                        'times', unit_times)
-                                unit_description['waveform_count'] = int(len(unit_times))
-                                unit_description['electrode_number'] = electrode_num
+                    continue
 
-                                single_unit_msg, continue_bool = entry_checker(\
-                                        msg = 'Single-unit? (y/n)',
-                                        check_func = lambda x: x in ['y','n'],
-                                        fail_response = 'Please enter (y/n)')
-                                if continue_bool:
-                                    if single_unit_msg == 'y': 
-                                        single_unit = True
-                                    elif single_unit_msg == 'n': 
-                                        single_unit = False
-                                else:
-                                    break
+            # Otherwise include each cluster as a separate unit
+            else:
+                for cluster in clusters:
+                    hf5.create_group('/sorted_units', unit_name)
+                    unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
+                    unit_times = spike_times[np.where(predictions == int(cluster))[0]]
+                    waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
+                            'waveforms', unit_waveforms)
+                    times = hf5.create_array('/sorted_units/%s' % unit_name, 
+                            'times', unit_times)
+                    unit_description['waveform_count'] = int(len(unit_times))
+                    unit_description['electrode_number'] = electrode_num
+
+                    single_unit_msg, continue_bool = entry_checker(\
+                            msg = 'Single-unit? (y/n)',
+                            check_func = lambda x: x in ['y','n'],
+                            fail_response = 'Please enter (y/n)')
+                    if continue_bool:
+                        if single_unit_msg == 'y': 
+                            single_unit = True
+                        elif single_unit_msg == 'n': 
+                            single_unit = False
+                    else:
+                        break
 
 
-                                unit_description['single_unit'] = int(single_unit)
-                                # If the user says that this is a single unit, 
-                                # ask them whether its regular or fast spiking
-                                unit_description['regular_spiking'] = 0
-                                unit_description['fast_spiking'] = 0
+                    unit_description['single_unit'] = int(single_unit)
+                    # If the user says that this is a single unit, 
+                    # ask them whether its regular or fast spiking
+                    unit_description['regular_spiking'] = 0
+                    unit_description['fast_spiking'] = 0
 
-                                if single_unit:
-                                    unit_type_msg, continue_bool = entry_checker(\
-                                            msg = 'Regular or fast spiking? (r/f)',
-                                            check_func = lambda x: x in ['r','f'],
-                                            fail_response = 'Please enter (r/f)')
-                                    if continue_bool:
-                                        if unit_type_msg == 'r': 
-                                            unit_type = 'regular_spiking'
-                                        elif unit_type_msg == 'f': 
-                                            unit_type = 'fast_spiking'
-                                    else:
-                                        break
+                    if single_unit:
+                        unit_type_msg, continue_bool = entry_checker(\
+                                msg = 'Regular or fast spiking? (r/f)',
+                                check_func = lambda x: x in ['r','f'],
+                                fail_response = 'Please enter (r/f)')
+                        if continue_bool:
+                            if unit_type_msg == 'r': 
+                                unit_type = 'regular_spiking'
+                            elif unit_type_msg == 'f': 
+                                unit_type = 'fast_spiking'
+                        else:
+                            break
 
-                                        unit_description[unit_type] = 1
-                                unit_description.append()
-                                table.flush()
-                                hf5.flush()                             
+                            unit_description[unit_type] = 1
+                    unit_description.append()
+                    table.flush()
+                    hf5.flush()                             
 
-                                # Finally increment max_unit and create a new unit name
-                                max_unit += 1
-                                unit_name = 'unit%03d' % int(max_unit + 1)
+                    # Finally increment max_unit and create a new unit name
+                    max_unit += 1
+                    unit_name = 'unit%03d' % int(max_unit + 1)
 
-                                # Get a new unit_descriptor table row for this new unit
-                                unit_description = table.row
+                    # Get a new unit_descriptor table row for this new unit
+                    unit_description = table.row
 
         print('==== Iteration Ended ===\n')
 # Close the hdf5 file
 hf5.close()
-         
-
-
-
-        
-
-
-
-
