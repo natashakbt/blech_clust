@@ -6,10 +6,18 @@ import glob
 from tqdm import trange
 from joblib import Parallel, delayed
 import multiprocessing as mp
+import warnings
+import sys
+warnings.filterwarnings('ignore')
 
-# Read blech.dir, and cd to that directory
-with open('blech.dir','r') as blech_dir:
-    data_dir = blech_dir.readline()[:-1]
+# Get name of directory with the data files
+if sys.argv[1] != '':
+    data_dir = os.path.abspath(sys.argv[1])
+    if data_dir[-1] != '/':
+        data_dir += '/'
+else:
+    data_dir = easygui.diropenbox(msg = 'Please select data directory')
+print(f'Data dir : {data_dir}')
 
 # Read the clustering params for the file
 with open(glob.glob(data_dir + '/*params*')[0],'r') as param_file:
@@ -23,27 +31,27 @@ cluster_num = int(params[0])
 
 def umap_plots(data_dir, electrode_num):
     # If processing has happened, the file will exist
-    pca_file = data_dir + \
-                '/spike_waveforms/electrode{}/pca_waveforms.npy'.format(electrode_num)
+    pca_file = os.path.join(data_dir,
+            f'spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy')
 
     if os.path.isfile(pca_file):
         
         try:
-            pca_waveforms = np.load(data_dir + \
-                    '/spike_waveforms/electrode{}/pca_waveforms.npy'.format(electrode_num))
+            pca_waveforms = np.load(os.path.join(data_dir,
+                    f'spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy'))
 
             umap_waveforms = umap.UMAP(n_components = 2).\
                     fit_transform(pca_waveforms[:,:20])
             
-            clustering_results = [np.load(data_dir + \
-                    '/clustering_results/electrode{0}/clusters{1}/predictions.npy'.\
-                    format(electrode_num, cluster)) for cluster in \
+            clustering_results = [np.load(os.path.join(data_dir,
+                    f'clustering_results/electrode{electrode_num:02}/'\
+                    f'clusters{cluster}/predictions.npy')) for cluster in \
                     range(2,cluster_num+1)] 
             
-            spike_times = np.load(data_dir + \
-                    '/spike_times/electrode{}/spike_times.npy'.format(electrode_num))
+            spike_times = np.load(os.path.join(data_dir,
+                    f'spike_times/electrode{electrode_num:02}/spike_times.npy'))
 
-            print('Processing for Electrode {} complete'.format(electrode_num))
+            print(f'Processing for Electrode {electrode_num:02} complete')
 
             for cluster in range(2,cluster_num+1):
 
@@ -52,19 +60,19 @@ def umap_plots(data_dir, electrode_num):
                         c = clustering_results[cluster-2], s = 2, cmap = 'brg')
                 legend = ax1.legend(*scatter.legend_elements())
                 ax1.add_artist(legend)
-                fig1.savefig(data_dir + \
-                    '/Plots/{0}/Plots/{1}_clusters_waveforms_ISIs/cluster{1}_umap.png'.\
-                    format(electrode_num, cluster), 
-                    dpi = 300)
+                fig1_name = f'Plots/{electrode_num:02}/'\
+                        f'{cluster}_clusters_waveforms_ISIs/cluster{cluster}_umap.png'
+                fig1_path = os.path.join(data_dir,fig1_name)
+                fig1.savefig(fig1_path, dpi = 300)
                 plt.close(fig1)
 
                 nbins = np.min([100,int(umap_waveforms.shape[0]/100)])
                 fig2, ax2 = plt.subplots()
                 ax2.hexbin(umap_waveforms[:,0],umap_waveforms[:,1], gridsize = nbins)
-                fig2.savefig(data_dir + \
-                    '/Plots/{0}/Plots/{1}_clusters_waveforms_ISIs/cluster{1}_umap_hist.png'.\
-                    format(electrode_num, cluster),
-                    dpi = 300)
+                fig2_name = os.path.join(data_dir,
+                    f'Plots/{electrode_num:02}/'\
+                    f'{cluster}_clusters_waveforms_ISIs/cluster{cluster}_umap_hist.png')
+                fig2.savefig(fig2_name, dpi = 300)
                 plt.close(fig2)
 
                 fig3, ax3 = plt.subplots(2,2,figsize=(20,10))
@@ -84,10 +92,10 @@ def umap_plots(data_dir, electrode_num):
 
                 plt.tight_layout()
 
-                fig3.savefig(data_dir + \
-                    '/Plots/{0}/Plots/{1}_clusters_waveforms_ISIs/cluster{1}_umap_timeseries.png'.\
-                    format(electrode_num, cluster),
-                    dpi = 300)
+                fig3_name = os.path.join(data_dir,
+                        f'Plots/{electrode_num:02}/'\
+                        f'{cluster}_clusters_waveforms_ISIs/cluster{cluster}_umap_timeseries.png')
+                fig3.savefig(fig3_name, dpi = 300)
                 plt.close(fig3)
 
                 fig4, ax4 = plt.subplots(2,2,figsize=(20,10))
@@ -107,20 +115,19 @@ def umap_plots(data_dir, electrode_num):
 
                 plt.tight_layout()
 
-                fig4.savefig(data_dir + \
-                    '/Plots/{0}/Plots/{1}_clusters_waveforms_ISIs/cluster{1}_pca_timeseries.png'.\
-                    format(electrode_num, cluster),
-                    dpi = 300)
+                fig4_name = os.path.join(data_dir,
+                        f'Plots/{electrode_num:02}/'\
+                        f'{cluster}_clusters_waveforms_ISIs/cluster{cluster}_pca_timeseries.png')
+                fig4.savefig(fig4_name, dpi = 300)
                 plt.close(fig4)
+                print(f'Saved image : {fig4_name}')
 
         except:
             # In other words, I'm too lazy to actually debug shit
-            pass
+            raise Exception('Something went wrong :(')
+
+    else:
+        print('No electrode{electrode_num:02} found')
 
 for electrode_num in trange(len(os.listdir(data_dir + '/clustering_results'))):
     umap_plots(data_dir, electrode_num)
-
-#Parallel(n_jobs = mp.cpu_count())\
-#        (delayed(umap_plots)(data_dir, electrode_num, pca_waveforms) \
-#        for electrode_num in \
-#        trange(len(os.listdir(data_dir + '/clustering_results'))))
