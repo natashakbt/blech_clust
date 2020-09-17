@@ -99,27 +99,38 @@ filt_el = get_filtered_electrode(
 del raw_el
 
 # Calculate the 3 voltage parameters
-breach_rate = float(len(np.where(filt_el>voltage_cutoff)[0])*int(sampling_rate))/len(filt_el)
-test_el = np.reshape(filt_el[:int(sampling_rate)*int(len(filt_el)/sampling_rate)], 
+breach_rate = float(len(np.where(filt_el>voltage_cutoff)[0])\
+                            *int(sampling_rate))/len(filt_el)
+test_el = np.reshape(filt_el[:int(sampling_rate)\
+                    *int(len(filt_el)/sampling_rate)], 
                             (-1, int(sampling_rate)))
-breaches_per_sec = [len(np.where(test_el[i] > voltage_cutoff)[0]) for i in range(len(test_el))]
+breaches_per_sec = [len(np.where(test_el[i] > voltage_cutoff)[0]) \
+                        for i in range(len(test_el))]
 breaches_per_sec = np.array(breaches_per_sec)
 secs_above_cutoff = len(np.where(breaches_per_sec > 0)[0])
 if secs_above_cutoff == 0:
         mean_breach_rate_persec = 0
 else:
-        mean_breach_rate_persec = np.mean(breaches_per_sec[np.where(breaches_per_sec > 0)[0]])
+        mean_breach_rate_persec = np.mean(breaches_per_sec[\
+                                np.where(breaches_per_sec > 0)[0]])
 
-# And if they all exceed the cutoffs, assume that the headstage fell off mid-experiment
+# And if they all exceed the cutoffs, 
+# assume that the headstage fell off mid-experiment
 recording_cutoff = int(len(filt_el)/sampling_rate)
-if breach_rate >= max_breach_rate and secs_above_cutoff >= max_secs_above_cutoff and mean_breach_rate_persec >= max_mean_breach_rate_persec:
-        # Find the first 1 second epoch where the number of cutoff breaches is higher than the maximum allowed mean breach rate 
-        recording_cutoff = np.where(breaches_per_sec > max_mean_breach_rate_persec)[0][0]
+if breach_rate >= max_breach_rate and \
+        secs_above_cutoff >= max_secs_above_cutoff and \
+        mean_breach_rate_persec >= max_mean_breach_rate_persec:
+        # Find the first 1 second epoch where the number of cutoff breaches 
+        # is higher than the maximum allowed mean breach rate 
+        recording_cutoff = np.where(breaches_per_sec > \
+                max_mean_breach_rate_persec)[0][0]
 
 # Dump a plot showing where the recording was cut off at
 fig = plt.figure()
 plt.plot(np.arange(test_el.shape[0]), np.mean(test_el, axis = 1))
-plt.plot((recording_cutoff, recording_cutoff), (np.min(np.mean(test_el, axis = 1)), np.max(np.mean(test_el, axis = 1))), 'k-', linewidth = 4.0)
+plt.plot((recording_cutoff, recording_cutoff), 
+        (np.min(np.mean(test_el, axis = 1)), 
+            np.max(np.mean(test_el, axis = 1))), 'k-', linewidth = 4.0)
 plt.xlabel('Recording time (secs)')
 plt.ylabel('Average voltage recorded per sec (microvolts)')
 plt.title('Recording cutoff time (indicated by the black horizontal line)')
@@ -130,11 +141,18 @@ plt.close("all")
 filt_el = filt_el[:recording_cutoff*int(sampling_rate)] 
 
 # Slice waveforms out of the filtered electrode recordings
-#slices, spike_times, mean_val, threshold = extract_waveforms(filt_el, spike_snapshot = [spike_snapshot_before, spike_snapshot_after], sampling_rate = sampling_rate)
+#slices, spike_times, mean_val, threshold = \
+#        extract_waveforms(filt_el, 
+#                            spike_snapshot = \
+#                                    [spike_snapshot_before, 
+#                                    spike_snapshot_after], 
+#                            sampling_rate = sampling_rate)
 slices, spike_times, polarity, mean_val, threshold = \
         extract_waveforms_abu(filt_el, 
-                            spike_snapshot = [spike_snapshot_before, spike_snapshot_after], 
-                                sampling_rate = sampling_rate)
+                            spike_snapshot = \
+                                    [spike_snapshot_before, 
+                                    spike_snapshot_after], 
+                            sampling_rate = sampling_rate)
 
 # Extract windows from filt_el and plot with threshold overlayed
 window_len = 0.2 #sec
@@ -203,10 +221,17 @@ slices_autocorr = fftconvolve(slices_dejittered, slices_dejittered, axes = -1)
 del slices; del spike_times
 
 # Save these slices/spike waveforms and their times to their respective folders
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy', slices_dejittered)
-#np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveform_derivative.npy', slices_derivatives)
-#np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_autocorrelation.npy', slices_autocorr)
-np.save(f'./spike_times/electrode{electrode_num:02}/spike_times.npy', times_dejittered)
+np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy', \
+                slices_dejittered)
+#np.save(\
+#    f'./spike_waveforms/electrode{electrode_num:02}/spike_waveform_derivative.npy'\
+#    , slices_derivatives)
+#np.save(\
+#        f'./spike_waveforms/electrode{electrode_num:02}/spike_autocorrelation.npy', 
+#        slices_autocorr)
+np.save(
+        f'./spike_times/electrode{electrode_num:02}/spike_times.npy', \
+        times_dejittered)
 
 # Scale the dejittered slices by the energy of the waveforms
 scaled_slices, energy = scale_waveforms(slices_dejittered)
@@ -216,16 +241,25 @@ scaled_autocorr = zscore(slices_autocorr, axis=-1)
 
 # Run PCA on the scaled waveforms
 pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
-#pca_derivatives, derivative_explained_variance_ratio = implement_pca(scaled_derivatives)
+#pca_derivatives, derivative_explained_variance_ratio = \
+#        implement_pca(scaled_derivatives)
 # Perform PCA on scaled autocorrelations
 pca_autocorr, autocorr_explained_variance_ratio = implement_pca(scaled_autocorr)
 
-# Save the pca_slices, energy and amplitudes to the spike_waveforms folder for this electrode
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', pca_slices)
-#np.save(f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_derivative.npy', pca_derivatives)
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy', pca_autocorr)
+# Save the pca_slices, energy and amplitudes to the 
+# spike_waveforms folder for this electrode
+np.save(
+    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', 
+    pca_slices)
+#np.save(
+#    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_derivative.npy', 
+#    pca_derivatives)
+np.save(
+    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy',
+    pca_autocorr)
 np.save(f'./spike_waveforms/electrode{electrode_num:02}/energy.npy', energy)
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy', amplitudes)
+np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy', 
+        amplitudes)
 
 
 # Create file for saving plots, and plot explained variance ratios of the PCA
@@ -238,7 +272,8 @@ plt.ylabel('Explained variance ratio')
 fig.savefig(f'./Plots/{electrode_num:02}/pca_variance.png', bbox_inches='tight')
 plt.close("all")
 
-# Make an array of the data to be used for clustering, and delete pca_slices, scaled_slices, energy and amplitudes
+# Make an array of the data to be used for clustering, 
+# and delete pca_slices, scaled_slices, energy and amplitudes
 n_pc = 3
 data = np.zeros((len(pca_slices), n_pc + 2))
 data[:,2:] = pca_slices[:,:n_pc]
@@ -288,10 +323,12 @@ for i in range(max_clusters-1):
         #        threshold = thresh)
 
         # Sometimes large amplitude noise waveforms cluster with the 
-        # spike waveforms because the amplitude has been factored out of the scaled slices.   
+        # spike waveforms because the amplitude has been factored out of 
+        # the scaled slices.   
         # Run through the clusters and find the waveforms that are more than 
         # wf_amplitude_sd_cutoff larger than the cluster mean. 
-        # Set predictions = -1 at these points so that they aren't picked up by blech_post_process
+        # Set predictions = -1 at these points so that they aren't 
+        # picked up by blech_post_process
         for cluster in range(i+2):
                 cluster_points = np.where(predictions[:] == cluster)[0]
                 this_cluster = predictions[cluster_points]
@@ -305,10 +342,18 @@ for i in range(max_clusters-1):
 
         # Make folder for results of i+2 clusters, and store results there
         os.mkdir(f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}')
-        np.save(f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}/predictions.npy', predictions)
-        #np.save('./clustering_results/electrode{electrode_num:02}/clusters{i+2}/bic.npy', bic)
+        np.save(\
+            f'./clustering_results/electrode{electrode_num:02}/'\
+                    'clusters{i+2}/predictions.npy', 
+            predictions)
+        #np.save(\
+        #   f './clustering_results/electrode{electrode_num:02}/'\
+        #   'clusters{i+2}/bic.npy', 
+        #   bic)
 
-        # Plot the graphs, for this set of clusters, in the directory made for this electrode
+        # Plot the graphs, for this set of clusters, 
+        # in the directory made for this electrode
+
         #os.mkdir('./Plots/{electrode_num:02}/{i+2}_clusters')
         #colors = cm.rainbow(np.linspace(0, 1, i+2))
 
@@ -318,7 +363,8 @@ for i in range(max_clusters-1):
         #                        fig = plt.figure()
         #                        plt_names = []
         #                        for cluster in range(i+2):
-        #                                plot_data = np.where(predictions[:] == cluster)[0]
+        #                                plot_data = \
+        #                                    np.where(predictions[:] == cluster)[0]
         #                                plt_names.append(\
         #                                        plt.scatter(\
         #                                            data[plot_data, feature1], 
@@ -330,14 +376,16 @@ for i in range(max_clusters-1):
         #                        plt.ylabel("Feature %i" % feature2)
         #                        # Produce figure legend
         #                        plt.legend(tuple(plt_names), 
-        #                                tuple("Cluster %i" % cluster for cluster in range(i+2)), 
+        #                                tuple("Cluster %i" % cluster \
+        #                                        for cluster in range(i+2)), 
         #                                scatterpoints = 1, 
         #                                loc = 'lower left', 
         #                                ncol = 3, 
         #                                fontsize = 8)
         #                        plt.title("%i clusters" % (i+2))
         #                        fig.savefig(f'./Plots/{electrode_num:02}/'\
-        #                                '{i+2}_clusters/feature{feature2}vs{feature1}.png')
+        #                                '{i+2}_clusters/feature{feature2}'\
+        #                                    'vs{feature1}.png')
         #                        plt.close("all")
 
         #for cluster in range(i+2):
@@ -347,23 +395,31 @@ for i in range(max_clusters-1):
         #        for other_cluster in range(i+2):
         #                mahalanobis_dist = []
         #                other_cluster_mean = model.means_[other_cluster, :]
-        #                other_cluster_covar_I = linalg.inv(model.covariances_[other_cluster, :, :])
+        #                other_cluster_covar_I = \
+        #                        linalg.inv(model.covariances_[other_cluster, :, :])
         #                for points in cluster_points:
-        #                        mahalanobis_dist.append(mahalanobis(data[points, :], other_cluster_mean, other_cluster_covar_I))
+        #                        mahalanobis_dist.append(\
+        #                                mahalanobis(data[points, :], 
+        #                                other_cluster_mean, 
+        #                                other_cluster_covar_I))
         #                # Plot histogram of Mahalanobis distances
         #                y,binEdges=np.histogram(mahalanobis_dist)
         #                bincenters = 0.5*(binEdges[1:] + binEdges[:-1])
-        #                plt.plot(bincenters, y, label = 'Dist from cluster %i' % other_cluster) 
+        #                plt.plot(bincenters, y, 
+        #                        label = 'Dist from cluster %i' % other_cluster) 
         #                                        
         #        plt.xlabel('Mahalanobis distance')
         #        plt.ylabel('Frequency')
         #        plt.legend(loc = 'upper right', fontsize = 8)
-        #        plt.title('Mahalanobis distance of Cluster %i from all other clusters' % cluster)
-        #        fig.savefig('./Plots/%i/%i_clusters/Mahalonobis_cluster%i.png' % (electrode_num, i+2, cluster))
+        #        plt.title('Mahalanobis distance of Cluster %i '\
+        #                        'from all other clusters' % cluster)
+        #        fig.savefig('./Plots/%i/%i_clusters/Mahalonobis_cluster%i.png' \
+        #                            % (electrode_num, i+2, cluster))
         #        plt.close("all")
         
         
-        # Create file, and plot spike waveforms for the different clusters. Plot 10 times downsampled dejittered/smoothed waveforms.
+        # Create file, and plot spike waveforms for the different clusters. 
+        # Plot 10 times downsampled dejittered/smoothed waveforms.
         # Additionally plot the ISI distribution of each cluster 
         os.mkdir(f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs')
         x = np.arange(len(slices_dejittered[0])/10) + 1
@@ -376,12 +432,20 @@ for i in range(max_clusters-1):
                 #               plot_wf[time] = slices_dejittered[point, time*10]
                 #       plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
                 #       plt.hold(True)
-                # plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), slices_dejittered[cluster_points, ::10].T, linewidth = 0.01, color = 'red')
-                fig, ax = blech_waveforms_datashader.waveforms_datashader(slices_dejittered[cluster_points, :], x, dir_name = "datashader_temp_el" + str(electrode_num))
-                ax.set_xlabel('Sample ({:d} samples per ms)'.format(int(sampling_rate/1000)))
+                # plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), 
+                #            slices_dejittered[cluster_points, ::10].T, 
+                #            linewidth = 0.01, color = 'red')
+                fig, ax = \
+                        blech_waveforms_datashader.waveforms_datashader(\
+                            slices_dejittered[cluster_points, :], 
+                            x, 
+                            dir_name = "datashader_temp_el" + str(electrode_num))
+                ax.set_xlabel('Sample ({:d} samples per ms)'.\
+                        format(int(sampling_rate/1000)))
                 ax.set_ylabel('Voltage (microvolts)')
                 ax.set_title('Cluster%i' % cluster)
-                fig.savefig(f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
+                fig.savefig(f'./Plots/{electrode_num:02}/'\
+                        '{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
                 plt.close("all")
                 
                 fig = plt.figure()
@@ -391,14 +455,25 @@ for i in range(max_clusters-1):
                 max_ISI_val = 20
                 bin_count = 100
                 neg_pos_ISI = np.concatenate((-1*ISIs,ISIs),axis=-1)
-                hist_obj = plt.hist(neg_pos_ISI, bins = np.linspace(-max_ISI_val,max_ISI_val,bin_count)) 
+                hist_obj = plt.hist(\
+                            neg_pos_ISI, 
+                            bins = np.linspace(-max_ISI_val,max_ISI_val,bin_count)) 
                 plt.xlim([-max_ISI_val, max_ISI_val])
                 # Scale y-lims by all but the last value
                 upper_lim = np.max(hist_obj[0][:-1])
                 if upper_lim:
                     plt.ylim([0,upper_lim])
-                plt.title("2ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 2.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 2.0)[0]), len(cluster_times)) + '\n' + "1ms ISI violations = %.1f percent (%i/%i)" %((float(len(np.where(ISIs < 1.0)[0]))/float(len(cluster_times)))*100.0, len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
-                fig.savefig(f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
+                plt.title("2ms ISI violations = %.1f percent (%i/%i)" \
+                        %((float(len(np.where(ISIs < 2.0)[0]))/\
+                        float(len(cluster_times)))*100.0, \
+                        len(np.where(ISIs < 2.0)[0]), \
+                        len(cluster_times)) + '\n' + \
+                        "1ms ISI violations = %.1f percent (%i/%i)" \
+                        %((float(len(np.where(ISIs < 1.0)[0]))/\
+                        float(len(cluster_times)))*100.0, \
+                        len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
+                fig.savefig(f'./Plots/{electrode_num:02}/'\
+                        '{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
                 plt.close("all")                
 
 # Make file for dumping info about memory usage
