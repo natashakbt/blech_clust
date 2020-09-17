@@ -27,14 +27,7 @@ for line in f.readlines():
 f.close()
 os.chdir(dir_name[0][:-1])
 
-# Pull out SGE_TASK_ID # - this will be the electrode number to be looked at. 
-try:
-        #electrode_num = int(os.getenv('SGE_TASK_ID')) - 1
-        electrode_num = int(sys.argv[1]) - 1
-except:
-        # Alternatively, if running on jetstream (or personal computer) 
-        # using GNU parallel, get sys.argv[1]
-        electrode_num = int(sys.argv[1]) - 1 
+electrode_num = int(sys.argv[1]) - 1
 
 # Check if the directories for this electrode number exist - 
 # if they do, delete them (existence of the directories indicates a 
@@ -62,27 +55,35 @@ for files in file_list:
                 params_file = files
 
 # Read the .params file
-f = open(params_file, 'r')
-params = []
-for line in f.readlines():
-        params.append(line)
-f.close()
+#f = open(params_file, 'r')
+#params = []
+#for line in f.readlines():
+#        params.append(line)
+#f.close()
+
+with open(params_file,'r') as params_file_connect:
+    params_dict = json.load(params_file_connect)
+
+# Ideally one would access the params_dict and not have to define variables
+# But one step at a time
+for key,value in params_dict.items():
+    globals()[key] = value
 
 # Assign the parameters to variables
-max_clusters = int(params[0])
-num_iter = int(params[1])
-thresh = float(params[2])
-num_restarts = int(params[3])
-voltage_cutoff = float(params[4])
-max_breach_rate = float(params[5])
-max_secs_above_cutoff = int(params[6])
-max_mean_breach_rate_persec = float(params[7])
-wf_amplitude_sd_cutoff = int(params[8])
-bandpass_lower_cutoff = float(params[9])
-bandpass_upper_cutoff = float(params[10])
-spike_snapshot_before = float(params[11])
-spike_snapshot_after = float(params[12])
-sampling_rate = float(params[13])
+#max_clusters = int(params[0])
+#num_iter = int(params[1])
+#thresh = float(params[2])
+#num_restarts = int(params[3])
+#voltage_cutoff = float(params[4])
+#max_breach_rate = float(params[5])
+#max_secs_above_cutoff = int(params[6])
+#max_mean_breach_rate_persec = float(params[7])
+#wf_amplitude_sd_cutoff = int(params[8])
+#bandpass_lower_cutoff = float(params[9])
+#bandpass_upper_cutoff = float(params[10])
+#spike_snapshot_before = float(params[11])
+#spike_snapshot_after = float(params[12])
+#sampling_rate = float(params[13])
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
@@ -140,13 +141,6 @@ plt.close("all")
 # Then cut the recording accordingly
 filt_el = filt_el[:recording_cutoff*int(sampling_rate)] 
 
-# Slice waveforms out of the filtered electrode recordings
-#slices, spike_times, mean_val, threshold = \
-#        extract_waveforms(filt_el, 
-#                            spike_snapshot = \
-#                                    [spike_snapshot_before, 
-#                                    spike_snapshot_after], 
-#                            sampling_rate = sampling_rate)
 slices, spike_times, polarity, mean_val, threshold = \
         extract_waveforms_abu(filt_el, 
                             spike_snapshot = \
@@ -193,7 +187,6 @@ def img_plot(array):
     plt.imshow(array, interpolation='nearest',aspect='auto', cmap='jet')
 
 # Dejitter these spike waveforms, and get their maximum amplitudes
-#slices_dejittered, times_dejittered = dejitter(slices, spike_times, spike_snapshot = [spike_snapshot_before, spike_snapshot_after], sampling_rate = sampling_rate)
 # Slices are returned sorted by amplitude polaity
 slices_dejittered, times_dejittered = \
     dejitter_abu2(slices, 
@@ -223,26 +216,17 @@ del slices; del spike_times
 # Save these slices/spike waveforms and their times to their respective folders
 np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy', \
                 slices_dejittered)
-#np.save(\
-#    f'./spike_waveforms/electrode{electrode_num:02}/spike_waveform_derivative.npy'\
-#    , slices_derivatives)
-#np.save(\
-#        f'./spike_waveforms/electrode{electrode_num:02}/spike_autocorrelation.npy', 
-#        slices_autocorr)
 np.save(
         f'./spike_times/electrode{electrode_num:02}/spike_times.npy', \
         times_dejittered)
 
 # Scale the dejittered slices by the energy of the waveforms
 scaled_slices, energy = scale_waveforms(slices_dejittered)
-#scaled_derivatives, deriv_energy = scale_waveforms(slices_derivatives)
 # Scale the autocorrelations by zscoring the autocorr for each waveform
 scaled_autocorr = zscore(slices_autocorr, axis=-1) 
 
 # Run PCA on the scaled waveforms
 pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
-#pca_derivatives, derivative_explained_variance_ratio = \
-#        implement_pca(scaled_derivatives)
 # Perform PCA on scaled autocorrelations
 pca_autocorr, autocorr_explained_variance_ratio = implement_pca(scaled_autocorr)
 
@@ -251,9 +235,6 @@ pca_autocorr, autocorr_explained_variance_ratio = implement_pca(scaled_autocorr)
 np.save(
     f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', 
     pca_slices)
-#np.save(
-#    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_derivative.npy', 
-#    pca_derivatives)
 np.save(
     f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy',
     pca_autocorr)
@@ -293,7 +274,6 @@ data = pca(whiten='True').fit_transform(standard_data)
 
 
 del pca_slices; del scaled_slices; del energy; 
-#del slices_derivatives, scaled_derivatives, pca_derivatives
 del slices_autocorr, scaled_autocorr, pca_autocorr
 
 # Set a threshold on how many datapoints are used to FIT the gmm
@@ -309,18 +289,6 @@ for i in range(max_clusters-1):
                 tol = thresh).fit(train_set)
 
         predictions = model.predict(data)
-        #model, predictions, bic = clusterGMM(\
-        #        data, 
-        #        n_clusters = i+2, 
-        #        n_iter = num_iter, 
-        #        restarts = num_restarts, 
-        #        threshold = thresh)
-        #predictions = clusterKMeans(
-        #        data, 
-        #        n_clusters = i+2, 
-        #        n_iter = num_iter, 
-        #        restarts = num_restarts, 
-        #        threshold = thresh)
 
         # Sometimes large amplitude noise waveforms cluster with the 
         # spike waveforms because the amplitude has been factored out of 
@@ -346,77 +314,6 @@ for i in range(max_clusters-1):
             f'./clustering_results/electrode{electrode_num:02}/'\
                     'clusters{i+2}/predictions.npy', 
             predictions)
-        #np.save(\
-        #   f './clustering_results/electrode{electrode_num:02}/'\
-        #   'clusters{i+2}/bic.npy', 
-        #   bic)
-
-        # Plot the graphs, for this set of clusters, 
-        # in the directory made for this electrode
-
-        #os.mkdir('./Plots/{electrode_num:02}/{i+2}_clusters')
-        #colors = cm.rainbow(np.linspace(0, 1, i+2))
-
-        #for feature1 in range(len(data[0])):
-        #        for feature2 in range(len(data[0])):
-        #                if feature1 < feature2:
-        #                        fig = plt.figure()
-        #                        plt_names = []
-        #                        for cluster in range(i+2):
-        #                                plot_data = \
-        #                                    np.where(predictions[:] == cluster)[0]
-        #                                plt_names.append(\
-        #                                        plt.scatter(\
-        #                                            data[plot_data, feature1], 
-        #                                            data[plot_data, feature2], 
-        #                                            color = colors[cluster], 
-        #                                            s = 0.8))
-        #                                                                        
-        #                        plt.xlabel("Feature %i" % feature1)
-        #                        plt.ylabel("Feature %i" % feature2)
-        #                        # Produce figure legend
-        #                        plt.legend(tuple(plt_names), 
-        #                                tuple("Cluster %i" % cluster \
-        #                                        for cluster in range(i+2)), 
-        #                                scatterpoints = 1, 
-        #                                loc = 'lower left', 
-        #                                ncol = 3, 
-        #                                fontsize = 8)
-        #                        plt.title("%i clusters" % (i+2))
-        #                        fig.savefig(f'./Plots/{electrode_num:02}/'\
-        #                                '{i+2}_clusters/feature{feature2}'\
-        #                                    'vs{feature1}.png')
-        #                        plt.close("all")
-
-        #for cluster in range(i+2):
-        #        fig = plt.figure()
-        #        cluster_points = np.where(predictions[:] == cluster)[0]
-        #        
-        #        for other_cluster in range(i+2):
-        #                mahalanobis_dist = []
-        #                other_cluster_mean = model.means_[other_cluster, :]
-        #                other_cluster_covar_I = \
-        #                        linalg.inv(model.covariances_[other_cluster, :, :])
-        #                for points in cluster_points:
-        #                        mahalanobis_dist.append(\
-        #                                mahalanobis(data[points, :], 
-        #                                other_cluster_mean, 
-        #                                other_cluster_covar_I))
-        #                # Plot histogram of Mahalanobis distances
-        #                y,binEdges=np.histogram(mahalanobis_dist)
-        #                bincenters = 0.5*(binEdges[1:] + binEdges[:-1])
-        #                plt.plot(bincenters, y, 
-        #                        label = 'Dist from cluster %i' % other_cluster) 
-        #                                        
-        #        plt.xlabel('Mahalanobis distance')
-        #        plt.ylabel('Frequency')
-        #        plt.legend(loc = 'upper right', fontsize = 8)
-        #        plt.title('Mahalanobis distance of Cluster %i '\
-        #                        'from all other clusters' % cluster)
-        #        fig.savefig('./Plots/%i/%i_clusters/Mahalonobis_cluster%i.png' \
-        #                            % (electrode_num, i+2, cluster))
-        #        plt.close("all")
-        
         
         # Create file, and plot spike waveforms for the different clusters. 
         # Plot 10 times downsampled dejittered/smoothed waveforms.
@@ -426,15 +323,6 @@ for i in range(max_clusters-1):
         for cluster in range(i+2):
                 cluster_points = np.where(predictions[:] == cluster)[0]
 
-                #for point in cluster_points:
-                #       plot_wf = np.zeros(len(slices_dejittered[0])/10)
-                #       for time in range(len(slices_dejittered[point])/10):
-                #               plot_wf[time] = slices_dejittered[point, time*10]
-                #       plt.plot(x-15, plot_wf, linewidth = 0.1, color = 'red')
-                #       plt.hold(True)
-                # plt.plot(x - int((sampling_rate/1000.0)*spike_snapshot_before), 
-                #            slices_dejittered[cluster_points, ::10].T, 
-                #            linewidth = 0.01, color = 'red')
                 fig, ax = \
                         blech_waveforms_datashader.waveforms_datashader(\
                             slices_dejittered[cluster_points, :], 

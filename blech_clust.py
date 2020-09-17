@@ -5,6 +5,7 @@ import tables
 import sys
 import numpy as np
 import multiprocessing
+import json
 
 # Necessary blech_clust modules
 import read_file
@@ -18,11 +19,12 @@ else:
     dir_name = easygui.diropenbox(msg = 'Please select data directory')
 
 
-cont = 'a'
-while cont not in ['y','n']:
-    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
-if cont == 'n':
-    sys.exit('Incorrect dir')
+#cont = 'a'
+#while cont not in ['y','n']:
+#    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
+#if cont == 'n':
+#    sys.exit('Incorrect dir')
+
 #dir_name = easygui.diropenbox()
 
 # Get the type of data files (.rhd or .dat)
@@ -173,22 +175,37 @@ else:
 #            values = [1,1.5])
 
 # And print them to a blech_params file
-clustering_params = [7,1000, 0.0001,10]
-data_params = [10000,1,60,100,3]
-bandpass_params = [300,3000]
-spike_snapshot = [1,1.5]
+clustering_params = {'max_clusters' : 7,
+                    'num_iter' : 1000, 
+                    'thresh' : 0.0001,
+                    'num_restarts' : 10}
+data_params = {'voltage_cutoff' : 10000,
+                'max_breach_rate' : 1,
+                'max_secs_above_cutoff' : 60,
+                'max_mean_breach_rate_persec' : 100,
+                'wf_amplitude_sd_cutoff' : 3}
+bandpass_params = {'bandpass_lower_cutoff' : 300,
+                    'bandpass_upper_cutoff' : 3000}
+spike_snapshot = {'spike_snapshot_before' : 1,
+                    'spike_snapshot_after' : 1.5}
+all_params_dict = {**clustering_params, **data_params,
+                **bandpass_params, **spike_snapshot,
+                'sampling_rate' : sampling_rate}
 
-f = open(hdf5_name[-1]+'.params', 'w')
-for i in clustering_params:
-	print(i, file=f)
-for i in data_params:
-	print(i, file=f)
-for i in bandpass_params:
-	print(i, file=f)
-for i in spike_snapshot:
-	print(i, file=f)
-print(sampling_rate, file=f)
-f.close()
+with open(hdf5_name[-1]+'.params', 'w') as params_file:
+    json.dump(all_params_dict, params_file, indent = 4)
+
+#f = open(hdf5_name[-1]+'.params', 'w')
+#for i in clustering_params:
+#	print(i, file=f)
+#for i in data_params:
+#	print(i, file=f)
+#for i in bandpass_params:
+#	print(i, file=f)
+#for i in spike_snapshot:
+#	print(i, file=f)
+#print(sampling_rate, file=f)
+#f.close()
 
 # Make a directory for dumping files talking about memory usage in blech_process.py
 os.mkdir('memory_monitor_clustering')
