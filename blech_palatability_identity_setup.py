@@ -23,7 +23,13 @@ from sklearn.isotonic import IsotonicRegression
 from sklearn import preprocessing
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+# Get name of directory with the data files
+if len(sys.argv) > 1:
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
 os.chdir(dir_name)
 
 # Look for the hdf5 file in the directory
@@ -36,14 +42,19 @@ for files in file_list:
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
-# Get the digital inputs/tastes available, then ask the user to rank them in order of palatability
+# Get the digital inputs/tastes available, 
+# then ask the user to rank them in order of palatability
 trains_dig_in = hf5.list_nodes('/spike_trains')
-palatability_rank = easygui.multenterbox(msg = 'Rank the digital inputs in order of palatability (1 for the lowest, only integers)', fields = [train._v_name for train in trains_dig_in])
+palatability_rank = easygui.multenterbox(\
+        msg = 'Rank the digital inputs in order of palatability (1 for the lowest, only integers)', \
+        fields = [train._v_name for train in trains_dig_in])
 for i in range(len(palatability_rank)):
 	palatability_rank[i] = int(palatability_rank[i])
 
 # Now ask the user to put in the identities of the digital inputs
-identities = easygui.multenterbox(msg = 'Put in the identities of the digital inputs (only integers)', fields = [train._v_name for train in trains_dig_in])
+identities = easygui.multenterbox(\
+        msg = 'Put in the identities of the digital inputs (only integers)', 
+        fields = [train._v_name for train in trains_dig_in])
 for i in range(len(identities)):
 	identities[i] = int(identities[i])
 

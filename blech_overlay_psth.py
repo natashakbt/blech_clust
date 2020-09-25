@@ -7,7 +7,13 @@ import sys
 import os
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+# Get name of directory with the data files
+if len(sys.argv) > 1:
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
 os.chdir(dir_name)
 
 # Make directory to store the PSTH plots. Delete and remake the directory if it exists

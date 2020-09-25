@@ -6,27 +6,64 @@ import sys
 import os
 from numba import jit
 
-# Numba compiled function to compute the number of spikes in this_unit_times that are within 1 ms of a spike in other_unit_times, and vice versa
+# Numba compiled function to compute the number of spikes in this_unit_times 
+# that are within 1 ms of a spike in other_unit_times, and vice versa
 @jit(nogil = True)
 def unit_similarity(this_unit_times, other_unit_times):
 	this_unit_counter = 0
 	other_unit_counter = 0
-	for i in range(len(this_unit_times)):
-		for j in range(len(other_unit_times)):
-			if np.abs(this_unit_times[i] - other_unit_times[j]) <= 1.0:
+	for this_time in this_unit_times:
+		for other_time in other_unit_times:
+			if abs(this_time - other_time) <= 1.0:
 				this_unit_counter += 1
 				other_unit_counter += 1
 	return this_unit_counter, other_unit_counter
 
+def entry_checker(msg, check_func, fail_response):
+    check_bool = False
+    continue_bool = True
+    exit_str = '"x" to exit :: '
+    while not check_bool:
+        msg_input = input(msg.join([' ',exit_str]))
+        if msg_input == 'x':
+            continue_bool = False
+            break
+        check_bool = check_func(msg_input)
+        if not check_bool:
+            print(fail_response)
+    return msg_input, continue_bool
+
+
 # Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+# Get name of directory with the data files
+if len(sys.argv) > 1:
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
 os.chdir(dir_name)
 
-# Ask the user for a cutoff percentage for unit distances - if two units have distances greater than the cutoff, then will be written to file
-similarity_cutoff = easygui.multenterbox(msg = "Enter a cutoff percentage for unit similarities - violations will be written to file (0-100)", fields = ["Unit similarity cutoff percent"])
-similarity_cutoff = float(similarity_cutoff[0])
+# Ask the user for a cutoff percentage for unit distances - 
+# if two units have distances greater than the cutoff, then will be written to file
+cutoff_str, continue_bool = entry_checker(\
+        msg = 'Cutoff Percentage (0-100)  :: ',
+        check_func = lambda x: (str.isdigit(x) and (0<=int(x)<=100)),
+        fail_response = 'Please enter an integer')
+if continue_bool:
+    similarity_cutoff = int(cutoff_str)
+else:
+    print("Exiting")
+    exit()
 
-# Open a file to write these unit distance violations to - these units are likely the same and one of them will need to be removed from the HDF5 file
+#similarity_cutoff = easygui.multenterbox(\
+#                        msg = "Enter a cutoff percentage for unit similarities '\
+#                            '- violations will be written to file (0-100)", 
+#                        fields = ["Unit similarity cutoff percent"])
+#similarity_cutoff = float(similarity_cutoff[0])
+
+# Open a file to write these unit distance violations to - 
+# these units are likely the same and one of them will need to be removed from the HDF5 file
 unit_similarity_violations = open("unit_similarity_violations.txt", "w")
 print("Unit number 1" + "\t" + "Unit number 2", file = unit_similarity_violations)
 
@@ -44,7 +81,8 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 units = hf5.list_nodes('/sorted_units')
 
 # Now go through the units one by one, and get the pairwise distances between them
-# Similarity is defined as the percentage of spikes of the reference unit that have a spike from the compared unit within 1 ms
+# Similarity is defined as the percentage of spikes of the reference unit 
+# that have a spike from the compared unit within 1 ms
 print("==================")
 print("Similarity calculation starting")
 unit_distances = np.zeros((len(units), len(units)))
@@ -54,12 +92,19 @@ for this_unit in range(len(units)):
 		if other_unit < this_unit:
 			continue
 		other_unit_times = (units[other_unit].times[:])/30.0
-		this_unit_counter, other_unit_counter = unit_similarity(this_unit_times, other_unit_times)
-		unit_distances[this_unit, other_unit] = 100.0*(float(this_unit_counter)/len(this_unit_times))
-		unit_distances[other_unit, this_unit] = 100.0*(float(other_unit_counter)/len(other_unit_times))
-		# If the similarity goes beyond the defined cutoff, write these unit numbers to file
-		if this_unit != other_unit and (unit_distances[this_unit, other_unit] > similarity_cutoff or unit_distances[other_unit, this_unit] > similarity_cutoff):
-			print(str(this_unit) + "\t" + str(other_unit), file = unit_similarity_violations)
+		this_unit_counter, other_unit_counter = \
+                        unit_similarity(this_unit_times, other_unit_times)
+		unit_distances[this_unit, other_unit] = \
+                        100.0*(float(this_unit_counter)/len(this_unit_times))
+		unit_distances[other_unit, this_unit] = \
+                        100.0*(float(other_unit_counter)/len(other_unit_times))
+		# If the similarity goes beyond the defined cutoff, 
+                # write these unit numbers to file
+		if this_unit != other_unit \
+                        and (unit_distances[this_unit, other_unit] > similarity_cutoff \
+                        or unit_distances[other_unit, this_unit] > similarity_cutoff):
+			print(str(this_unit) + "\t" + \
+                                str(other_unit), file = unit_similarity_violations)
 	# Print the progress to the window
 	print("Unit %i of %i completed" % (this_unit+1, len(units)))
 print("Similarity calculation complete, results being saved to file")
