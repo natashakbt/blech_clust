@@ -5,6 +5,7 @@ import easygui
 import sys
 import os
 import ast
+import json
 import matplotlib
 import shutil
 matplotlib.use('Agg')
@@ -19,8 +20,15 @@ sns.set_color_codes(palette = 'colorblind')
 #        'size'   : '50'}
 #matplotlib.rc("font", **font)
 
-# Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+# Get directory where the hdf5 file sits, and change to that directory
+# Get name of directory with the data files
+if sys.argv[1] != '':
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+
 os.chdir(dir_name)
 
 # Look for the hdf5 file in the directory
@@ -34,23 +42,33 @@ for files in file_list:
 hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Ask the user for the pre stimulus duration used while making the spike arrays
-pre_stim = easygui.multenterbox(msg = 'What was the pre-stimulus duration pulled into the spike arrays?', fields = ['Pre stimulus (ms)'])
+json_name = os.path.basename(os.path.dirname(dir_name)) + ".params"
+with open(json_name,'r') as params_file_connect:
+    params_dict = json.load(params_file_connect)
+#pre_stim = params_dict['psth_durations'][0]
+
+pre_stim = easygui.multenterbox(\
+        msg = 'What was the pre-stimulus duration pulled into the spike arrays?', 
+        fields = ['Pre stimulus (ms)'])
 pre_stim = int(pre_stim[0])
 
 # Get the psth paramaters from the user
-params = easygui.multenterbox(msg = 'Enter the parameters for making the PSTHs', fields = ['Window size (ms)', 'Step size (ms)'])
+params = easygui.multenterbox(
+        msg = 'Enter the parameters for making the PSTHs', 
+        fields = ['Window size (ms)', 'Step size (ms)'])
 for i in range(len(params)):
 	params[i] = int(params[i])
 
-# Make directory to store the PSTH plots. Delete and remake the directory if it exists
+# Make directory to store the PSTH plots. 
+# Delete and remake the directory if it exists
 try:
     shutil.rmtree("PSTH")
-
 except:
 	pass
 os.mkdir("PSTH")
 
-# Make directory to store the raster plots. Delete and remake the directory if it exists
+# Make directory to store the raster plots. 
+# Delete and remake the directory if it exists
 try:
     shutil.rmtree("raster")
 except:
@@ -74,8 +92,17 @@ for dig_in in trains_dig_in:
 		spike_rate = []
 		for i in range(0, trial_avg_spike_array.shape[1] - params[0], params[1]):
 			time.append(i - pre_stim)
-			spike_rate.append(1000.0*np.sum(trial_avg_spike_array[unit, i:i+params[0]])/float(params[0]))
-		taste_responsiveness_t, taste_responsiveness_p = ttest_ind(np.mean(dig_in.spike_array[:, unit, pre_stim:pre_stim + r_post_stim], axis = 1), np.mean(dig_in.spike_array[:, unit, pre_stim - r_pre_stim:pre_stim], axis = 1))   
+			spike_rate.append(\
+                                1000.0*np.sum(\
+                                    trial_avg_spike_array[unit, i:i+params[0]])/float(params[0]))
+		taste_responsiveness_t, taste_responsiveness_p = \
+                        ttest_ind(\
+                            np.mean(\
+                                dig_in.spike_array[:, unit, pre_stim:pre_stim + r_post_stim], 
+                                    axis = 1), 
+                            np.mean(\
+                                dig_in.spike_array[:, unit, pre_stim - r_pre_stim:pre_stim], 
+                                    axis = 1))   
 		fig = plt.figure() #figsize = (12.8, 7.2), dpi = 100)
 		plt.title('Window: %i ms, Step: %i ms, Taste responsive: %s' % (params[0], params[1], str(bool(taste_responsiveness_p<0.001))) + '\n' + 'Electrode: %i, Single Unit: %i, RSU: %i, FS: %i' % (hf5.root.unit_descriptor[unit]['electrode_number'], hf5.root.unit_descriptor[unit]['single_unit'], hf5.root.unit_descriptor[unit]['regular_spiking'], hf5.root.unit_descriptor[unit]['fast_spiking']))
 		plt.xlabel('Time from taste delivery (ms)')
@@ -263,12 +290,3 @@ for unit in range(num_units):
 		plt.close("all")
 
 hf5.close()
-
-		
-				
-
-
-
-	
-
-
