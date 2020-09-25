@@ -18,7 +18,7 @@ if len(sys.argv) > 1:
 else:
     dir_name = easygui.diropenbox(msg = 'Please select data directory')
 
-
+print(f'Processing : {dir_name}')
 #cont = 'a'
 #while cont not in ['y','n']:
 #    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
@@ -43,7 +43,8 @@ file_list = os.listdir('./')
 #hdf5_name = str.split(dir_name, '/')
 hdf5_name = str(os.path.dirname(dir_name)).split('/')
 
-# Create hdf5 file, and make groups for raw data, raw emgs, digital outputs and digital inputs, and close
+# Create hdf5 file, and make groups for raw data, raw emgs, 
+# digital outputs and digital inputs, and close
 hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
 hf5.create_group('/', 'raw')
 hf5.create_group('/', 'raw_emg')
@@ -70,26 +71,22 @@ for i in range(len(dig_in)):
 	dig_in[i] = int(dig_in[i][0])
 dig_in.sort()
 
-# Read the amplifier sampling rate from info.rhd - look at Intan's website for structure of header files
+# Read the amplifier sampling rate from info.rhd - 
+# look at Intan's website for structure of header files
 sampling_rate = np.fromfile('info.rhd', dtype = np.dtype('float32'))
 sampling_rate = int(sampling_rate[2])
 
-# Check with user to see if the right ports, inputs and sampling rate were identified. 
-# Screw user if something was wrong, and terminate blech_clust
-#check = easygui.ynbox(\
-#        msg = 'ports used: ' + str(ports) + '\n' + \
-#        'sampling rate: ' + str(sampling_rate) + ' hz' + '\n' \
-#        + 'digital inputs on intan board: ' + str(dig_in), \
-#        title = 'check parameters from your recordings!')
-
-cont = 'a'
-while cont not in ['y','n']:
-    cont = input('ports used: ' + str(ports) + '\n' + \
-            'sampling rate: ' + str(sampling_rate) + ' hz' + \
-            '\n' + 'digital inputs on intan board: ' + str(dig_in) + \
-            '\n All good? (y/n) \n ::')
-if cont == 'n':
-    sys.exit('Incorrect dir')
+check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
+            f'\n digital inputs on intan board: {dig_in}'
+print(check_str)
+#cont = 'a'
+#while cont not in ['y','n']:
+#    cont = input('ports used: ' + str(ports) + '\n' + \
+#            'sampling rate: ' + str(sampling_rate) + ' hz' + \
+#            '\n' + 'digital inputs on intan board: ' + str(dig_in) + \
+#            '\n All good? (y/n) \n ::')
+#if cont == 'n':
+#    sys.exit('Incorrect dir')
 
 # Go ahead only if the user approves by saying yes
 #if check:
@@ -135,45 +132,6 @@ else:
 	print("Only files structured as one file per channel can be read at this time...")
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
 
-# Read in clustering parameters
-#clustering_params = easygui.multenterbox(\
-#        msg = 'Fill in the parameters for clustering (using a GMM)', 
-#        fields = ['Maximum number of clusters', 
-#                'Maximum number of iterations (1000 is more than enough)', 
-#                'Convergence criterion (usually 0.0001)', 
-#                'Number of random restarts for GMM (10 is more than enough)'])
-
-## Read in data cleaning parameters 
-# (to account for cases when the headstage fell off mid-experiment)
-#data_params = easygui.multenterbox(\
-#        msg = 'Fill in the parameters for cleaning your data in case the head stage fell off', 
-#        fields = [\
-#                'Voltage cutoff for disconnected headstage noise (in microV, usually 1500)', 
-#                'Maximum rate of cutoff breaches per sec '\
-#                        '(something like 0.2 is good if 1500 microV is the cutoff)', 
-#                'Maximum number of allowed seconds with at least 1 cutoff breach '\
-#                        '(10 is good for a 30-60 min recording)', 
-#                'Maximum allowed average number of cutoff breaches per sec '\
-#                        '(20 is a good number)', 
-#                'Intra-cluster waveform amplitude SD cutoff - '\
-#                        'larger waveforms will be thrown out (3 would be a good number)'], 
-#        values = [1500,0.2,10,20,3])
-
-## Ask the user for the bandpass filter frequencies for pulling out spikes
-#bandpass_params = easygui.multenterbox(\
-#        msg = "Fill in the lower and upper frequencies for the '\
-#                'bandpass filter for spike sorting", 
-#        fields = ['Lower frequency cutoff (Hz)', 
-#                'Upper frequency cutoff (Hz)'],values = [300,3000])
-
-## Ask the user for the size of the spike snapshot to be used for sorting
-#spike_snapshot = easygui.multenterbox(\
-#        msg = "Fill in the size of the spike snapshot you want to use for '\
-#            'sorting (use steps of 0.5ms - like 0.5, 1, 1.5, ..)", 
-#            fields = ['Time before spike minimum (ms)', 
-#                        'Time after spike minimum (ms)'], 
-#            values = [1,1.5])
-
 # And print them to a blech_params file
 clustering_params = {'max_clusters' : 7,
                     'num_iter' : 1000, 
@@ -195,30 +153,12 @@ all_params_dict = {**clustering_params, **data_params,
 with open(hdf5_name[-1]+'.params', 'w') as params_file:
     json.dump(all_params_dict, params_file, indent = 4)
 
-#f = open(hdf5_name[-1]+'.params', 'w')
-#for i in clustering_params:
-#	print(i, file=f)
-#for i in data_params:
-#	print(i, file=f)
-#for i in bandpass_params:
-#	print(i, file=f)
-#for i in spike_snapshot:
-#	print(i, file=f)
-#print(sampling_rate, file=f)
-#f.close()
-
 # Make a directory for dumping files talking about memory usage in blech_process.py
 os.mkdir('memory_monitor_clustering')
 
 # Ask for the HPC queue to use - was in previous version, now just use all.q
-#queue = easygui.multchoicebox(\
-#        msg = 'Which HPC queue do you want to use?', 
-#        choices = ('neuro.q', 'dk.q'))
 
 # Grab Brandeis unet username
-#username = easygui.multenterbox(\
-#        msg = 'Enter your Brandeis/Jetstream/personal computer id', 
-#        fields = ['unet username'])
 username = ['abuzarmahmood']
 
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
@@ -251,7 +191,3 @@ print(dir_name, file=f)
 f.close()
 
 print('blech_clust.py complete \n')
-#print("Now logout of the compute node and go back to the login node. '\
-#        'Then go to the bkech_clust folder on your desktop and say: '\
-#        'qsub -t 1-"+str(len(ports)*32-len(emg_channels))+" -q all.q '\
-#        '-ckpt reloc -l mem_free=4G -l mem_token=4G blech_clust.sh")

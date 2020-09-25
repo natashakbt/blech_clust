@@ -6,6 +6,7 @@ import tables
 import numpy as np
 from clustering import *
 import sys
+import json
 from matplotlib.backends.backend_pdf import PdfPages
 import pylab as plt
 import matplotlib.cm as cm
@@ -54,13 +55,6 @@ for files in file_list:
         if files[-6:] == 'params':
                 params_file = files
 
-# Read the .params file
-#f = open(params_file, 'r')
-#params = []
-#for line in f.readlines():
-#        params.append(line)
-#f.close()
-
 with open(params_file,'r') as params_file_connect:
     params_dict = json.load(params_file_connect)
 
@@ -68,22 +62,6 @@ with open(params_file,'r') as params_file_connect:
 # But one step at a time
 for key,value in params_dict.items():
     globals()[key] = value
-
-# Assign the parameters to variables
-#max_clusters = int(params[0])
-#num_iter = int(params[1])
-#thresh = float(params[2])
-#num_restarts = int(params[3])
-#voltage_cutoff = float(params[4])
-#max_breach_rate = float(params[5])
-#max_secs_above_cutoff = int(params[6])
-#max_mean_breach_rate_persec = float(params[7])
-#wf_amplitude_sd_cutoff = int(params[8])
-#bandpass_lower_cutoff = float(params[9])
-#bandpass_upper_cutoff = float(params[10])
-#spike_snapshot_before = float(params[11])
-#spike_snapshot_after = float(params[12])
-#sampling_rate = float(params[13])
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
@@ -203,12 +181,10 @@ polarity = polarity[spike_order]
 amplitudes = np.zeros((slices_dejittered.shape[0]))
 amplitudes[polarity < 0] =  np.min(slices_dejittered[polarity < 0], axis = 1)
 amplitudes[polarity > 0] =  np.max(slices_dejittered[polarity > 0], axis = 1)
-#slices_derivatives = np.diff(slices_dejittered,axis=-1)
 
 # Calculate autocorrelation of dejittered slices to attempt to remove 
 # periodic noise
 slices_autocorr = fftconvolve(slices_dejittered, slices_dejittered, axes = -1)
-
 
 # Delete the original slices and times now that dejittering is complete
 del slices; del spike_times
@@ -242,7 +218,6 @@ np.save(f'./spike_waveforms/electrode{electrode_num:02}/energy.npy', energy)
 np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy', 
         amplitudes)
 
-
 # Create file for saving plots, and plot explained variance ratios of the PCA
 fig = plt.figure()
 x = np.arange(len(explained_variance_ratio))
@@ -261,17 +236,14 @@ data[:,2:] = pca_slices[:,:n_pc]
 data[:,0] = energy[:]/np.max(energy)
 data[:,1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
 data = np.concatenate((data,pca_autocorr[:,:3]),axis=-1)
-#data = np.concatenate((data,pca_derivatives[:,:3]),axis=-1)
 
 # Standardize features in the data since they 
 # occupy very uneven scales
-
 standard_data = scaler().fit_transform(data)
 
 # We can whiten the data and potentially use
 # diagonal covariances for the GMM to speed things up
 data = pca(whiten='True').fit_transform(standard_data)
-
 
 del pca_slices; del scaled_slices; del energy; 
 del slices_autocorr, scaled_autocorr, pca_autocorr
@@ -312,7 +284,7 @@ for i in range(max_clusters-1):
         os.mkdir(f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}')
         np.save(\
             f'./clustering_results/electrode{electrode_num:02}/'\
-                    'clusters{i+2}/predictions.npy', 
+                    f'clusters{i+2}/predictions.npy', 
             predictions)
         
         # Create file, and plot spike waveforms for the different clusters. 
@@ -333,7 +305,7 @@ for i in range(max_clusters-1):
                 ax.set_ylabel('Voltage (microvolts)')
                 ax.set_title('Cluster%i' % cluster)
                 fig.savefig(f'./Plots/{electrode_num:02}/'\
-                        '{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
+                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
                 plt.close("all")
                 
                 fig = plt.figure()
@@ -361,7 +333,7 @@ for i in range(max_clusters-1):
                         float(len(cluster_times)))*100.0, \
                         len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
                 fig.savefig(f'./Plots/{electrode_num:02}/'\
-                        '{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
+                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
                 plt.close("all")                
 
 # Make file for dumping info about memory usage
