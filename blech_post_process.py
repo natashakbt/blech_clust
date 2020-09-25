@@ -118,7 +118,7 @@ while True:
         if continue_bool:
             num_clusters = int(num_clusters_str)
         else:
-            break
+            continue
 
         def cluster_check(x):
             clusters = re.findall('[0-9]+',x)
@@ -132,7 +132,7 @@ while True:
             clusters = re.findall('[0-9]+',clusters_msg)
             clusters = [int(x) for x in clusters]
         else:
-            break
+            continue
         
         # Print out selections
         print('||| Electrode {}, Solution {}, Cluster {} |||'.\
@@ -207,7 +207,7 @@ while True:
                 elif merge_msg == 'n': 
                     merge = False
             else:
-                break
+                continue
 
         else:
             split_msg, continue_bool = entry_checker(\
@@ -220,7 +220,7 @@ while True:
                 elif split_msg == 'n': 
                     re_cluster = False
             else:
-                break
+                continue
 
 
         # If the user asked to split/re-cluster, 
@@ -255,7 +255,7 @@ while True:
                     thresh = float(clustering_params[2])
                     n_restarts = int(clustering_params[3]) 
             else:
-                break
+                continue
 
             # Make data array to be put through the GMM - 5 components: 
             # 3 PCs, scaled energy, amplitude
@@ -333,7 +333,7 @@ while True:
                             if x not in remove_these]
                 print(f'Chosen splits {chosen_split}')
             else:
-                break
+                continue
 
 ##################################################
 
@@ -388,7 +388,7 @@ while True:
                     elif single_unit_msg == 'n': 
                         single_unit = False
                 else:
-                    break
+                    continue
 
                 unit_description['single_unit'] = int(single_unit)
                 # If the user says that this is a single unit, 
@@ -407,7 +407,7 @@ while True:
                         elif unit_type_msg == 'f': 
                             unit_type = 'fast_spiking'
                     else:
-                        break
+                        continue
 
                     unit_description[unit_type] = 1              
                     unit_description.append()
@@ -440,7 +440,7 @@ while True:
                     elif single_unit_msg == 'n': 
                         single_unit = False
                 else:
-                    break
+                    continue
 
                 unit_description['single_unit'] = int(single_unit) 
 
@@ -459,7 +459,7 @@ while True:
                         elif unit_type_msg == 'f': 
                             unit_type = 'fast_spiking'
                     else:
-                        break
+                        continue
 
                     unit_description[unit_type] = 1              
 
@@ -510,7 +510,7 @@ while True:
                     elif proceed_msg == 'n': 
                         proceed = False
                 else:
-                    break
+                    continue
 
                 # Create unit if the user agrees to proceed, 
                 # else abort and go back to start of the loop 
@@ -533,7 +533,7 @@ while True:
                         elif single_unit_msg == 'n': 
                             single_unit = False
                     else:
-                        break
+                        continue
 
                     unit_description['single_unit'] = int(single_unit)
 
@@ -552,7 +552,7 @@ while True:
                             elif unit_type_msg == 'f': 
                                 unit_type = 'fast_spiking'
                         else:
-                            break
+                            continue
 
                             unit_description[unit_type] = 1
                     unit_description.append()
@@ -584,7 +584,7 @@ while True:
                         elif single_unit_msg == 'n': 
                             single_unit = False
                     else:
-                        break
+                        continue
 
 
                     unit_description['single_unit'] = int(single_unit)
@@ -604,7 +604,7 @@ while True:
                             elif unit_type_msg == 'f': 
                                 unit_type = 'fast_spiking'
                         else:
-                            break
+                            continue
 
                             unit_description[unit_type] = 1
                     unit_description.append()
