@@ -5,46 +5,49 @@ import pylab as plt
 import glob
 from tqdm import trange
 import sys
+import json
 
 # Read blech.dir, and cd to that directory
 with open('umap_dir.txt','r') as f:
     data_dir = f.readline()[:-1]
 
 # Read the clustering params for the file
-with open(glob.glob(data_dir + '/*params*')[0],'r') as param_file:
-    params = [float(line) for line in param_file.readlines()[:-1]]
-cluster_num = int(params[0])
+with open(glob.glob(data_dir + '/*params*')[0],'r') as params_file_connect:
+    params_dict = json.load(params_file_connect)
+cluster_num = params_dict['max_clusters']
+#with open(glob.glob(data_dir + '/*params*')[0],'r') as param_file:
+#    params = [float(line) for line in param_file.readlines()[:-1]]
+#cluster_num = int(params[0])
 
 # Get PCA waveforms from spike_waveforms
 # Get cluster predictions from clustering_results
 # Plot output in Plots
-electrode_num = sys.argv[-1]
+electrode_num = int(sys.argv[-1])
 
 def umap_plots(data_dir, electrode_num):
     # If processing has happened, the file will exist
     pca_file = data_dir + \
-                '/spike_waveforms/electrode{}/pca_waveforms.npy'.format(electrode_num)
+                '/spike_waveforms/electrode{0:02d}/pca_waveforms.npy'.format(electrode_num)
 
     if os.path.isfile(pca_file):
         
         try:
-            print('Processing Electrode {}'.format(electrode_num))
+            print('Processing Electrode {0:02}'.format(electrode_num))
             pca_waveforms = np.load(data_dir + \
-                    '/spike_waveforms/electrode{}/pca_waveforms.npy'.format(electrode_num))
+                    '/spike_waveforms/electrode{0:02d}/pca_waveforms.npy'.format(electrode_num))
 
             umap_waveforms = umap.UMAP(n_components = 2).\
                     fit_transform(pca_waveforms[:,:20])
             
             clustering_results = [np.load(data_dir + \
-                    '/clustering_results/electrode{0}/clusters{1}/predictions.npy'.\
+                    '/clustering_results/electrode{0:02d}/clusters{1}/predictions.npy'.\
                     format(electrode_num, cluster)) for cluster in \
                     range(2,cluster_num+1)] 
             
             spike_times = np.load(data_dir + \
-                    '/spike_times/electrode{}/spike_times.npy'.format(electrode_num))
+                    '/spike_times/electrode{0:02d}/spike_times.npy'.format(electrode_num))
 
-            print('Processing for Electrode {} complete'.format(electrode_num))
-            print('Outputting figures')
+            print(f'Outputting figures : Electrode {electrode_num:02}')
 
             for cluster in range(2,cluster_num+1):
 
@@ -55,7 +58,7 @@ def umap_plots(data_dir, electrode_num):
                 legend = ax1.legend(*scatter.legend_elements())
                 ax1.add_artist(legend)
                 fig1.savefig(data_dir + \
-                    '/Plots/{0}/{1}_clusters_waveforms_ISIs/{1}cluster_umap.png'.\
+                    '/Plots/{0:02d}/{1}_clusters_waveforms_ISIs/{1}cluster_umap.png'.\
                     format(electrode_num, cluster), 
                     dpi = 300)
                 plt.close(fig1)
@@ -64,7 +67,7 @@ def umap_plots(data_dir, electrode_num):
                 fig2, ax2 = plt.subplots()
                 ax2.hexbin(umap_waveforms[:,0],umap_waveforms[:,1], gridsize = nbins)
                 fig2.savefig(data_dir + \
-                    '/Plots/{0}/{1}_clusters_waveforms_ISIs/{1}cluster_umap_hist.png'.\
+                        '/Plots/{0:02d}/{1}_clusters_waveforms_ISIs/{1}cluster_umap_hist.png'.\
                     format(electrode_num, cluster),
                     dpi = 300)
                 plt.close(fig2)
@@ -87,7 +90,7 @@ def umap_plots(data_dir, electrode_num):
                 plt.tight_layout()
 
                 fig3.savefig(data_dir + \
-                    '/Plots/{0}/{1}_clusters_waveforms_ISIs/{1}cluster_umap_timeseries.png'.\
+                    '/Plots/{0:02d}/{1}_clusters_waveforms_ISIs/{1}cluster_umap_timeseries.png'.\
                     format(electrode_num, cluster),
                     dpi = 300)
                 plt.close(fig3)
@@ -110,7 +113,7 @@ def umap_plots(data_dir, electrode_num):
                 plt.tight_layout()
 
                 fig4.savefig(data_dir + \
-                    '/Plots/{0}/{1}_clusters_waveforms_ISIs/cluster{1}_pca_timeseries.png'.\
+                    '/Plots/{0:02d}/{1}_clusters_waveforms_ISIs/cluster{1}_pca_timeseries.png'.\
                     format(electrode_num, cluster),
                     dpi = 300)
                 plt.close(fig4)
@@ -126,7 +129,7 @@ def umap_plots(data_dir, electrode_num):
                     ax.set_xlim(0, max_time)
                     ax.set_ylim(min_y, max_y)
                     fig.savefig(data_dir + \
-                        '/Plots/{0}/{1}_clusters_waveforms_ISIs/Cluster{2}_raster.png'.\
+                        '/Plots/{0:02d}/{1}_clusters_waveforms_ISIs/Cluster{2}_raster.png'.\
                         format(electrode_num, cluster, clust_num),
                         dpi = 300)
                     plt.close(fig)
