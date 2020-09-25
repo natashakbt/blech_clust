@@ -14,11 +14,14 @@ if sys.argv[1] != '':
     dir_name = os.path.abspath(sys.argv[1])
 else:
     dir_name = easygui.diropenbox('Please select data directory')
-cont = 'a'
-while cont not in ['y','n']:
-    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
-if dir_name == 'n':
-    sys.exit('Incorrect dir')
+
+print(f'Processing : {dir_name}')
+#cont = 'a'
+#while cont not in ['y','n']:
+#    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
+#if dir_name == 'n':
+#    sys.exit('Incorrect dir')
+
 os.chdir(dir_name)
 
 
