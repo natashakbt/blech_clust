@@ -22,7 +22,13 @@ removal_dirs = ['clustering_results', 'memory_monitor_clustering',
         'Plots','spike_times','spike_waveforms']
 dir_paths = [os.path.join(dir_name,x) for x in removal_dirs]
 for this_file in file_paths:
-    os.remove(this_file)
+    try:
+        os.remove(this_file)
+    except:
+        pass
 for this_dir in dir_paths:
-    shutil.rmtree(this_dir)
+    try:
+        shutil.rmtree(this_dir)
+    except:
+        pass
 
