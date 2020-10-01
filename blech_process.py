@@ -15,10 +15,18 @@ from scipy import linalg
 import memory_monitor as mm
 import blech_waveforms_datashader
 from scipy.signal import fftconvolve
+from scipy.signal import gaussian
 from scipy.stats import zscore
 from sklearn.preprocessing import StandardScaler as scaler
 from sklearn.decomposition import PCA as pca
 from sklearn.mixture import GaussianMixture as gmm
+
+############################################################
+#| |    ___   __ _  __| |
+#| |   / _ \ / _` |/ _` |
+#| |__| (_) | (_| | (_| |
+#|_____\___/ \__,_|\__,_|
+############################################################
 
 # Read blech.dir, and cd to that directory
 f = open('blech.dir', 'r')
@@ -116,6 +124,14 @@ plt.title('Recording cutoff time (indicated by the black horizontal line)')
 fig.savefig(f'./Plots/{electrode_num:02}/cutoff_time.png', bbox_inches='tight')
 plt.close("all")
 
+#############################################################                        
+#| __ )  ___  __ _(_)_ __    _ __  _ __ ___   ___ ___  ___ ___ 
+#|  _ \ / _ \/ _` | | '_ \  | '_ \| '__/ _ \ / __/ _ \/ __/ __|
+#| |_) |  __/ (_| | | | | | | |_) | | | (_) | (_|  __/\__ \__ \
+#|____/ \___|\__, |_|_| |_| | .__/|_|  \___/ \___\___||___/___/
+#            |___/          |_|                                
+#############################################################                        
+
 # Then cut the recording accordingly
 filt_el = filt_el[:recording_cutoff*int(sampling_rate)] 
 
@@ -186,15 +202,45 @@ amplitudes[polarity > 0] =  np.max(slices_dejittered[polarity > 0], axis = 1)
 # periodic noise
 slices_autocorr = fftconvolve(slices_dejittered, slices_dejittered, axes = -1)
 
+# Calculate cross-correlation of spikes with derivatives of gaussian
+# as a proxy for spike shape templates
+# Assuming sampling frequency remains the same, the size of the kernel
+# can remain constant
+template0 = gaussian(400,40)
+template1 = np.diff(template0)
+template2 = np.diff(template1)
+
+# Use PC1 of cross-correlation with each template as a dimension
+def conv_scale_pca(array, template):
+    conv = fftconvolve(array, 
+            np.tile(template[np.newaxis,:], (array.shape[0],1)), 
+            mode = 'valid',axes = -1)
+    scale_conv = zscore(conv,axis=-1); del conv
+    pca_conv, _ = implement_pca(scale_conv); 
+    del scale_conv
+    pca_conv = pca_conv[:,0]
+    return pca_conv
+
+# Test plots
+#fig, ax = plt.subplots(1,5)
+#plt.sca(ax[0])
+#img_plot(scaled_slices)
+#plt.sca(ax[1])
+#img_plot(np.tile(template[np.newaxis,:], (array.shape[0],1)))
+#ax[1].set_xlim((0,slices_dejittered.shape[1]))
+#plt.sca(ax[2])
+#img_plot(zscore(conv,axis=-1))
+#plt.sca(ax[3])
+#img_plot(pca_conv[:,np.newaxis])
+#ax[4].plot(zscore(np.mean(scaled_slices,axis=0),axis=-1))
+#ax[4].plot(zscore(template))
+#plt.show()
+
+conv_pca_slices = np.array([conv_scale_pca(slices_dejittered, template) \
+        for template in [template1, template2]]).T
+
 # Delete the original slices and times now that dejittering is complete
 del slices; del spike_times
-
-# Save these slices/spike waveforms and their times to their respective folders
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy', \
-                slices_dejittered)
-np.save(
-        f'./spike_times/electrode{electrode_num:02}/spike_times.npy', \
-        times_dejittered)
 
 # Scale the dejittered slices by the energy of the waveforms
 scaled_slices, energy = scale_waveforms(slices_dejittered)
@@ -208,15 +254,34 @@ pca_autocorr, autocorr_explained_variance_ratio = implement_pca(scaled_autocorr)
 
 # Save the pca_slices, energy and amplitudes to the 
 # spike_waveforms folder for this electrode
-np.save(
+# Save slices/spike waveforms and their times to their respective folders
+to_be_saved = ['slices_dejittered','times_dejittered',
+                'pca_slices','pca_autocorr','energy','amplitudes']
+save_paths = \
+    [f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy',
+    f'./spike_times/electrode{electrode_num:02}/spike_times.npy',
     f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', 
-    pca_slices)
-np.save(
     f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy',
-    pca_autocorr)
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/energy.npy', energy)
-np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy', 
-        amplitudes)
+    f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
+    f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy']
+
+for key,path in zip(to_be_saved, save_paths):
+    np.save(path, globals()[key])
+
+#np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy', \
+#                slices_dejittered)
+#np.save(
+#        f'./spike_times/electrode{electrode_num:02}/spike_times.npy', \
+#        times_dejittered)
+#np.save(
+#    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', 
+#    pca_slices)
+#np.save(
+#    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy',
+#    pca_autocorr)
+#np.save(f'./spike_waveforms/electrode{electrode_num:02}/energy.npy', energy)
+#np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy', 
+#        amplitudes)
 
 # Create file for saving plots, and plot explained variance ratios of the PCA
 fig = plt.figure()
@@ -236,6 +301,7 @@ data[:,2:] = pca_slices[:,:n_pc]
 data[:,0] = energy[:]/np.max(energy)
 data[:,1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
 data = np.concatenate((data,pca_autocorr[:,:3]),axis=-1)
+data = np.concatenate((data,conv_pca_slices),axis=-1)
 
 # Standardize features in the data since they 
 # occupy very uneven scales
@@ -243,6 +309,7 @@ standard_data = scaler().fit_transform(data)
 
 # We can whiten the data and potentially use
 # diagonal covariances for the GMM to speed things up
+# Not sure how much this step helps
 data = pca(whiten='True').fit_transform(standard_data)
 
 del pca_slices; del scaled_slices; del energy; 
@@ -252,6 +319,7 @@ del slices_autocorr, scaled_autocorr, pca_autocorr
 dat_thresh = 10e3
 # Run GMM, from 2 to max_clusters
 for i in range(max_clusters-1):
+        # If dataset is very large, take subsample for fitting
         train_set = data[np.random.choice(np.arange(data.shape[0]),
                         int(np.min((data.shape[0],dat_thresh))))]
         model = gmm(
