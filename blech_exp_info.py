@@ -10,7 +10,7 @@ X Electrode Layout According to Regions
 X Taste concentrations and dig_in order
 X Taste Palatability Ranks
 X Laser parameters and dig_in
-Misc Notes
+X Misc Notes
 """
 
 import glob
@@ -21,6 +21,7 @@ import easygui
 import sys
 import re
 import itertools as it
+import argparse
 
 def entry_checker(msg, check_func, fail_response):
     check_bool = False
@@ -38,8 +39,15 @@ def entry_checker(msg, check_func, fail_response):
 
 
 # Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_path = os.path.abspath(sys.argv[1])
+# Create argument parser
+parser = argparse.ArgumentParser(description = 'Creates files with experiment info')
+parser.add_argument('dir_name',  help = 'Directory containing data files')
+parser.add_argument('--template', '-t', 
+        help = 'Template (.json) file to copy experimental details from')
+args = parser.parse_args()
+
+if args.dir_name:
+    dir_path = args.dir_name
     if dir_path[-1] != '/':
         dir_path += '/'
 else:
@@ -59,175 +67,190 @@ this_dict = {
 ## Brain Regions and Electrode Layout
 ##################################################
 
-def word_check(x):
-    words = re.findall('[A-Za-z]+',x)
-    return (sum([i.isalpha() for i in words]) == len(words)) and len(words) > 0
+if args.template:
+    with open(args.template,'r') as file:
+        template_dict = json.load(file)
+        var_names = ['regions','ports','electrode_layout','taste_params',
+                'laser_params','notes']
 
-region_str, continue_bool = entry_checker(\
-        msg = ' Which regions were recorded from (anything separated)  :: ',
-        check_func = word_check,
-        fail_response = 'Please enter letters only')
-if continue_bool:
-    regions = [x.lower() for x in re.findall('[A-Za-z]+',region_str)]
+        from_template = {key:template_dict[key] for key in var_names}
+        fin_dict = {**this_dict,**from_template}
+
 else:
-    exit()
 
-# Find all ports used
-file_list = os.listdir(dir_path)
-ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
-# Sort the ports in alphabetical order
-ports.sort()
+    def word_check(x):
+        words = re.findall('[A-Za-z]+',x)
+        return (sum([i.isalpha() for i in words]) == len(words)) and len(words) > 0
 
-# Depending on number of regions and ports, list all permutations
-# of electrode and ask user to select from them
-
-type_16_16_vals = [list(map(int,np.arange(8)))+list(map(int,np.arange(24,32))),
-                list(map(int, np.arange(8,24)))]
-type_16_16_keys = ['0-7,24-31','8-23']
-type_16_16 = dict(zip(type_16_16_keys,type_16_16_vals))
-type_32 = {'0-31' : list(map(int,np.arange(32)))}
-port_vals = [np.arange(32)+(32*num) for num in range(len(ports))]
-ports_dict = dict(zip(ports,port_vals))
-
-if len(ports) == 1:
-    if len(regions) > 1:
-        region_permutations = list(it.permutations(regions))
-        split_permutations = [list(zip(perm,type_16_16.keys())) \
-                for perm in region_permutations]
-        permutations = split_permutations 
-    else:
-        permutations = list(zip(regions,type_32.keys())) 
-
-else: # Assuming there would be no splitting if you have multiple ports
-    if len(regions) == 1:
-        permutations = [tuple((zip(regions,[ports])))]
-    elif len(regions) ==2:
-        region_permutations = list(it.permutations(regions))
-        permutations = []
-        for this_region_perm in region_permutations:
-            for count in np.arange(1,len(ports)):
-                permutations.append(\
-                        [(this_region_perm[0],ports[:count]),
-                            (this_region_perm[1],ports[count:])])
-
-# Ask user to select appropriate permutation
-perm_msg = "\n".join([str(x) for x in (list(zip(range(len(permutations)),permutations)))])
-def select_check(x):
-    global permutations
-    return x.isdigit() and len(re.findall('[0-9]+',x))==1 and 0<=int(x)<=len(permutations)
-
-perm_str, continue_bool = entry_checker(\
-        msg = f'{perm_msg} \n Please select the correct layout ::: ',
-        check_func = select_check,
-        fail_response = 'Please enter a single, valid integer')
-if continue_bool:
-    select_ind = int(perm_str)
-    selected_perm = permutations[select_ind]
-    fin_perm = []
-    if len(ports) == 1:
-        if len(regions) == 1:
-            for this_region in selected_perm:
-                fin_perm.append([this_region[0], type_32[this_region[1]]])
-        else:
-            for this_region in selected_perm:
-                fin_perm.append([this_region[0], type_16_16[this_region[1]]])
-    else:
-        fin_perm = []
-        for this_region in selected_perm:
-            fin_perm.append([this_region[0],
-                        [ports_dict[x].tolist() for x in this_region[1]]])
-else:
-    exit()
-
-
-##################################################
-## Dig-Ins
-##################################################
-def count_check(x):
-    nums = re.findall('[0-9]+',x)
-    return sum([x.isdigit() for x in nums]) == len(nums)
-taste_dig_in_str, continue_bool = entry_checker(\
-        msg = ' Taste dig_ins used (IN ORDER, anything separated)  :: ',
-        check_func = count_check,
-        fail_response = 'Please enter integers only')
-if continue_bool:
-    nums = re.findall('[0-9]+',taste_dig_in_str)
-    taste_digins = [int(x) for x in nums]
-else:
-    exit()
-
-def taste_check(x):
-    global taste_digins
-    return len(x.split(',')) == len(taste_digins)
-taste_conc_str, continue_bool = entry_checker(\
-        msg = ' Tastes (Concs) used (IN ORDER, COMMA separated)  :: ',
-        check_func = taste_check,
-        fail_response = 'Please enter as many tastes as digins')
-if continue_bool:
-    tastes = [x.strip().lower() for x in taste_conc_str.split(',')]
-else:
-    exit()
-
-# Ask user for palatability rankings
-def pal_check(x):
-    global taste_digins
-    nums = re.findall('[1-9]+',x)
-    return  sum([x.isdigit() for x in nums]) == len(nums) and \
-            sum([1<=int(x)<=len(taste_digins) for x in nums]) == len(taste_digins)
-
-taste_fin = str(list(zip(taste_digins, tastes)))
-palatability_str, continue_bool = entry_checker(\
-        msg = f' {taste_fin} \n Enter palatability rankings used (anything separated)  :: ',
-        check_func = pal_check,
-        fail_response = 'Please enter numbers 1<=x<len(tastes)')
-if continue_bool:
-    nums = re.findall('[1-9]+',palatability_str)
-    pal_ranks = [int(x) for x in nums]
-else:
-    exit()
-
-laser_select_str, continue_bool = entry_checker(\
-        msg = 'Laser dig_in , <BLANK> for none::: ',
-        check_func = count_check,
-        fail_response = 'Please enter a single, valid integer')
-if continue_bool:
-    if len(laser_select_str) == 0:
-        laser_digin = []
-    else:
-        laser_digin = int(laser_select_str)
-else:
-    exit()
-
-def laser_check(x):
-    nums = re.findall('[0-9]+',x)
-    return sum([x.isdigit() for x in nums]) == 2 
-if laser_digin:
-    laser_select_str, continue_bool = entry_checker(\
-            msg = 'Laser onset_time, duration (ms, IN ORDER, anything separated) ::: ',
-            check_func = laser_check,
-            fail_response = 'Please enter two, valid integers')
+    region_str, continue_bool = entry_checker(\
+            msg = ' Which regions were recorded from (anything separated)  :: ',
+            check_func = word_check,
+            fail_response = 'Please enter letters only')
     if continue_bool:
-        nums = re.findall('[0-9]+',laser_select_str)
-        onset_time, duration = [int(x) for x in nums]
+        regions = [x.lower() for x in re.findall('[A-Za-z]+',region_str)]
     else:
         exit()
-else:
-    onset_time, duration = [None, None]
 
-notes = input('Please enter any notes about the experiment. \n ::: ')
+    # Find all ports used
+    file_list = os.listdir(dir_path)
+    ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
+    # Sort the ports in alphabetical order
+    ports.sort()
 
-fin_dict = {**this_dict,
-        'regions' : regions,
-        'ports' : ports,
-        'electrode_layout' : fin_perm,
-        'taste_params' : {\
-                'dig_ins' : dict(zip(taste_digins,tastes)),
-                'pal_rankings' : pal_ranks},
-        'laser_params' : {\
-                'dig_in' : laser_digin,
-                'onset' : onset_time,
-                'duration': duration},
-        'notes' : notes}
+    # Depending on number of regions and ports, list all permutations
+    # of electrode and ask user to select from them
+
+    type_16_16_vals = [list(map(int,np.arange(8)))+list(map(int,np.arange(24,32))),
+                    list(map(int, np.arange(8,24)))]
+    type_16_16_keys = ['0-7,24-31','8-23']
+    type_16_16 = dict(zip(type_16_16_keys,type_16_16_vals))
+    type_32 = {'0-31' : list(map(int,np.arange(32)))}
+    port_vals = [np.arange(32)+(32*num) for num in range(len(ports))]
+    ports_dict = dict(zip(ports,port_vals))
+
+    if len(ports) == 1:
+        if len(regions) > 1:
+            region_permutations = list(it.permutations(regions))
+            split_permutations = [list(zip(perm,type_16_16.keys())) \
+                    for perm in region_permutations]
+            permutations = split_permutations 
+        else:
+            permutations = list(zip(regions,type_32.keys())) 
+
+    else: # Assuming there would be no splitting if you have multiple ports
+        if len(regions) == 1:
+            permutations = [tuple((zip(regions,[ports])))]
+        elif len(regions) ==2:
+            region_permutations = list(it.permutations(regions))
+            permutations = []
+            for this_region_perm in region_permutations:
+                for count in np.arange(1,len(ports)):
+                    permutations.append(\
+                            [(this_region_perm[0],ports[:count]),
+                                (this_region_perm[1],ports[count:])])
+
+    # Ask user to select appropriate permutation
+    perm_msg = "\n".join([str(x) for x in (list(zip(range(len(permutations)),permutations)))])
+    def select_check(x):
+        global permutations
+        return x.isdigit() and len(re.findall('[0-9]+',x))==1 and 0<=int(x)<=len(permutations)
+
+    perm_str, continue_bool = entry_checker(\
+            msg = f'{perm_msg} \n Please select the correct layout ::: ',
+            check_func = select_check,
+            fail_response = 'Please enter a single, valid integer')
+    if continue_bool:
+        select_ind = int(perm_str)
+        selected_perm = permutations[select_ind]
+        fin_perm = []
+        if len(ports) == 1:
+            if len(regions) == 1:
+                for this_region in selected_perm:
+                    fin_perm.append([this_region[0], type_32[this_region[1]]])
+            else:
+                for this_region in selected_perm:
+                    fin_perm.append([this_region[0], type_16_16[this_region[1]]])
+        else:
+            fin_perm = []
+            for this_region in selected_perm:
+                fin_perm.append([this_region[0],
+                            [ports_dict[x].tolist() for x in this_region[1]]])
+    else:
+        exit()
+
+
+    ##################################################
+    ## Dig-Ins
+    ##################################################
+    def count_check(x):
+        nums = re.findall('[0-9]+',x)
+        return sum([x.isdigit() for x in nums]) == len(nums)
+    taste_dig_in_str, continue_bool = entry_checker(\
+            msg = ' Taste dig_ins used (IN ORDER, anything separated)  :: ',
+            check_func = count_check,
+            fail_response = 'Please enter integers only')
+    if continue_bool:
+        nums = re.findall('[0-9]+',taste_dig_in_str)
+        taste_digins = [int(x) for x in nums]
+    else:
+        exit()
+
+    def taste_check(x):
+        global taste_digins
+        return len(x.split(',')) == len(taste_digins)
+    taste_conc_str, continue_bool = entry_checker(\
+            msg = ' Tastes (Concs) used (IN ORDER, COMMA separated)  :: ',
+            check_func = taste_check,
+            fail_response = 'Please enter as many tastes as digins')
+    if continue_bool:
+        tastes = [x.strip().lower() for x in taste_conc_str.split(',')]
+    else:
+        exit()
+
+    # Ask user for palatability rankings
+    def pal_check(x):
+        global taste_digins
+        nums = re.findall('[1-9]+',x)
+        return  sum([x.isdigit() for x in nums]) == len(nums) and \
+                sum([1<=int(x)<=len(taste_digins) for x in nums]) == len(taste_digins)
+
+    taste_fin = str(list(zip(taste_digins, tastes)))
+    palatability_str, continue_bool = entry_checker(\
+            msg = f' {taste_fin} \n Enter palatability rankings used (anything separated)  :: ',
+            check_func = pal_check,
+            fail_response = 'Please enter numbers 1<=x<len(tastes)')
+    if continue_bool:
+        nums = re.findall('[1-9]+',palatability_str)
+        pal_ranks = [int(x) for x in nums]
+    else:
+        exit()
+
+    laser_select_str, continue_bool = entry_checker(\
+            msg = 'Laser dig_in , <BLANK> for none::: ',
+            check_func = count_check,
+            fail_response = 'Please enter a single, valid integer')
+    if continue_bool:
+        if len(laser_select_str) == 0:
+            laser_digin = []
+        else:
+            laser_digin = int(laser_select_str)
+    else:
+        exit()
+
+    def laser_check(x):
+        nums = re.findall('[0-9]+',x)
+        return sum([x.isdigit() for x in nums]) == 2 
+    if laser_digin:
+        laser_select_str, continue_bool = entry_checker(\
+                msg = 'Laser onset_time, duration (ms, IN ORDER, anything separated) ::: ',
+                check_func = laser_check,
+                fail_response = 'Please enter two, valid integers')
+        if continue_bool:
+            nums = re.findall('[0-9]+',laser_select_str)
+            onset_time, duration = [int(x) for x in nums]
+        else:
+            exit()
+    else:
+        onset_time, duration = [None, None]
+
+    notes = input('Please enter any notes about the experiment. \n ::: ')
+
+    ########################################
+    ## Finalize dictionary
+    ########################################
+
+    fin_dict = {**this_dict,
+            'regions' : regions,
+            'ports' : ports,
+            'electrode_layout' : fin_perm,
+            'taste_params' : {\
+                    'dig_ins' : dict(zip(taste_digins,tastes)),
+                    'pal_rankings' : pal_ranks},
+            'laser_params' : {\
+                    'dig_in' : laser_digin,
+                    'onset' : onset_time,
+                    'duration': duration},
+            'notes' : notes}
 
 json_file_name = os.path.join(dir_path,'.'.join([dir_name,'json']))
 with open(json_file_name,'w') as file:
