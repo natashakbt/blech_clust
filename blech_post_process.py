@@ -75,6 +75,7 @@ class unit_descriptor(tables.IsDescription):
         regular_spiking = tables.Int32Col()
         fast_spiking = tables.Int32Col()
         waveform_count = tables.Int32Col()
+        #mean_amplitude = tables.Float32Col()
 
 # Make a table under /sorted_units describing the sorted units. 
 # If unit_descriptor already exists, just open it up in the variable table
@@ -140,44 +141,49 @@ while True:
 
 
         # Load data from the chosen electrode and solution
-        #loading_paths = [\
-        #    f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy',
-        #    f'./spike_times/electrode{electrode_num:02}/spike_times.npy',
-        #    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy',
-        #    f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
-        #    f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy',
-        #    f'./clustering_results/electrode{electrode_num:02}/'\
-        #            'clusters{num_clusters}/predictions.npy',
-        #    f'./spike_waveforms/electrode{electrode_num:02}/spike_autocorrelation.npy']
-
         loading_paths = [\
-            f'./spike_waveforms/electrode{electrode_num}/spike_waveforms.npy',
-            f'./spike_times/electrode{electrode_num}/spike_times.npy',
-            f'./spike_waveforms/electrode{electrode_num}/pca_waveforms.npy',
-            f'./spike_waveforms/electrode{electrode_num}/energy.npy',
-            f'./spike_waveforms/electrode{electrode_num}/spike_amplitudes.npy',
-            f'./clustering_results/electrode{electrode_num}/'\
+            f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy',
+            f'./spike_times/electrode{electrode_num:02}/spike_times.npy',
+            f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy',
+            f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
+            f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy',
+            f'./clustering_results/electrode{electrode_num:02}/'\
                     f'clusters{num_clusters}/predictions.npy',
-            f'./spike_waveforms/electrode{electrode_num}/pca_waveform_autocorrelation.npy']
+            f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy']
 
-        spike_waveforms = np.load(loading_paths[0]) 
-        spike_times = np.load(loading_paths[1])
-        pca_slices = np.load(loading_paths[2])
-        energy = np.load(loading_paths[3])
-        amplitudes = np.load(loading_paths[4])
-        predictions  = np.load(loading_paths[5])
-        autocorrs  = np.load(loading_paths[6])
+        #loading_paths = [\
+        #    f'./spike_waveforms/electrode{electrode_num}/spike_waveforms.npy',
+        #    f'./spike_times/electrode{electrode_num}/spike_times.npy',
+        #    f'./spike_waveforms/electrode{electrode_num}/pca_waveforms.npy',
+        #    f'./spike_waveforms/electrode{electrode_num}/energy.npy',
+        #    f'./spike_waveforms/electrode{electrode_num}/spike_amplitudes.npy',
+        #    f'./clustering_results/electrode{electrode_num}/'\
+        #            f'clusters{num_clusters}/predictions.npy',
+        #    f'./spike_waveforms/electrode{electrode_num}/pca_waveform_autocorrelation.npy']
+
+        var_names = ['spike_waveforms','spike_times','pca_slices','energy',\
+                'amplitudes','predictions','autocorrs']
+
+        for var, path in zip(var_names, loading_paths):
+            globals()[var] = np.load(path)
+        #spike_waveforms = np.load(loading_paths[0]) 
+        #spike_times = np.load(loading_paths[1])
+        #pca_slices = np.load(loading_paths[2])
+        #energy = np.load(loading_paths[3])
+        #amplitudes = np.load(loading_paths[4])
+        #predictions  = np.load(loading_paths[5])
+        #autocorrs  = np.load(loading_paths[6])
 
         # Re-show images of neurons so dumb people like Abu can make sure they
         # picked the right ones
         fig, ax = plt.subplots(len(clusters), 2)
         for cluster_num, cluster in enumerate(clusters):
             isi_plot = mpimg.imread(
-                                    './Plots/{}/{}_clusters_waveforms_ISIs/'\
+                    './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
                                     'Cluster{}_ISIs.png'\
                                     .format(electrode_num, num_clusters, cluster)) 
             waveform_plot =  mpimg.imread(
-                                    './Plots/{}/{}_clusters_waveforms_ISIs/'\
+                    './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
                                     'Cluster{}_waveforms.png'\
                                     .format(electrode_num, num_clusters, cluster)) 
             if len(clusters) < 2:
@@ -326,9 +332,9 @@ while True:
                 # If 111, select all
                 if 111 in chosen_split:
                     chosen_split = range(n_clusters)
-                # If any are negative, go into removal mode
+                    # If any are negative, go into removal mode
                 elif len(negative_vals) > 0:
-                    remove_these = [int(x) for x in negative_vals]
+                    remove_these = [abs(int(x)) for x in negative_vals]
                     chosen_split = [x for x in range(n_clusters) \
                             if x not in remove_these]
                 print(f'Chosen splits {chosen_split}')
@@ -619,5 +625,12 @@ while True:
                     unit_description = table.row
 
         print('==== Iteration Ended ===\n')
+
+print('== Post-processing exiting ==')
+print(f'== {len(hf5.root.unit_descriptor)} total units')
+if len(hf5.root.unit_descriptor) == hf5.root.sorted_units._g_getnchildren():
+    print('== unit_descriptor and sorted units counts match ==')
+else:
+    print('== unit_descriptor and sorted units counts **DO NOT** match ==')
 # Close the hdf5 file
 hf5.close()
