@@ -363,46 +363,52 @@ for i in range(max_clusters-1):
         for cluster in range(i+2):
                 cluster_points = np.where(predictions[:] == cluster)[0]
 
-                fig, ax = \
-                        blech_waveforms_datashader.waveforms_datashader(\
-                            slices_dejittered[cluster_points, :], 
-                            x, 
-                            dir_name = "datashader_temp_el" + str(electrode_num))
-                ax.set_xlabel('Sample ({:d} samples per ms)'.\
-                        format(int(sampling_rate/1000)))
-                ax.set_ylabel('Voltage (microvolts)')
-                ax.set_title('Cluster%i' % cluster)
-                fig.savefig(f'./Plots/{electrode_num:02}/'\
-                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
-                plt.close("all")
-                
-                fig = plt.figure()
-                cluster_times = times_dejittered[cluster_points]
-                ISIs = np.ediff1d(np.sort(cluster_times))
-                ISIs = ISIs/30.0
-                max_ISI_val = 20
-                bin_count = 100
-                neg_pos_ISI = np.concatenate((-1*ISIs,ISIs),axis=-1)
-                hist_obj = plt.hist(\
-                            neg_pos_ISI, 
-                            bins = np.linspace(-max_ISI_val,max_ISI_val,bin_count)) 
-                plt.xlim([-max_ISI_val, max_ISI_val])
-                # Scale y-lims by all but the last value
-                upper_lim = np.max(hist_obj[0][:-1])
-                if upper_lim:
-                    plt.ylim([0,upper_lim])
-                plt.title("2ms ISI violations = %.1f percent (%i/%i)" \
-                        %((float(len(np.where(ISIs < 2.0)[0]))/\
-                        float(len(cluster_times)))*100.0, \
-                        len(np.where(ISIs < 2.0)[0]), \
-                        len(cluster_times)) + '\n' + \
-                        "1ms ISI violations = %.1f percent (%i/%i)" \
-                        %((float(len(np.where(ISIs < 1.0)[0]))/\
-                        float(len(cluster_times)))*100.0, \
-                        len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
-                fig.savefig(f'./Plots/{electrode_num:02}/'\
-                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
-                plt.close("all")                
+                if len(cluster_points) > 0:
+                    fig, ax = \
+                            blech_waveforms_datashader.waveforms_datashader(\
+                                slices_dejittered[cluster_points, :], 
+                                x, 
+                                dir_name = "datashader_temp_el" + str(electrode_num))
+                    ax.set_xlabel('Sample ({:d} samples per ms)'.\
+                            format(int(sampling_rate/1000)))
+                    ax.set_ylabel('Voltage (microvolts)')
+                    ax.set_title('Cluster%i' % cluster)
+                    fig.savefig(f'./Plots/{electrode_num:02}/'\
+                            f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
+                    plt.close("all")
+                    
+                    fig = plt.figure()
+                    cluster_times = times_dejittered[cluster_points]
+                    ISIs = np.ediff1d(np.sort(cluster_times))
+                    ISIs = ISIs/30.0
+                    max_ISI_val = 20
+                    bin_count = 100
+                    neg_pos_ISI = np.concatenate((-1*ISIs,ISIs),axis=-1)
+                    hist_obj = plt.hist(\
+                                neg_pos_ISI, 
+                                bins = np.linspace(-max_ISI_val,max_ISI_val,bin_count)) 
+                    plt.xlim([-max_ISI_val, max_ISI_val])
+                    # Scale y-lims by all but the last value
+                    upper_lim = np.max(hist_obj[0][:-1])
+                    if upper_lim:
+                        plt.ylim([0,upper_lim])
+                    plt.title("2ms ISI violations = %.1f percent (%i/%i)" \
+                            %((float(len(np.where(ISIs < 2.0)[0]))/\
+                            float(len(cluster_times)))*100.0, \
+                            len(np.where(ISIs < 2.0)[0]), \
+                            len(cluster_times)) + '\n' + \
+                            "1ms ISI violations = %.1f percent (%i/%i)" \
+                            %((float(len(np.where(ISIs < 1.0)[0]))/\
+                            float(len(cluster_times)))*100.0, \
+                            len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
+                    fig.savefig(f'./Plots/{electrode_num:02}/'\
+                            f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
+                    plt.close("all")                
+                else:
+                    file_path = f'./Plots/{electrode_num:02}/'\
+                            f'{i+2}_clusters_waveforms_ISIs/no_spikes_Cluster{cluster}'
+                    with open(file_path,'w') as file_connect:
+                        file_connect.write('')
 
 # Make file for dumping info about memory usage
 f = open(f'./memory_monitor_clustering/{electrode_num:02}.txt', 'w')

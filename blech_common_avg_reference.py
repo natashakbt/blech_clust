@@ -66,9 +66,8 @@ else:
     print('Defaulting : 1 Boards, SPLIT half by side')
     group_ports = group_ports * num_groups
     average_electrodes = [list(range(8)) + list(range(24,32)), list(range(8,24))]
-print('Ports : {}\nElectrode Groups:'\
-        '{}\n{}\n'.format(group_ports,average_electrodes[0],\
-                                        average_electrodes[1]))
+for num,port in enumerate(group_ports):
+    print(f'PORT {port} : {average_electrodes[num]}')
 
 # Ask the user to choose the port number and electrodes for each of the groups
 #group_ports = []
