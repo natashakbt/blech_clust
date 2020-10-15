@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import multiprocessing
 import json
+import glob
 
 # Necessary blech_clust modules
 import read_file
@@ -25,22 +26,26 @@ print(f'Processing : {dir_name}')
 #if cont == 'n':
 #    sys.exit('Incorrect dir')
 
-#dir_name = easygui.diropenbox()
-
 # Get the type of data files (.rhd or .dat)
-#file_type = easygui.multchoicebox(\
-#        msg = 'What type of files am I dealing with?', 
-#        choices = ('one file per channel', '.dat', '.rhd'))
 file_type = ['one file per channel']
 
 # Change to that directory
 os.chdir(dir_name)
 
+# Check that experimental_info json file is present
+# If not present, refuse to cooperate
+dir_basename = os.path.basename(dir_name[:-1])
+json_path = glob.glob(os.path.join(dir_name, dir_basename + '.json'))
+if len(json_path) == 0:
+    print('Must have experimental info json before proceeding \n'\
+            'Run blech_exp_info.py first \n'\
+            '== Exiting ==')
+    exit()
+
 # Get the names of all files in this directory
 file_list = os.listdir('./')
 
 # Grab directory name to create the name of the hdf5 file
-#hdf5_name = str.split(dir_name, '/')
 hdf5_name = str(os.path.dirname(dir_name)).split('/')
 
 # Create hdf5 file, and make groups for raw data, raw emgs, 
@@ -78,22 +83,6 @@ sampling_rate = int(sampling_rate[2])
 
 check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
             f'\n digital inputs on intan board: {dig_in}'
-print(check_str)
-#cont = 'a'
-#while cont not in ['y','n']:
-#    cont = input('ports used: ' + str(ports) + '\n' + \
-#            'sampling rate: ' + str(sampling_rate) + ' hz' + \
-#            '\n' + 'digital inputs on intan board: ' + str(dig_in) + \
-#            '\n All good? (y/n) \n ::')
-#if cont == 'n':
-#    sys.exit('Incorrect dir')
-
-# Go ahead only if the user approves by saying yes
-#if check:
-#	pass
-#else:
-#	print("Well, if you don't agree, blech_clust can't do much!")
-#	sys.exit()
 
 # Get the emg electrode ports and channel numbers from the user
 # If only one amplifier port was used in the experiment, that's the emg_port. 
@@ -146,9 +135,28 @@ bandpass_params = {'bandpass_lower_cutoff' : 300,
                     'bandpass_upper_cutoff' : 3000}
 spike_snapshot = {'spike_snapshot_before' : 1,
                     'spike_snapshot_after' : 1.5}
+psth_params = {'psth_params' : 
+                    {'durations' : [500,2000],
+                        'window_size' : 250,
+                        'step_size' : 25}}
+pal_iden_calc_params = {'pal_iden_calc_params' : {
+                    'window_size' : 250,
+                    'step_size' : 25}}
+discrim_analysis_params = {'discrim_analysis_params' : {
+                    'bin_num' : 4,
+                    'bin_width' : 500,
+                    'p-value' : 0.05}}
+
+# Info on taste digins and laser should be in exp_info file
 all_params_dict = {**clustering_params, **data_params,
                 **bandpass_params, **spike_snapshot,
-                'sampling_rate' : sampling_rate}
+                **psth_params,
+                'sampling_rate' : sampling_rate,
+                'similarity_cutoff' : 50,
+                'spike_array_durations' : [2000,5000],
+                **pal_iden_calc_params,
+                **discrim_analysis_params,
+                'palatability_window' : [700,1200]}
 
 with open(hdf5_name[-1]+'.params', 'w') as params_file:
     json.dump(all_params_dict, params_file, indent = 4)
@@ -191,3 +199,4 @@ print(dir_name, file=f)
 f.close()
 
 print('blech_clust.py complete \n')
+print('*** Please check params file to make sure all is good ***\n')

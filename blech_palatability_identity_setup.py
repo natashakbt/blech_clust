@@ -4,6 +4,8 @@ import tables
 import easygui
 import sys
 import os
+import json
+import glob
 import itertools
 from scipy.stats import rankdata
 from scipy.stats import spearmanr
@@ -11,7 +13,6 @@ from scipy.stats import pearsonr
 from scipy.stats import f_oneway
 from scipy.spatial.distance import cdist
 from scipy.stats import ttest_ind
-from scipy.misc import comb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.model_selection import LeavePOut
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -21,6 +22,8 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
 from sklearn.isotonic import IsotonicRegression
 from sklearn import preprocessing
+
+print('Make sure you are in the **CORERCT ENVIRONMENT**')
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
@@ -42,48 +45,75 @@ for files in file_list:
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
+json_name = glob.glob('./**.params')[0]
+with open(json_name,'r') as params_file_connect:
+    params_dict = json.load(params_file_connect)
+
+dir_basename = os.path.basename(dir_name[:-1])
+json_path = glob.glob(os.path.join(dir_name, dir_basename + '.json'))[0]
+with open(json_path, 'r') as params_file:
+    info_dict = json.load(params_file)
+
 # Get the digital inputs/tastes available, 
 # then ask the user to rank them in order of palatability
 trains_dig_in = hf5.list_nodes('/spike_trains')
-palatability_rank = easygui.multenterbox(\
-        msg = 'Rank the digital inputs in order of palatability (1 for the lowest, only integers)', \
-        fields = [train._v_name for train in trains_dig_in])
-for i in range(len(palatability_rank)):
-	palatability_rank[i] = int(palatability_rank[i])
+palatability_rank = info_dict['taste_params']['pal_rankings']
+print(f'Palatability ranks : {palatability_rank}')
+
+#palatability_rank = easygui.multenterbox(\
+#        msg = 'Rank the digital inputs in order of palatability (1 for the lowest, only integers)', \
+#        fields = [train._v_name for train in trains_dig_in])
+#for i in range(len(palatability_rank)):
+#	palatability_rank[i] = int(palatability_rank[i])
 
 # Now ask the user to put in the identities of the digital inputs
-identities = easygui.multenterbox(\
-        msg = 'Put in the identities of the digital inputs (only integers)', 
-        fields = [train._v_name for train in trains_dig_in])
-for i in range(len(identities)):
-	identities[i] = int(identities[i])
+#identities = easygui.multenterbox(\
+#        msg = 'Put in the identities of the digital inputs (only integers)', 
+#        fields = [train._v_name for train in trains_dig_in])
+#for i in range(len(identities)):
+#	identities[i] = int(identities[i])
+
+taste_names = info_dict['taste_params']['tastes']
+tastes_set = set(taste_names)
+identities = [int(dict(zip(tastes_set,range(len(tastes_set))))[x]) for x in taste_names]
+print(f'Taste identities : {identities}')
 
 # Get the palatability/identity calculation paramaters from the user
-params = easygui.multenterbox(msg = 'Enter the parameters for palatability/identity calculation', fields = ['Window size (ms)', 'Step size (ms)'])
-for i in range(len(params)):
-	params[i] = int(params[i])
+#params = easygui.multenterbox(msg = 'Enter the parameters for palatability/identity calculation', fields = ['Window size (ms)', 'Step size (ms)'])
+#for i in range(len(params)):
+#	params[i] = int(params[i])
+params = list(params_dict['pal_iden_calc_params'].values())
+print(f'Params :: Window size : {params[0]}, Step size : {params[1]}')
 
 # Get the pre-stimulus time from the user
-pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike trains', fields = ['Pre stim (ms)'])
-pre_stim = int(pre_stim[0])
+#pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike trains', fields = ['Pre stim (ms)'])
+#pre_stim = int(pre_stim[0])
+pre_stim = params_dict['spike_array_durations'][0]
+print(f'Pre-stim duration : {pre_stim}')
 
 # Ask the user about the type of units they want to do the calculations on (single or all units)
-unit_type = easygui.multchoicebox(msg = 'Which type of units do you want to use?', choices = ('All units', 'Single units', 'Multi units', 'Custom choice'))
-all_units = np.arange(trains_dig_in[0].spike_array.shape[1])
-single_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 1])
-multi_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 0])
-chosen_units = []
-if unit_type[0] == 'All units':
-	chosen_units = all_units
-elif unit_type[0] == 'Single units':
-	chosen_units = single_units
-elif unit_type[0] == 'Multi units':
-	chosen_units = multi_units
-else:
-	chosen_units = easygui.multchoicebox(msg = 'Which units do you want to choose?', choices = ([i for i in all_units]))
-	for i in range(len(chosen_units)):
-		chosen_units[i] = int(chosen_units[i])
-	chosen_units = np.array(chosen_units)
+#unit_type = easygui.multchoicebox(msg = 'Which type of units do you want to use?', choices = ('All units', 'Single units', 'Multi units', 'Custom choice'))
+
+# Just pick all units
+chosen_units = np.arange(trains_dig_in[0].spike_array.shape[1])
+print('Picking ALL UNITS')
+
+#all_units = np.arange(trains_dig_in[0].spike_array.shape[1])
+#single_units = np.array([i for i in range(len(all_units)) \
+#        if hf5.root.unit_descriptor[i]["single_unit"] == 1])
+#multi_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 0])
+#chosen_units = []
+#if unit_type[0] == 'All units':
+#	chosen_units = all_units
+#elif unit_type[0] == 'Single units':
+#	chosen_units = single_units
+#elif unit_type[0] == 'Multi units':
+#	chosen_units = multi_units
+#else:
+#	chosen_units = easygui.multchoicebox(msg = 'Which units do you want to choose?', choices = ([i for i in all_units]))
+#	for i in range(len(chosen_units)):
+#		chosen_units[i] = int(chosen_units[i])
+#	chosen_units = np.array(chosen_units)
 
 
 # Now make arrays to pull the data out
@@ -136,7 +166,8 @@ hf5.create_array('/ancillary_analysis', 'params', params)
 hf5.create_array('/ancillary_analysis', 'pre_stim', np.array(pre_stim))
 hf5.flush()
 
-# First pull out the unique laser(duration,lag) combinations - these are the same irrespective of the unit and time
+# First pull out the unique laser(duration,lag) combinations - 
+# these are the same irrespective of the unit and time
 unique_lasers = np.vstack({tuple(row) for row in laser[0, 0, :, :]})
 unique_lasers = unique_lasers[unique_lasers[:, 0].argsort(), :]
 unique_lasers = unique_lasers[unique_lasers[:, 1].argsort(), :]
@@ -186,13 +217,19 @@ hf5.flush()
 
 #---------Taste discriminability/responsiveness calculation (ANOVA in user-defined bins)------------------------------------------
 # Ask the user for the number/size of bins to use
-bin_params = easygui.multenterbox(msg = 'Enter the number of bins and their size for taste discriminability/responsiveness analysis', fields = ['Number of bins (integers only)', 'Width of bins (ms)'])
-for i in range(len(bin_params)):
-	bin_params[i] = int(bin_params[i])
+#bin_params = easygui.multenterbox(msg = 'Enter the number of bins and their size for taste discriminability/responsiveness analysis', fields = ['Number of bins (integers only)', 'Width of bins (ms)'])
+#for i in range(len(bin_params)):
+#	bin_params[i] = int(bin_params[i])
+bin_params = [params_dict['discrim_analysis_params'][x] for x in ['bin_num','bin_width']]
 
 # Ask the user for the significance level to use for the taste discrimination ANOVA
-discrim_p = easygui.multenterbox(msg = 'Enter the significance level to use for taste discrimination/responsiveness ANOVA', fields = ['p value'])
-discrim_p = float(discrim_p[0])
+#discrim_p = easygui.multenterbox(msg = 'Enter the significance level to use for taste discrimination/responsiveness ANOVA', fields = ['p value'])
+#discrim_p = float(discrim_p[0])
+discrim_p = params_dict['discrim_analysis_params']['p-value']
+print(f"""Discrim Analysis Params :: 
+        Bin num : {bin_params[0]},
+        Bin width : {bin_params[1]},
+        p-value : {discrim_p}""") 
 
 # Make an array to save the 1 or 0 if the taste responsiveness ANOVA is significant or not (for comparison to CTA data from Grossman et al., 2008)
 # Last axis of the array stores the time bin markers of the responsiveness ANOVA
@@ -280,43 +317,44 @@ hf5.flush()
 # Do the analysis only if there are 4 tastes in the dataset
 
 if num_tastes == 4:
-	# Ask the user for the limits of the bin to use for palatability deduction
-	p_deduce_params = easygui.multenterbox(msg = 'Enter the start and end times to use for palatability deduction', fields = ['Start time (ms)', 'End time (ms)'])
-	for i in range(len(p_deduce_params)):
-		p_deduce_params[i] = int(p_deduce_params[i])
+        # Ask the user for the limits of the bin to use for palatability deduction
+        #p_deduce_params = easygui.multenterbox(msg = 'Enter the start and end times to use for palatability deduction', fields = ['Start time (ms)', 'End time (ms)'])
+        #for i in range(len(p_deduce_params)):
+        #	p_deduce_params[i] = int(p_deduce_params[i])
+        p_deduce_params = params_dict['palatability_window']
 
-	# Open a file to write the results of palatability deduction
-	f = open('palatability_deduction.txt', 'w')
+        # Open a file to write the results of palatability deduction
+        f = open('palatability_deduction.txt', 'w')
 
-	# The basic possible palatability patterns - permutations of these give all possible palatability rank orders
-	base_p_patterns = [[1, 1, 1, 1], [1, 1, 1, 2], [1, 1, 2, 2], [1, 1, 2, 3], [1, 2, 2, 3], [1, 2, 3, 4]]
+        # The basic possible palatability patterns - permutations of these give all possible palatability rank orders
+        base_p_patterns = [[1, 1, 1, 1], [1, 1, 1, 2], [1, 1, 2, 2], [1, 1, 2, 3], [1, 2, 2, 3], [1, 2, 3, 4]]
 
-	# Find the times/places from the neural_response_laser array that we need in the analysis
-	x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
-	places = np.where((x >= p_deduce_params[0])*(x <= p_deduce_params[1]))[0]
+        # Find the times/places from the neural_response_laser array that we need in the analysis
+        x = np.arange(0, time - params[0] + params[1], params[1]) - pre_stim
+        places = np.where((x >= p_deduce_params[0])*(x <= p_deduce_params[1]))[0]
 
-	# Run through the laser conditions
-	for i in range(unique_lasers.shape[0]):
-		print("Laser condition: ", unique_lasers[i, :], file=f)
-		# Run through the basic palatability patterns	
-		for pattern in base_p_patterns:
-			order = []
-			corrs = []
-			# Run through all permutations of this pattern
-			for per in itertools.permutations(pattern):
-				order.append(per)
-				this_corr = []
-				# Run through the units
-				for unit in range(num_units):
-					# Get correlation for 1.) ith laser condition, 2.) in times indicated by places, 3.) for this unit, and 4.) this permutation of the basic pattern
-					this_corr.append(pearsonr(np.mean(neural_response_laser[i, places, :, unit, :], axis = 0).T.reshape(-1), np.tile(per, neural_response_laser.shape[-1]))[0]**2)
-				corrs.append(np.mean(this_corr))
-			# Now get the order with the maximum average correlation across units
-			print("Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs), file=f)
-		print("", file=f)
+        # Run through the laser conditions
+        for i in range(unique_lasers.shape[0]):
+                print("Laser condition: ", unique_lasers[i, :], file=f)
+                # Run through the basic palatability patterns	
+                for pattern in base_p_patterns:
+                        order = []
+                        corrs = []
+                        # Run through all permutations of this pattern
+                        for per in itertools.permutations(pattern):
+                                order.append(per)
+                                this_corr = []
+                                # Run through the units
+                                for unit in range(num_units):
+                                        # Get correlation for 1.) ith laser condition, 2.) in times indicated by places, 3.) for this unit, and 4.) this permutation of the basic pattern
+                                        this_corr.append(pearsonr(np.mean(neural_response_laser[i, places, :, unit, :], axis = 0).T.reshape(-1), np.tile(per, neural_response_laser.shape[-1]))[0]**2)
+                                corrs.append(np.mean(this_corr))
+                        # Now get the order with the maximum average correlation across units
+                        print("Base pattern: ", pattern, " Max pattern: ", order[np.argmax(corrs)], " Max avg corr: ", np.max(corrs), file=f)
+                print("", file=f)
 
-	f.close()
-		
+        f.close()
+            
 #---------End palatability rank order deduction--------------------------------------------------------------------
 
 # --------Palatability calculation - separate r and p values for Spearman and Pearson correlations----------------

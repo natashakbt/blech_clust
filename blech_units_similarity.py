@@ -5,6 +5,8 @@ import easygui
 import sys
 import os
 from numba import jit
+import json
+import glob
 
 # Numba compiled function to compute the number of spikes in this_unit_times 
 # that are within 1 ms of a spike in other_unit_times, and vice versa
@@ -19,20 +21,6 @@ def unit_similarity(this_unit_times, other_unit_times):
 				other_unit_counter += 1
 	return this_unit_counter, other_unit_counter
 
-def entry_checker(msg, check_func, fail_response):
-    check_bool = False
-    continue_bool = True
-    exit_str = '"x" to exit :: '
-    while not check_bool:
-        msg_input = input(msg.join([' ',exit_str]))
-        if msg_input == 'x':
-            continue_bool = False
-            break
-        check_bool = check_func(msg_input)
-        if not check_bool:
-            print(fail_response)
-    return msg_input, continue_bool
-
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
@@ -44,23 +32,10 @@ else:
     dir_name = easygui.diropenbox(msg = 'Please select data directory')
 os.chdir(dir_name)
 
-# Ask the user for a cutoff percentage for unit distances - 
-# if two units have distances greater than the cutoff, then will be written to file
-cutoff_str, continue_bool = entry_checker(\
-        msg = 'Cutoff Percentage (0-100)  :: ',
-        check_func = lambda x: (str.isdigit(x) and (0<=int(x)<=100)),
-        fail_response = 'Please enter an integer')
-if continue_bool:
-    similarity_cutoff = int(cutoff_str)
-else:
-    print("Exiting")
-    exit()
-
-#similarity_cutoff = easygui.multenterbox(\
-#                        msg = "Enter a cutoff percentage for unit similarities '\
-#                            '- violations will be written to file (0-100)", 
-#                        fields = ["Unit similarity cutoff percent"])
-#similarity_cutoff = float(similarity_cutoff[0])
+json_name = glob.glob('./**.params')[0]
+with open(json_name,'r') as params_file_connect:
+    params_dict = json.load(params_file_connect)
+similarity_cutoff = params_dict['similarity_cutoff']
 
 # Open a file to write these unit distance violations to - 
 # these units are likely the same and one of them will need to be removed from the HDF5 file
@@ -85,6 +60,7 @@ units = hf5.list_nodes('/sorted_units')
 # that have a spike from the compared unit within 1 ms
 print("==================")
 print("Similarity calculation starting")
+print(f"Similarity cutoff ::: {similarity_cutoff}")
 unit_distances = np.zeros((len(units), len(units)))
 for this_unit in range(len(units)):
 	this_unit_times = (units[this_unit].times[:])/30.0
@@ -111,22 +87,6 @@ print("Similarity calculation complete, results being saved to file")
 print("==================")
 
 
-'''
-Tried to do everything in the numba compiled loop through vectorized numpy code - failed because of memory errors involved in broadcasting arrays
-for this_unit in range(len(units)):
-	this_unit_times = units[this_unit].times[:]
-	for other_unit in range(len(units)): 
-		if other_unit < this_unit:
-			continue
-		other_unit_times = units[other_unit].times[:]
-		# The outer keyword can be attached to any numpy ufunc to apply that operation to every element in x AND in y. So here we calculate diff[i, j] = this_unit_times[i] - other_unit_times[j] for all i and j
-		diff = np.abs(np.subtract.outer(this_unit_times, other_unit_times))
-		# Divide the diffs by 30 to convert to milliseconds - then check how many spikes have a spike in the other unit within 1 millisecond	
-		diff_this_other = np.min(diff, axis = 1)/30.0
-		diff_other_this = np.min(diff, axis = 0)/30.0
-		unit_distances[this_unit, other_unit] = 100.0*len(np.where(diff_this_other <= 1.0)[0])/len(diff_this_other)
-		unit_distances[other_unit, this_unit] = 100.0*len(np.where(diff_other_this <= 1.0)[0])/len(diff_other_this)'''
-	
 # Make a node for storing unit distances under /sorted_units. First try to delete it, and pass if it exists
 try:
 	hf5.remove_node('/unit_distances')
@@ -136,5 +96,3 @@ hf5.create_array('/', 'unit_distances', unit_distances)
 
 hf5.close()
 unit_similarity_violations.close()
-
-

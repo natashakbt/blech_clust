@@ -1,4 +1,8 @@
 """
+For help with input arguments:
+    python blech_exp_info.py -h 
+
+
 Code to generate file containing relevant experimental info:
 
 X Animal name
@@ -174,16 +178,39 @@ else:
         taste_digins = [int(x) for x in nums]
     else:
         exit()
+    
+    # Trials per taste
+    dig_in_trials_str, continue_bool = entry_checker(\
+            msg = ' Trials per dig-in (IN ORDER, anything separated)  :: ',
+            check_func = count_check,
+            fail_response = 'Please enter integers only')
+    if continue_bool:
+        nums = re.findall('[0-9]+',dig_in_trials_str)
+        dig_in_trials = [int(x) for x in nums]
+    else:
+        exit()
 
     def taste_check(x):
         global taste_digins
-        return len(x.split(',')) == len(taste_digins)
-    taste_conc_str, continue_bool = entry_checker(\
-            msg = ' Tastes (Concs) used (IN ORDER, COMMA separated)  :: ',
+        return len(re.findall('[A-Za-z]+',x)) == len(taste_digins)
+    taste_str, continue_bool = entry_checker(\
+            msg = ' Tastes names used (IN ORDER, anything separated)  :: ',
             check_func = taste_check,
             fail_response = 'Please enter as many tastes as digins')
     if continue_bool:
-        tastes = [x.strip().lower() for x in taste_conc_str.split(',')]
+        tastes = re.findall('[A-Za-z]+', taste_str)
+    else:
+        exit()
+
+    def float_check(x):
+        global taste_digins
+        return len(x.split(',')) == len(taste_digins)
+    conc_str, continue_bool = entry_checker(\
+            msg = 'Corresponding concs used (in M, IN ORDER, COMMA separated)  :: ',
+            check_func = float_check,
+            fail_response = 'Please enter as many concentrations as digins')
+    if continue_bool:
+        concs = [float(x) for x in conc_str.split(",")]
     else:
         exit()
 
@@ -194,7 +221,7 @@ else:
         return  sum([x.isdigit() for x in nums]) == len(nums) and \
                 sum([1<=int(x)<=len(taste_digins) for x in nums]) == len(taste_digins)
 
-    taste_fin = str(list(zip(taste_digins, tastes)))
+    taste_fin = str(list(zip(taste_digins, list(zip(tastes,concs)))))
     palatability_str, continue_bool = entry_checker(\
             msg = f' {taste_fin} \n Enter palatability rankings used (anything separated)  :: ',
             check_func = pal_check,
@@ -205,6 +232,8 @@ else:
     else:
         exit()
 
+    ########################################
+    # Ask for laser info
     laser_select_str, continue_bool = entry_checker(\
             msg = 'Laser dig_in , <BLANK> for none::: ',
             check_func = count_check,
@@ -233,7 +262,7 @@ else:
     else:
         onset_time, duration = [None, None]
 
-    notes = input('Please enter any notes about the experiment. \n ::: ')
+    notes = input('::: Please enter any notes about the experiment. \n ::: ')
 
     ########################################
     ## Finalize dictionary
@@ -244,7 +273,10 @@ else:
             'ports' : ports,
             'electrode_layout' : fin_perm,
             'taste_params' : {\
-                    'dig_ins' : dict(zip(taste_digins,tastes)),
+                    'dig_ins' : taste_digins,
+                    'trial_count' : dig_in_trials,
+                    'tastes' : tastes,
+                    'concs' : concs,
                     'pal_rankings' : pal_ranks},
             'laser_params' : {\
                     'dig_in' : laser_digin,
