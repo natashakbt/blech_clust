@@ -79,7 +79,7 @@ num_electrodes = np.max(num_electrodes) + 1
 # Every region is a separate group, multiple ports under single region is a separate group,
 # emg is a separate group
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.json'))[0]
+json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 

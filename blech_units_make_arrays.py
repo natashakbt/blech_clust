@@ -87,11 +87,11 @@ for on_times in dig_on:
                 # Continue without appending anything if this port wasn't on at all
                 pass 
         start_points.append(np.array(start))
-        end_points.append(np.array(end))	
+        end_points.append(np.array(end))
 
 # Extract taste dig-ins from experimental info file
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.json'))[0]
+json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 

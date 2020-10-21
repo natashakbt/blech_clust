@@ -35,7 +35,7 @@ os.chdir(dir_name)
 # Check that experimental_info json file is present
 # If not present, refuse to cooperate
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.json'))
+json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))
 if len(json_path) == 0:
     print('Must have experimental info json before proceeding \n'\
             'Run blech_exp_info.py first \n'\
