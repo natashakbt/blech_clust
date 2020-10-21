@@ -47,7 +47,7 @@ def entry_checker(msg, check_func, fail_response):
 parser = argparse.ArgumentParser(description = 'Creates files with experiment info')
 parser.add_argument('dir_name',  help = 'Directory containing data files')
 parser.add_argument('--template', '-t', 
-        help = 'Template (.json) file to copy experimental details from')
+        help = 'Template (.info) file to copy experimental details from')
 args = parser.parse_args()
 
 if args.dir_name:
@@ -149,8 +149,7 @@ else:
         fin_perm = []
         if len(ports) == 1:
             if len(regions) == 1:
-                for this_region in selected_perm:
-                    fin_perm.append([this_region[0], type_32[this_region[1]]])
+                fin_perm.append([selected_perm[0], [type_32[selected_perm[1]]]])
             else:
                 for this_region in selected_perm:
                     fin_perm.append([this_region[0], type_16_16[this_region[1]]])
@@ -162,13 +161,59 @@ else:
     else:
         exit()
 
+    # Ask user for EMG electrodes and add them as a "region" to the fin_perm
+    def count_check(x):
+        nums = re.findall('[0-9]+',x)
+        return sum([x.isdigit() for x in nums]) == len(nums)
+    if len(ports) > 1:
+        port_vals = list(zip(np.arange(len(ports)), ports))
+        port_str = "\n".join([str(x) for x in port_vals])
+        print(port_str)
+        emg_port_str, continue_bool = entry_checker(\
+                msg = 'EMG Port, <BLANK> for none::: ',
+                check_func = count_check,
+                fail_response = 'Please enter a single, valid integer')
+        if continue_bool:
+            if len(emg_port_str) == 0:
+                emg_port = []
+            else:
+                emg_port = [int(emg_port_str)]
+        else:
+            exit()
+    else:
+        emg_port = [0]
+
+    if len(emg_port) > 0:
+        potential_electrodes = np.arange(32) + 32*emg_port
+        print(f"Port : {ports[emg_port[0]]}, \n Electrodes : {potential_electrodes}")
+        emg_elec_str, continue_bool = entry_checker(\
+                msg = 'EMG Electrodes, <BLANK> for none (ANYTHING separated) ::: ',
+                check_func = count_check,
+                fail_response = 'Please enter integers')
+        if continue_bool:
+            if len(emg_elec_str) == 0:
+                emg_electrodes = []
+            else:
+                emg_electrodes = [int(x) for x in re.findall('[0-9]+',emg_elec_str)]
+        else:
+            exit()
+
+    # Walk through fin_perm and delete emg_electrodes where you find them 
+    # and add them as a new region
+    if len(emg_electrodes) > 0:
+        for region in fin_perm:
+            for group in region[1]:
+                for elec in emg_electrodes:
+                    ind = np.where(np.array(group) == elec)[0]
+                    if len(ind) > 0:
+                        del group[ind[0]]
+
+        fin_perm.append(['emg',[emg_electrodes]])
+
 
     ##################################################
     ## Dig-Ins
     ##################################################
-    def count_check(x):
-        nums = re.findall('[0-9]+',x)
-        return sum([x.isdigit() for x in nums]) == len(nums)
     taste_dig_in_str, continue_bool = entry_checker(\
             msg = ' Taste dig_ins used (IN ORDER, anything separated)  :: ',
             check_func = count_check,
@@ -179,11 +224,15 @@ else:
     else:
         exit()
     
+    def float_check(x):
+        global taste_digins
+        return len(x.split(',')) == len(taste_digins)
+
     # Trials per taste
     dig_in_trials_str, continue_bool = entry_checker(\
             msg = ' Trials per dig-in (IN ORDER, anything separated)  :: ',
             check_func = count_check,
-            fail_response = 'Please enter integers only')
+            fail_response = 'Please enter integers only, and as many as dig-ins')
     if continue_bool:
         nums = re.findall('[0-9]+',dig_in_trials_str)
         dig_in_trials = [int(x) for x in nums]
@@ -202,9 +251,6 @@ else:
     else:
         exit()
 
-    def float_check(x):
-        global taste_digins
-        return len(x.split(',')) == len(taste_digins)
     conc_str, continue_bool = entry_checker(\
             msg = 'Corresponding concs used (in M, IN ORDER, COMMA separated)  :: ',
             check_func = float_check,
@@ -284,7 +330,7 @@ else:
                     'duration': duration},
             'notes' : notes}
 
-json_file_name = os.path.join(dir_path,'.'.join([dir_name,'json']))
+json_file_name = os.path.join(dir_path,'.'.join([dir_name,'info']))
 with open(json_file_name,'w') as file:
     json.dump(fin_dict, file, indent = 4)
 
