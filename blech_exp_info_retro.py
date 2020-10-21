@@ -23,7 +23,6 @@ import glob
 import json
 import numpy as np
 import os
-import easygui
 import sys
 import re
 import itertools as it
@@ -34,7 +33,7 @@ def entry_checker(msg, check_func, fail_response):
     continue_bool = True
     exit_str = '"x" to exit :: '
     while not check_bool:
-        msg_input = input(msg.join([' ',exit_str]))
+        msg_input = raw_input(msg.join([' ',exit_str]))
         if msg_input == 'x':
             continue_bool = False
             break
@@ -52,12 +51,9 @@ parser.add_argument('--template', '-t',
         help = 'Template (.info) file to copy experimental details from')
 args = parser.parse_args()
 
-if args.dir_name:
-    dir_path = args.dir_name
-    if dir_path[-1] != '/':
-        dir_path += '/'
-else:
-    dir_path = easygui.diropenbox(msg = 'Please select data directory')
+dir_path = args.dir_name
+if dir_path[-1] != '/':
+    dir_path += '/'
 
 dir_name = os.path.basename(dir_path[:-1])
 
@@ -80,7 +76,8 @@ if args.template:
                 'laser_params','notes']
 
         from_template = {key:template_dict[key] for key in var_names}
-        fin_dict = {**this_dict,**from_template}
+        dicts = [this_dict, from_template]
+        fin_dict = {k: v for d in dicts for k, v in d.items()}
 
 else:
 
@@ -312,13 +309,13 @@ else:
     else:
         onset_time, duration = [None, None]
 
-    notes = input('::: Please enter any notes about the experiment. \n ::: ')
+    notes = raw_input('::: Please enter any notes about the experiment. \n ::: ')
 
     ########################################
     ## Finalize dictionary
     ########################################
 
-    fin_dict = {**this_dict,
+    temp_dict = {
             'regions' : regions,
             'ports' : ports,
             'electrode_layout' : fin_perm,
@@ -333,6 +330,8 @@ else:
                     'onset' : onset_time,
                     'duration': duration},
             'notes' : notes}
+    dicts = [this_dict, temp_dict]
+    fin_dict = {k: v for d in dicts for k, v in d.items()}
 
 json_file_name = os.path.join(dir_path,'.'.join([dir_name,'info']))
 with open(json_file_name,'w') as file:
