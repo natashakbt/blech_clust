@@ -200,7 +200,7 @@ else:
 
     # Walk through fin_perm and delete emg_electrodes where you find them 
     # and add them as a new region
-    if len(emg_electrodes) > 0:
+    if 'emg_electrodes' in dir():
         for region in fin_perm:
             for group in region[1]:
                 for elec in emg_electrodes:
