@@ -52,8 +52,10 @@ freqparam = list(map(int,easygui.multenterbox(
 # Ask use whether they would like to extract LFPs from the
 # start or end of the taste delivery signal
 taste_signal_choice = \
-                easygui.buttonbox('Should trials be marked using the START or END of the taste'\
-                ' delivery pulse?', 'Please select', choices = ['Start', 'End'], default_choice = 'Start')
+                easygui.buttonbox(\
+                'Should trials be marked using the START or END of the taste delivery pulse?', 
+                'Please select', 
+                choices = ['Start', 'End'], default_choice = 'Start')
 print('Marking trials from {} of taste delivery pulse'.format(taste_signal_choice.upper()))
 
 if taste_signal_choice is 'Start':
