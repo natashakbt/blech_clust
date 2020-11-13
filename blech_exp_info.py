@@ -146,18 +146,17 @@ else:
     if continue_bool:
         select_ind = int(perm_str)
         selected_perm = permutations[select_ind]
-        fin_perm = []
+        fin_perm = {}
         if len(ports) == 1:
             if len(regions) == 1:
-                fin_perm.append([selected_perm[0], [type_32[selected_perm[1]]]])
+                fin_perm[selected_perm[0]] = [type_32[selected_perm[1]]]
             else:
                 for this_region in selected_perm:
-                    fin_perm.append([this_region[0], type_16_16[this_region[1]]])
+                    fin_perm[this_region[0]] = [type_16_16[this_region[1]]]
         else:
-            fin_perm = []
             for this_region in selected_perm:
-                fin_perm.append([this_region[0],
-                            [ports_dict[x].tolist() for x in this_region[1]]])
+                fin_perm[this_region[0]] = \
+                            [ports_dict[x].tolist() for x in this_region[1]]
     else:
         exit()
 
@@ -208,7 +207,7 @@ else:
                     if len(ind) > 0:
                         del group[ind[0]]
 
-        fin_perm.append(['emg',[emg_electrodes]])
+        fin_perm['emg'] = [emg_electrodes]
 
 
     ##################################################
