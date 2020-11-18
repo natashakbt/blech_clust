@@ -87,10 +87,11 @@ with open(json_path, 'r') as params_file:
 # we can directly pull them
 all_car_group_vals = []
 all_car_group_names = []
-for region in info_dict['electrode_layout']:
-    for group in region[1]:
-        all_car_group_vals.append(group)
-        all_car_group_names.append(region[0])
+for region_name, region_elecs in info_dict['electrode_layout'].items():
+    for group in region_elecs:
+        if len(group) > 0:
+            all_car_group_vals.append(group)
+            all_car_group_names.append(region_name)
 num_groups = len(all_car_group_vals)
 
 # Ask the user to choose the port number and electrodes for each of the groups
