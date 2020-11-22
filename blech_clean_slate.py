@@ -14,21 +14,21 @@ else:
 
 file_list = os.listdir(dir_name)
 
-# Mark for removal:
-removal_files = ['*.h5','*.params','results.log']
-file_paths = [glob.glob(os.path.join(dir_name, x)) for x in removal_files]
-file_paths = [x[0] for x in file_paths if len(x) > 0]
-removal_dirs = ['clustering_results', 'memory_monitor_clustering',
-        'Plots','spike_times','spike_waveforms']
-dir_paths = [os.path.join(dir_name,x) for x in removal_dirs]
-for this_file in file_paths:
+# Keep certain files and remove everything else
+keep_pattern = ['*.dat','*.info','*.rhd']
+keep_files = []
+for pattern in keep_pattern:
+    keep_files.extend(glob.glob(os.path.join(dir_name, pattern)))
+keep_files_basenames = [os.path.basename(x) for x in keep_files]
+
+remove_files = [x for x in file_list if x not in keep_files_basenames] 
+remove_paths = [os.path.join(dir_name,x) for x in remove_files]
+
+for x in remove_paths:
     try:
-        os.remove(this_file)
+        shutil.rmtree(x)
     except:
-        pass
-for this_dir in dir_paths:
-    try:
-        shutil.rmtree(this_dir)
-    except:
+        os.remove(x)
+    finally:
         pass
 
