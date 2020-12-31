@@ -9,9 +9,17 @@ import pylab as plt
 import matplotlib.image as mpimg
 from sklearn.mixture import GaussianMixture
 import blech_waveforms_datashader
+import argparse
 
 # Get directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
+# Create argument parser
+parser = argparse.ArgumentParser(description = 'Spike extraction and sorting script')
+parser.add_argument('dir_name',  help = 'Directory containing data files')
+parser.add_argument('--show-plot', '-p', 
+        help = 'Show waveforms while iterating (True/False)', default = True)
+args = parser.parse_args()
+
 if sys.argv[1] != '':
     dir_name = os.path.abspath(sys.argv[1])
     if dir_name[-1] != '/':
@@ -176,25 +184,28 @@ while True:
 
         # Re-show images of neurons so dumb people like Abu can make sure they
         # picked the right ones
-        fig, ax = plt.subplots(len(clusters), 2)
-        for cluster_num, cluster in enumerate(clusters):
-            isi_plot = mpimg.imread(
-                    './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
-                                    'Cluster{}_ISIs.png'\
-                                    .format(electrode_num, num_clusters, cluster)) 
-            waveform_plot =  mpimg.imread(
-                    './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
-                                    'Cluster{}_waveforms.png'\
-                                    .format(electrode_num, num_clusters, cluster)) 
-            if len(clusters) < 2:
-                ax[0].imshow(isi_plot,aspect='auto');ax[0].axis('off')
-                ax[1].imshow(waveform_plot,aspect='auto');ax[1].axis('off')
-            else:
-                ax[cluster_num, 0].imshow(isi_plot,aspect='auto');ax[cluster_num,0].axis('off')
-                ax[cluster_num, 1].imshow(waveform_plot,aspect='auto');ax[cluster_num,1].axis('off')
-        fig.suptitle('Are these the neurons you want to select?')
-        fig.tight_layout()
-        plt.show()
+        if args.show_plot: 
+            fig, ax = plt.subplots(len(clusters), 2)
+            for cluster_num, cluster in enumerate(clusters):
+                isi_plot = mpimg.imread(
+                        './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
+                                        'Cluster{}_ISIs.png'\
+                                        .format(electrode_num, num_clusters, cluster)) 
+                waveform_plot =  mpimg.imread(
+                        './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
+                                        'Cluster{}_waveforms.png'\
+                                        .format(electrode_num, num_clusters, cluster)) 
+                if len(clusters) < 2:
+                    ax[0].imshow(isi_plot,aspect='auto');ax[0].axis('off')
+                    ax[1].imshow(waveform_plot,aspect='auto');ax[1].axis('off')
+                else:
+                    ax[cluster_num, 0].imshow(isi_plot,aspect='auto');
+                    ax[cluster_num,0].axis('off')
+                    ax[cluster_num, 1].imshow(waveform_plot,aspect='auto');
+                    ax[cluster_num,1].axis('off')
+            fig.suptitle('Are these the neurons you want to select?')
+            fig.tight_layout()
+            plt.show()
 
         # Check if the user wants to merge clusters if more than 1 cluster was chosen. 
         # Else ask if the user wants to split/re-cluster the chosen cluster
@@ -341,7 +352,7 @@ while True:
             else:
                 continue
 
-##################################################
+        ##################################################
 
         # Get list of existing nodes/groups under /sorted_units
         node_list = hf5.list_nodes('/sorted_units')
@@ -421,7 +432,7 @@ while True:
                 table.flush()
                 hf5.flush()
                 
-##################################################
+        ##################################################
 
         # If only 1 cluster was chosen (and it wasn't split), 
         # add that as a new unit in /sorted_units. 
