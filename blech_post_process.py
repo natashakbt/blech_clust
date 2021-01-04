@@ -97,7 +97,7 @@ except:
 # Define a unit_descriptor class to be used to add things (anything!) 
 # about the sorted units to a pytables table
 class unit_descriptor(tables.IsDescription):
-        unit_number = tables.Int32Col()
+        unit_number = tables.Int32Col(pos=0)
         electrode_number = tables.Int32Col()
         single_unit = tables.Int32Col()
         regular_spiking = tables.Int32Col()
@@ -130,6 +130,7 @@ def entry_checker(msg, check_func, fail_response):
 counter = len(hf5.root.unit_descriptor) - 1
 while True:
 
+        unit_details_bool = 0
         counter += 1
         if counter == len(sort_table):
             break
@@ -227,27 +228,8 @@ while True:
         merge_msg = 'a'
         re_cluster_msg = 'a'
         if len(clusters) > 1:
+            # Providing more than one cluster will AUTOMATICALLY merge
             merge = True
-            ## if sort_file present use that
-            #if args.sort_file is not None:
-            #    merge_element = sort_table.Merge[counter]
-            #    if not (merge_element.strip() == ''):
-            #            merge = True
-            #    else:
-            #            merge = False
-            ## Otherwise ask user
-            #else:
-            #    merge_msg, continue_bool = entry_checker(\
-            #            msg = 'MERGE all clusters? (y/n)',
-            #            check_func = lambda x: x in ['y','n'],
-            #            fail_response = 'Please enter (y/n)')
-            #    if continue_bool:
-            #        if merge_msg == 'y': 
-            #            merge = True
-            #        elif merge_msg == 'n': 
-            #            merge = False
-            #    else:
-            #        continue
 
         else:
             # if sort_file present use that
@@ -311,13 +293,10 @@ while True:
             this_cluster = np.where(predictions == int(clusters[0]))[0]
             n_pc = 3
             data = np.zeros((len(this_cluster), n_pc + 3))  
-            #data = np.zeros((len(this_cluster), n_pc + 2))  
             data[:,3:] = pca_slices[this_cluster,:n_pc]
-            #data[:,2:] = pca_slices[this_cluster,:n_pc]
             data[:,0] = energy[this_cluster]/np.max(energy[this_cluster])
             data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
             data = np.concatenate((data,autocorrs[this_cluster,:3]),axis=-1)
-            #data[:,2] = autocorrs[this_cluster]/np.max(autocorrs[this_cluster])
 
             # Cluster the data
             g = GaussianMixture(
@@ -423,57 +402,27 @@ while True:
                 hf5.create_group('/sorted_units', unit_name)
                 # Waveforms of originally chosen cluster
                 unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]    
+                # Subsetting this set of waveforms to include only the chosen split
                 unit_waveforms = np.concatenate(\
                         [unit_waveforms[np.where(split_predictions == this_split)[0], :] \
                                     for this_split in chosen_split])
-                # Subsetting this set of waveforms to include only the chosen split
+
                 # Do the same thing for the spike times
                 unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
                 unit_times = np.concatenate(\
                         [unit_times[np.where(split_predictions == this_split)[0]] \
                                     for this_split in chosen_split])
+                # Add to HDF5
                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
                                 'waveforms', unit_waveforms)
                 times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
 
-                #single_unit_msg, continue_bool = entry_checker(\
-                #        msg = 'Single-unit? (y/n)',
-                #        check_func = lambda x: x in ['y','n'],
-                #        fail_response = 'Please enter (y/n)')
-                #if continue_bool:
-                #    if single_unit_msg == 'y': 
-                #        single_unit = True
-                #    elif single_unit_msg == 'n': 
-                #        single_unit = False
-                #else:
-                #    continue
-
-                #unit_description['single_unit'] = int(single_unit)
-                ## If the user says that this is a single unit, 
-                ## ask them whether its regular or fast spiking
-                #unit_description['regular_spiking'] = 0
-                #unit_description['fast_spiking'] = 0
-
-                #if single_unit:
-                #    unit_type_msg, continue_bool = entry_checker(\
-                #            msg = 'Regular or fast spiking? (r/f)',
-                #            check_func = lambda x: x in ['r','f'],
-                #            fail_response = 'Please enter (r/f)')
-                #    if continue_bool:
-                #        if unit_type_msg == 'r': 
-                #            unit_type = 'regular_spiking'
-                #        elif unit_type_msg == 'f': 
-                #            unit_type = 'fast_spiking'
-                #    else:
-                #        continue
-
-                #    unit_description[unit_type] = 1              
-
-                unit_description.append()
-                table.flush()
-                hf5.flush()
+                # To consolidate asking for unit details (single unit vs multi,
+                # regular vs fast), set bool and ask for details at the end
+                unit_details_bool = 1
+                unit_details_file_bool = 0
                 
         ##################################################
 
@@ -490,42 +439,12 @@ while True:
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
 
-                #single_unit_msg, continue_bool = entry_checker(\
-                #        msg = 'Single-unit? (y/n)',
-                #        check_func = lambda x: x in ['y','n'],
-                #        fail_response = 'Please enter (y/n)')
-                #if continue_bool:
-                #    if single_unit_msg == 'y': 
-                #        single_unit = True
-                #    elif single_unit_msg == 'n': 
-                #        single_unit = False
-                #else:
-                #    continue
-
-                #unit_description['single_unit'] = int(single_unit) 
-
-                ## If the user says that this is a single unit, 
-                ## ask them whether its regular or fast spiking
-                #unit_description['regular_spiking'] = 0
-                #unit_description['fast_spiking'] = 0
-                #if single_unit:
-                #    unit_type_msg, continue_bool = entry_checker(\
-                #            msg = 'Regular or fast spiking? (r/f)',
-                #            check_func = lambda x: x in ['r','f'],
-                #            fail_response = 'Please enter (r/f)')
-                #    if continue_bool:
-                #        if unit_type_msg == 'r': 
-                #            unit_type = 'regular_spiking'
-                #        elif unit_type_msg == 'f': 
-                #            unit_type = 'fast_spiking'
-                #    else:
-                #        continue
-
-                #    unit_description[unit_type] = 1              
-
-                unit_description.append()
-                table.flush()
-                hf5.flush()
+                # To consolidate asking for unit details (single unit vs multi,
+                # regular vs fast), set bool and ask for details at the end
+                unit_details_bool = 1
+                # If unit was not manipulated (merge/split), read unit details
+                # from file if provided
+                unit_details_file_bool = 1
 
         else:
             # If the chosen units are going to be merged, merge them
@@ -583,106 +502,79 @@ while True:
                     unit_description['waveform_count'] = int(len(unit_times))
                     unit_description['electrode_number'] = electrode_num
 
-                    #single_unit_msg, continue_bool = entry_checker(\
-                    #        msg = 'Single-unit? (y/n)',
-                    #        check_func = lambda x: x in ['y','n'],
-                    #        fail_response = 'Please enter (y/n)')
-                    #if continue_bool:
-                    #    if single_unit_msg == 'y': 
-                    #        single_unit = True
-                    #    elif single_unit_msg == 'n': 
-                    #        single_unit = False
-                    #else:
-                    #    continue
+                    # To consolidate asking for unit details (single unit vs multi,
+                    # regular vs fast), set bool and ask for details at the end
+                    unit_details_bool = 1
+                    unit_details_file_bool = 0
 
-                    #unit_description['single_unit'] = int(single_unit)
-
-                    ## If the user says that this is a single unit, 
-                    ## ask them whether its regular or fast spiking
-                    #unit_description['regular_spiking'] = 0
-                    #unit_description['fast_spiking'] = 0
-                    #if single_unit:
-                    #    unit_type_msg, continue_bool = entry_checker(\
-                    #            msg = 'Regular or fast spiking? (r/f)',
-                    #            check_func = lambda x: x in ['r','f'],
-                    #            fail_response = 'Please enter (r/f)')
-                    #    if continue_bool:
-                    #        if unit_type_msg == 'r': 
-                    #            unit_type = 'regular_spiking'
-                    #        elif unit_type_msg == 'f': 
-                    #            unit_type = 'fast_spiking'
-                    #    else:
-                    #        continue
-
-                    #        unit_description[unit_type] = 1
-                    unit_description.append()
-                    table.flush()
-                    hf5.flush()
                 else:
                     continue
 
-            # Otherwise include each cluster as a separate unit
-            else:
-                for cluster in clusters:
-                    hf5.create_group('/sorted_units', unit_name)
-                    unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
-                    unit_times = spike_times[np.where(predictions == int(cluster))[0]]
-                    waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
-                            'waveforms', unit_waveforms)
-                    times = hf5.create_array('/sorted_units/%s' % unit_name, 
-                            'times', unit_times)
-                    unit_description['waveform_count'] = int(len(unit_times))
-                    unit_description['electrode_number'] = electrode_num
+        # Ask user for unit details, and ask for HDF5 file 
+        if unit_details_bool:
+            unit_description['regular_spiking'] = 0
+            unit_description['fast_spiking'] = 0
 
-                    single_unit_msg, continue_bool = entry_checker(\
-                            msg = 'Single-unit? (y/n)',
-                            check_func = lambda x: x in ['y','n'],
-                            fail_response = 'Please enter (y/n)')
+            if unit_details_file_bool:
+                single_unit_msg = sort_table.single_unit[counter]
+                if not (single_unit_msg.strip() == ''):
+                    single_unit = True
+
+                    # If single unit, check unit type
+                    unit_type_msg = sort_table.Type[counter] 
+                    if unit_type_msg == 'r': 
+                        unit_type = 'regular_spiking'
+                    elif unit_type_msg == 'f': 
+                        unit_type = 'fast_spiking'
+
+            else:
+                single_unit_msg, continue_bool = entry_checker(\
+                        msg = 'Single-unit? (y/n)',
+                        check_func = lambda x: x in ['y','n'],
+                        fail_response = 'Please enter (y/n)')
+                if continue_bool:
+                    if single_unit_msg == 'y': 
+                        single_unit = True
+                    elif single_unit_msg == 'n': 
+                        single_unit = False
+                else:
+                    continue
+
+
+                # If the user says that this is a single unit, 
+                # ask them whether its regular or fast spiking
+                if single_unit:
+                    unit_type_msg, continue_bool = entry_checker(\
+                            msg = 'Regular or fast spiking? (r/f)',
+                            check_func = lambda x: x in ['r','f'],
+                            fail_response = 'Please enter (r/f)')
                     if continue_bool:
-                        if single_unit_msg == 'y': 
-                            single_unit = True
-                        elif single_unit_msg == 'n': 
-                            single_unit = False
+                        if unit_type_msg == 'r': 
+                            unit_type = 'regular_spiking'
+                        elif unit_type_msg == 'f': 
+                            unit_type = 'fast_spiking'
                     else:
                         continue
 
 
-                    unit_description['single_unit'] = int(single_unit)
-                    # If the user says that this is a single unit, 
-                    # ask them whether its regular or fast spiking
-                    unit_description['regular_spiking'] = 0
-                    unit_description['fast_spiking'] = 0
+            unit_description['single_unit'] = int(single_unit)
+            unit_description[unit_type] = 1
 
-                    if single_unit:
-                        unit_type_msg, continue_bool = entry_checker(\
-                                msg = 'Regular or fast spiking? (r/f)',
-                                check_func = lambda x: x in ['r','f'],
-                                fail_response = 'Please enter (r/f)')
-                        if continue_bool:
-                            if unit_type_msg == 'r': 
-                                unit_type = 'regular_spiking'
-                            elif unit_type_msg == 'f': 
-                                unit_type = 'fast_spiking'
-                        else:
-                            continue
-
-                            unit_description[unit_type] = 1
-                    unit_description.append()
-                    table.flush()
-                    hf5.flush()                             
-
-                    # Finally increment max_unit and create a new unit name
-                    max_unit += 1
-                    unit_name = 'unit%03d' % int(max_unit + 1)
-
-                    # Get a new unit_descriptor table row for this new unit
-                    unit_description = table.row
+            unit_description.append()
+            table.flush()
+            hf5.flush()
 
         print('==== {} Complete ===\n'.format(unit_name))
         print('==== Iteration Ended ===\n')
 
 # Sort unit_descriptor by unit_number
-# This will be needed if sort_table is used
+# This will be needed if sort_table is used, as using sort_table
+# will add merge/split marked units first
+temp_table = table[:]
+temp_table.sort(order = 'unit_number')
+table[:] = temp_table
+table.flush()
+hf5.flush()
 
 print('== Post-processing exiting ==')
 print(f'== {len(hf5.root.unit_descriptor)} total units')
