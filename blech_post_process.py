@@ -10,18 +10,37 @@ import matplotlib.image as mpimg
 from sklearn.mixture import GaussianMixture
 import blech_waveforms_datashader
 import argparse
+import pandas as pd
+import ast
+
+def cluster_check(x):
+    clusters = re.findall('[0-9]+',x)
+    return sum([i.isdigit() for i in clusters]) == len(clusters)
 
 # Get directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
 # Create argument parser
 parser = argparse.ArgumentParser(description = 'Spike extraction and sorting script')
-parser.add_argument('dir_name',  help = 'Directory containing data files')
+parser.add_argument('--dir-name',  '-d', help = 'Directory containing data files')
 parser.add_argument('--show-plot', '-p', 
         help = 'Show waveforms while iterating (True/False)', default = True)
+parser.add_argument('--sort-file', '-f', help = 'CSV with sorted units')
 args = parser.parse_args()
 
-if sys.argv[1] != '':
-    dir_name = os.path.abspath(sys.argv[1])
+if args.sort_file is not None:
+    if not (args.sort_file[-3:] == 'csv'):
+        raise Exception("Please provide CSV file")
+    sort_table = pd.read_csv(args.sort_file)
+    sort_table.fillna('',inplace=True)
+    # Check when more than one cluster is specified
+    sort_table['len_cluster'] = [len(re.findall('[0-9]+',x)) for x in sort_table.Cluster]
+    # Get splits and merges out of the way first
+    sort_table.sort_values(['len_cluster','Split'],ascending=False, inplace=True)
+    true_index = sort_table.index
+    sort_table.reset_index(inplace=True)
+
+if args.dir_name is not None: 
+    dir_name = os.path.abspath(args.dir_name)
     if dir_name[-1] != '/':
         dir_name += '/'
 else:
@@ -32,16 +51,16 @@ os.chdir(dir_name)
 
 # Clean up the memory monitor files, pass if clean up has been done already
 if not os.path.exists('./memory_monitor_clustering/memory_usage.txt'):
-        file_list = os.listdir('./memory_monitor_clustering')
-        f = open('./memory_monitor_clustering/memory_usage.txt', 'w')
-        for files in file_list:
-                try:
-                        mem_usage = np.loadtxt('./memory_monitor_clustering/' + files)
-                        print('electrode'+files[:-4], '\t', str(mem_usage)+'MB', file=f)
-                        os.system('rm ' + './memory_monitor_clustering/' + files)
-                except:
-                        pass    
-        f.close()
+    file_list = os.listdir('./memory_monitor_clustering')
+    f = open('./memory_monitor_clustering/memory_usage.txt', 'w')
+    for files in file_list:
+        try:
+            mem_usage = np.loadtxt('./memory_monitor_clustering/' + files)
+            print('electrode'+files[:-4], '\t', str(mem_usage)+'MB', file=f)
+            os.system('rm ' + './memory_monitor_clustering/' + files)
+        except:
+            pass    
+    f.close()
 
 # Look for the hdf5 file in the directory
 file_list = os.listdir('./')
@@ -78,6 +97,7 @@ except:
 # Define a unit_descriptor class to be used to add things (anything!) 
 # about the sorted units to a pytables table
 class unit_descriptor(tables.IsDescription):
+        unit_number = tables.Int32Col()
         electrode_number = tables.Int32Col()
         single_unit = tables.Int32Col()
         regular_spiking = tables.Int32Col()
@@ -107,41 +127,51 @@ def entry_checker(msg, check_func, fail_response):
     return msg_input, continue_bool
 
 # Run an infinite loop as long as the user wants to pick clusters from the electrodes   
+counter = len(hf5.root.unit_descriptor) - 1
 while True:
 
-        # Get electrode number from user
-        electrode_num_str, continue_bool = entry_checker(\
-                msg = 'Electrode number :: ',
-                check_func = str.isdigit,
-                fail_response = 'Please enter an interger')
-
-        if continue_bool:
-            electrode_num = int(electrode_num_str)
-        else:
+        counter += 1
+        if counter == len(sort_table):
             break
+        # If sort_file given, iterate through that, otherwise ask user
+        if args.sort_file is not None:
+                electrode_num = int(sort_table.Chan[counter])
+                num_clusters = int(sort_table.Solution[counter])
+                clusters = re.findall('[0-9]+',sort_table.Cluster[counter])
+                clusters = [int(x) for x in clusters]
 
-        num_clusters_str, continue_bool = entry_checker(\
-                msg = 'Solution number :: ',
-                check_func = lambda x: (str.isdigit(x) and (1<int(x)<=7)),
-                fail_response = 'Please enter an interger')
-        if continue_bool:
-            num_clusters = int(num_clusters_str)
         else:
-            continue
+            # Get electrode number from user
+            electrode_num_str, continue_bool = entry_checker(\
+                    msg = 'Electrode number :: ',
+                    check_func = str.isdigit,
+                    fail_response = 'Please enter an interger')
 
-        def cluster_check(x):
-            clusters = re.findall('[0-9]+',x)
-            return sum([i.isdigit() for i in clusters]) == len(clusters)
+            if continue_bool:
+                electrode_num = int(electrode_num_str)
+            else:
+                break
 
-        clusters_msg, continue_bool = entry_checker(\
-                msg = 'Cluster numbers (anything separated) ::',
-                check_func = cluster_check,
-                fail_response = 'Please enter integers')
-        if continue_bool:
-            clusters = re.findall('[0-9]+',clusters_msg)
-            clusters = [int(x) for x in clusters]
-        else:
-            continue
+            num_clusters_str, continue_bool = entry_checker(\
+                    msg = 'Solution number :: ',
+                    check_func = lambda x: (str.isdigit(x) and (1<int(x)<=7)),
+                    fail_response = 'Please enter an interger')
+            if continue_bool:
+                num_clusters = int(num_clusters_str)
+            else:
+                continue
+
+
+            clusters_msg, continue_bool = entry_checker(\
+                    msg = 'Cluster numbers (anything separated) ::',
+                    check_func = cluster_check,
+                    fail_response = 'Please enter integers')
+            if continue_bool:
+                clusters = re.findall('[0-9]+',clusters_msg)
+                clusters = [int(x) for x in clusters]
+            else:
+                continue
+
         
         # Print out selections
         print('||| Electrode {}, Solution {}, Cluster {} |||'.\
@@ -159,32 +189,15 @@ while True:
                     f'clusters{num_clusters}/predictions.npy',
             f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy']
 
-        #loading_paths = [\
-        #    f'./spike_waveforms/electrode{electrode_num}/spike_waveforms.npy',
-        #    f'./spike_times/electrode{electrode_num}/spike_times.npy',
-        #    f'./spike_waveforms/electrode{electrode_num}/pca_waveforms.npy',
-        #    f'./spike_waveforms/electrode{electrode_num}/energy.npy',
-        #    f'./spike_waveforms/electrode{electrode_num}/spike_amplitudes.npy',
-        #    f'./clustering_results/electrode{electrode_num}/'\
-        #            f'clusters{num_clusters}/predictions.npy',
-        #    f'./spike_waveforms/electrode{electrode_num}/pca_waveform_autocorrelation.npy']
-
         var_names = ['spike_waveforms','spike_times','pca_slices','energy',\
                 'amplitudes','predictions','autocorrs']
 
         for var, path in zip(var_names, loading_paths):
             globals()[var] = np.load(path)
-        #spike_waveforms = np.load(loading_paths[0]) 
-        #spike_times = np.load(loading_paths[1])
-        #pca_slices = np.load(loading_paths[2])
-        #energy = np.load(loading_paths[3])
-        #amplitudes = np.load(loading_paths[4])
-        #predictions  = np.load(loading_paths[5])
-        #autocorrs  = np.load(loading_paths[6])
 
         # Re-show images of neurons so dumb people like Abu can make sure they
         # picked the right ones
-        if args.show_plot: 
+        if ast.literal_eval(args.show_plot): 
             fig, ax = plt.subplots(len(clusters), 2)
             for cluster_num, cluster in enumerate(clusters):
                 isi_plot = mpimg.imread(
@@ -214,30 +227,49 @@ while True:
         merge_msg = 'a'
         re_cluster_msg = 'a'
         if len(clusters) > 1:
-            merge_msg, continue_bool = entry_checker(\
-                    msg = 'MERGE all clusters? (y/n)',
-                    check_func = lambda x: x in ['y','n'],
-                    fail_response = 'Please enter (y/n)')
-            if continue_bool:
-                if merge_msg == 'y': 
-                    merge = True
-                elif merge_msg == 'n': 
-                    merge = False
-            else:
-                continue
+            merge = True
+            ## if sort_file present use that
+            #if args.sort_file is not None:
+            #    merge_element = sort_table.Merge[counter]
+            #    if not (merge_element.strip() == ''):
+            #            merge = True
+            #    else:
+            #            merge = False
+            ## Otherwise ask user
+            #else:
+            #    merge_msg, continue_bool = entry_checker(\
+            #            msg = 'MERGE all clusters? (y/n)',
+            #            check_func = lambda x: x in ['y','n'],
+            #            fail_response = 'Please enter (y/n)')
+            #    if continue_bool:
+            #        if merge_msg == 'y': 
+            #            merge = True
+            #        elif merge_msg == 'n': 
+            #            merge = False
+            #    else:
+            #        continue
 
         else:
-            split_msg, continue_bool = entry_checker(\
-                    msg = 'SPLIT this cluster? (y/n)',
-                    check_func = lambda x: x in ['y','n'],
-                    fail_response = 'Please enter (y/n)')
-            if continue_bool:
-                if split_msg == 'y': 
-                    re_cluster = True
-                elif split_msg == 'n': 
-                    re_cluster = False
+            # if sort_file present use that
+            if args.sort_file is not None:
+                split_element = sort_table.Split[counter]
+                if not (split_element.strip() == ''):
+                        re_cluster = True
+                else:
+                        re_cluster = False
+            # Otherwise ask user
             else:
-                continue
+                split_msg, continue_bool = entry_checker(\
+                        msg = 'SPLIT this cluster? (y/n)',
+                        check_func = lambda x: x in ['y','n'],
+                        fail_response = 'Please enter (y/n)')
+                if continue_bool:
+                    if split_msg == 'y': 
+                        re_cluster = True
+                    elif split_msg == 'n': 
+                        re_cluster = False
+                else:
+                    continue
 
 
         # If the user asked to split/re-cluster, 
@@ -357,23 +389,34 @@ while True:
         # Get list of existing nodes/groups under /sorted_units
         node_list = hf5.list_nodes('/sorted_units')
 
-        # If node_list is empty, start naming units from 000
-        unit_name = ''
-        max_unit = 0
-        if node_list == []:             
-                unit_name = 'unit%03d' % 0
-        # Else name the new unit by incrementing the last unit by 1 
+        # if sort_table given, use that to name units
+        if args.sort_file is not None:
+            unit_name = 'unit%03d' % int(true_index[counter])
+
         else:
-                unit_numbers = []
-                for node in node_list:
-                        unit_numbers.append(node._v_pathname.split('/')[-1][-3:])
-                        unit_numbers[-1] = int(unit_numbers[-1])
-                unit_numbers = np.array(unit_numbers)
-                max_unit = np.max(unit_numbers)
-                unit_name = 'unit%03d' % int(max_unit + 1)
+            # If node_list is empty, start naming units from 000
+            unit_name = ''
+            max_unit = 0
+            if node_list == []:             
+                    unit_name = 'unit%03d' % 0
+            # Else name the new unit by incrementing the last unit by 1 
+            else:
+                    unit_numbers = []
+                    for node in node_list:
+                            unit_numbers.append(node._v_pathname.split('/')[-1][-3:])
+                            unit_numbers[-1] = int(unit_numbers[-1])
+                    unit_numbers = np.array(unit_numbers)
+                    max_unit = np.max(unit_numbers)
+                    unit_name = 'unit%03d' % int(max_unit + 1)
 
         # Get a new unit_descriptor table row for this new unit
         unit_description = table.row    
+        # Put in unit number
+        if args.sort_file is not None:
+            unit_description['unit_number'] = int(true_index[counter])
+        else:
+            unit_description['unit_number'] = int(max_unit + 1)
+
 
         # If the user re-clustered/split clusters, add the chosen clusters in split_clusters
         if re_cluster:
@@ -395,40 +438,40 @@ while True:
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
 
-                single_unit_msg, continue_bool = entry_checker(\
-                        msg = 'Single-unit? (y/n)',
-                        check_func = lambda x: x in ['y','n'],
-                        fail_response = 'Please enter (y/n)')
-                if continue_bool:
-                    if single_unit_msg == 'y': 
-                        single_unit = True
-                    elif single_unit_msg == 'n': 
-                        single_unit = False
-                else:
-                    continue
+                #single_unit_msg, continue_bool = entry_checker(\
+                #        msg = 'Single-unit? (y/n)',
+                #        check_func = lambda x: x in ['y','n'],
+                #        fail_response = 'Please enter (y/n)')
+                #if continue_bool:
+                #    if single_unit_msg == 'y': 
+                #        single_unit = True
+                #    elif single_unit_msg == 'n': 
+                #        single_unit = False
+                #else:
+                #    continue
 
-                unit_description['single_unit'] = int(single_unit)
-                # If the user says that this is a single unit, 
-                # ask them whether its regular or fast spiking
-                unit_description['regular_spiking'] = 0
-                unit_description['fast_spiking'] = 0
+                #unit_description['single_unit'] = int(single_unit)
+                ## If the user says that this is a single unit, 
+                ## ask them whether its regular or fast spiking
+                #unit_description['regular_spiking'] = 0
+                #unit_description['fast_spiking'] = 0
 
-                if single_unit:
-                    unit_type_msg, continue_bool = entry_checker(\
-                            msg = 'Regular or fast spiking? (r/f)',
-                            check_func = lambda x: x in ['r','f'],
-                            fail_response = 'Please enter (r/f)')
-                    if continue_bool:
-                        if unit_type_msg == 'r': 
-                            unit_type = 'regular_spiking'
-                        elif unit_type_msg == 'f': 
-                            unit_type = 'fast_spiking'
-                    else:
-                        continue
+                #if single_unit:
+                #    unit_type_msg, continue_bool = entry_checker(\
+                #            msg = 'Regular or fast spiking? (r/f)',
+                #            check_func = lambda x: x in ['r','f'],
+                #            fail_response = 'Please enter (r/f)')
+                #    if continue_bool:
+                #        if unit_type_msg == 'r': 
+                #            unit_type = 'regular_spiking'
+                #        elif unit_type_msg == 'f': 
+                #            unit_type = 'fast_spiking'
+                #    else:
+                #        continue
 
-                    unit_description[unit_type] = 1              
-                    unit_description.append()
+                #    unit_description[unit_type] = 1              
 
+                unit_description.append()
                 table.flush()
                 hf5.flush()
                 
@@ -447,38 +490,38 @@ while True:
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
 
-                single_unit_msg, continue_bool = entry_checker(\
-                        msg = 'Single-unit? (y/n)',
-                        check_func = lambda x: x in ['y','n'],
-                        fail_response = 'Please enter (y/n)')
-                if continue_bool:
-                    if single_unit_msg == 'y': 
-                        single_unit = True
-                    elif single_unit_msg == 'n': 
-                        single_unit = False
-                else:
-                    continue
+                #single_unit_msg, continue_bool = entry_checker(\
+                #        msg = 'Single-unit? (y/n)',
+                #        check_func = lambda x: x in ['y','n'],
+                #        fail_response = 'Please enter (y/n)')
+                #if continue_bool:
+                #    if single_unit_msg == 'y': 
+                #        single_unit = True
+                #    elif single_unit_msg == 'n': 
+                #        single_unit = False
+                #else:
+                #    continue
 
-                unit_description['single_unit'] = int(single_unit) 
+                #unit_description['single_unit'] = int(single_unit) 
 
-                # If the user says that this is a single unit, 
-                # ask them whether its regular or fast spiking
-                unit_description['regular_spiking'] = 0
-                unit_description['fast_spiking'] = 0
-                if single_unit:
-                    unit_type_msg, continue_bool = entry_checker(\
-                            msg = 'Regular or fast spiking? (r/f)',
-                            check_func = lambda x: x in ['r','f'],
-                            fail_response = 'Please enter (r/f)')
-                    if continue_bool:
-                        if unit_type_msg == 'r': 
-                            unit_type = 'regular_spiking'
-                        elif unit_type_msg == 'f': 
-                            unit_type = 'fast_spiking'
-                    else:
-                        continue
+                ## If the user says that this is a single unit, 
+                ## ask them whether its regular or fast spiking
+                #unit_description['regular_spiking'] = 0
+                #unit_description['fast_spiking'] = 0
+                #if single_unit:
+                #    unit_type_msg, continue_bool = entry_checker(\
+                #            msg = 'Regular or fast spiking? (r/f)',
+                #            check_func = lambda x: x in ['r','f'],
+                #            fail_response = 'Please enter (r/f)')
+                #    if continue_bool:
+                #        if unit_type_msg == 'r': 
+                #            unit_type = 'regular_spiking'
+                #        elif unit_type_msg == 'f': 
+                #            unit_type = 'fast_spiking'
+                #    else:
+                #        continue
 
-                    unit_description[unit_type] = 1              
+                #    unit_description[unit_type] = 1              
 
                 unit_description.append()
                 table.flush()
@@ -540,38 +583,38 @@ while True:
                     unit_description['waveform_count'] = int(len(unit_times))
                     unit_description['electrode_number'] = electrode_num
 
-                    single_unit_msg, continue_bool = entry_checker(\
-                            msg = 'Single-unit? (y/n)',
-                            check_func = lambda x: x in ['y','n'],
-                            fail_response = 'Please enter (y/n)')
-                    if continue_bool:
-                        if single_unit_msg == 'y': 
-                            single_unit = True
-                        elif single_unit_msg == 'n': 
-                            single_unit = False
-                    else:
-                        continue
+                    #single_unit_msg, continue_bool = entry_checker(\
+                    #        msg = 'Single-unit? (y/n)',
+                    #        check_func = lambda x: x in ['y','n'],
+                    #        fail_response = 'Please enter (y/n)')
+                    #if continue_bool:
+                    #    if single_unit_msg == 'y': 
+                    #        single_unit = True
+                    #    elif single_unit_msg == 'n': 
+                    #        single_unit = False
+                    #else:
+                    #    continue
 
-                    unit_description['single_unit'] = int(single_unit)
+                    #unit_description['single_unit'] = int(single_unit)
 
-                    # If the user says that this is a single unit, 
-                    # ask them whether its regular or fast spiking
-                    unit_description['regular_spiking'] = 0
-                    unit_description['fast_spiking'] = 0
-                    if single_unit:
-                        unit_type_msg, continue_bool = entry_checker(\
-                                msg = 'Regular or fast spiking? (r/f)',
-                                check_func = lambda x: x in ['r','f'],
-                                fail_response = 'Please enter (r/f)')
-                        if continue_bool:
-                            if unit_type_msg == 'r': 
-                                unit_type = 'regular_spiking'
-                            elif unit_type_msg == 'f': 
-                                unit_type = 'fast_spiking'
-                        else:
-                            continue
+                    ## If the user says that this is a single unit, 
+                    ## ask them whether its regular or fast spiking
+                    #unit_description['regular_spiking'] = 0
+                    #unit_description['fast_spiking'] = 0
+                    #if single_unit:
+                    #    unit_type_msg, continue_bool = entry_checker(\
+                    #            msg = 'Regular or fast spiking? (r/f)',
+                    #            check_func = lambda x: x in ['r','f'],
+                    #            fail_response = 'Please enter (r/f)')
+                    #    if continue_bool:
+                    #        if unit_type_msg == 'r': 
+                    #            unit_type = 'regular_spiking'
+                    #        elif unit_type_msg == 'f': 
+                    #            unit_type = 'fast_spiking'
+                    #    else:
+                    #        continue
 
-                            unit_description[unit_type] = 1
+                    #        unit_description[unit_type] = 1
                     unit_description.append()
                     table.flush()
                     hf5.flush()
@@ -635,7 +678,11 @@ while True:
                     # Get a new unit_descriptor table row for this new unit
                     unit_description = table.row
 
+        print('==== {} Complete ===\n'.format(unit_name))
         print('==== Iteration Ended ===\n')
+
+# Sort unit_descriptor by unit_number
+# This will be needed if sort_table is used
 
 print('== Post-processing exiting ==')
 print(f'== {len(hf5.root.unit_descriptor)} total units')
