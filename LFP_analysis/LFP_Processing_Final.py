@@ -190,9 +190,8 @@ hf5.create_group('/', 'Parsed_LFP')
 # Code further below simply enumerates arrays in Parsed_LFP
 if "/Parsed_LFP_channels" in hf5:
         hf5.remove_node('/Parsed_LFP_channels')
-else:
-    hf5.create_array('/', 'Parsed_LFP_channels', electrodegroup)
-    hf5.flush()
+hf5.create_array('/', 'Parsed_LFP_channels', electrodegroup)
+hf5.flush()
 
 # Ask if this analysis is looking at more than 1 trial and/or taste
 #msg   = "Do you want to create LFPs for more than " + \
