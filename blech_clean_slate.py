@@ -15,7 +15,7 @@ else:
 file_list = os.listdir(dir_name)
 
 # Keep certain files and remove everything else
-keep_pattern = ['*.dat','*.info','*.rhd']
+keep_pattern = ['*.dat','*.info','*.rhd', '*.csv']
 keep_files = []
 for pattern in keep_pattern:
     keep_files.extend(glob.glob(os.path.join(dir_name, pattern)))
