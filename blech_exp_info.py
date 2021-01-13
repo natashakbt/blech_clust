@@ -176,7 +176,7 @@ else:
             if len(emg_port_str) == 0:
                 emg_port = []
             else:
-                emg_port = [int(emg_port_str)]
+                emg_port = [int(x) for x in emg_port_str]
         else:
             exit()
     else:
@@ -200,8 +200,8 @@ else:
     # Walk through fin_perm and delete emg_electrodes where you find them 
     # and add them as a new region
     if 'emg_electrodes' in dir():
-        for region in fin_perm:
-            for group in region[1]:
+        for region_name, region_vals in fin_perm.items():
+            for group in region_vals:
                 for elec in emg_electrodes:
                     ind = np.where(np.array(group) == elec)[0]
                     if len(ind) > 0:
