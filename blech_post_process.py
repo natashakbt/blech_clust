@@ -23,7 +23,7 @@ def cluster_check(x):
 parser = argparse.ArgumentParser(description = 'Spike extraction and sorting script')
 parser.add_argument('--dir-name',  '-d', help = 'Directory containing data files')
 parser.add_argument('--show-plot', '-p', 
-        help = 'Show waveforms while iterating (True/False)', default = True)
+        help = 'Show waveforms while iterating (True/False)', default = 'True')
 parser.add_argument('--sort-file', '-f', help = 'CSV with sorted units')
 args = parser.parse_args()
 
@@ -33,7 +33,7 @@ if args.sort_file is not None:
     sort_table = pd.read_csv(args.sort_file)
     sort_table.fillna('',inplace=True)
     # Check when more than one cluster is specified
-    sort_table['len_cluster'] = [len(re.findall('[0-9]+',x)) for x in sort_table.Cluster]
+    sort_table['len_cluster'] = [len(re.findall('[0-9]+',str(x))) for x in sort_table.Cluster]
     # Get splits and merges out of the way first
     sort_table.sort_values(['len_cluster','Split'],ascending=False, inplace=True)
     true_index = sort_table.index
@@ -132,14 +132,14 @@ while True:
 
         unit_details_bool = 0
         counter += 1
-        if counter == len(sort_table):
-            break
         # If sort_file given, iterate through that, otherwise ask user
         if args.sort_file is not None:
-                electrode_num = int(sort_table.Chan[counter])
-                num_clusters = int(sort_table.Solution[counter])
-                clusters = re.findall('[0-9]+',sort_table.Cluster[counter])
-                clusters = [int(x) for x in clusters]
+            if counter == len(sort_table):
+                break
+            electrode_num = int(sort_table.Chan[counter])
+            num_clusters = int(sort_table.Solution[counter])
+            clusters = re.findall('[0-9]+',str(sort_table.Cluster[counter]))
+            clusters = [int(x) for x in clusters]
 
         else:
             # Get electrode number from user
@@ -515,7 +515,7 @@ while True:
             unit_description['regular_spiking'] = 0
             unit_description['fast_spiking'] = 0
 
-            if unit_details_file_bool:
+            if unit_details_file_bool and (args.sort_file is not None):
                 single_unit_msg = sort_table.single_unit[counter]
                 if not (single_unit_msg.strip() == ''):
                     single_unit = True
@@ -526,6 +526,9 @@ while True:
                         unit_type = 'regular_spiking'
                     elif unit_type_msg == 'f': 
                         unit_type = 'fast_spiking'
+                    unit_description[unit_type] = 1
+                else:
+                    single_unit = False
 
             else:
                 single_unit_msg, continue_bool = entry_checker(\
@@ -555,10 +558,9 @@ while True:
                             unit_type = 'fast_spiking'
                     else:
                         continue
-
+                    unit_description[unit_type] = 1
 
             unit_description['single_unit'] = int(single_unit)
-            unit_description[unit_type] = 1
 
             unit_description.append()
             table.flush()
@@ -580,6 +582,22 @@ print('== Post-processing exiting ==')
 print(f'== {len(hf5.root.unit_descriptor)} total units')
 if len(hf5.root.unit_descriptor) == hf5.root.sorted_units._g_getnchildren():
     print('== unit_descriptor and sorted units counts match ==')
+    # If things match, renumber sorted_units and unit_num in unit_descriptor
+    # to be continuously increasing (in case units from the sort-table
+    # were deleted or not selected
+    # This should not be a problem if units were enterred manually
+    if args.sort_file is not None:
+        # Since we're not indexing by name, we can rename directly
+        base_dir = '/sorted_units'
+        node_list = hf5.list_nodes(base_dir)
+        final_nums = np.arange(len(node_list))
+        for this_node,inter_num in zip(node_list,final_nums):
+            this_node._f_rename('unit{:03d}'.format(inter_num))
+        # Also rename unit_nums in unit_descriptor
+        temp_table = table[:]
+        for unit, this_unit_num in zip(temp_table, final_nums):
+            unit[0] = this_unit_num
+        table[:] = temp_table
 else:
     print('== unit_descriptor and sorted units counts **DO NOT** match ==')
 # Close the hdf5 file
