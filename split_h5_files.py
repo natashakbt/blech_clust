@@ -12,9 +12,21 @@ import tables
 import easygui
 import sys
 import os
+import argparse
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+parser = argparse.ArgumentParser(description = 'Spike extraction and sorting script')
+parser.add_argument('--dir-name',  '-d', help = 'Directory containing data files')
+args = parser.parse_args()
+
+if args.dir_name is not None: 
+    dir_name = os.path.abspath(args.dir_name)
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+
+#dir_name = easygui.diropenbox()
 os.chdir(dir_name)
 
 # Look for the hdf5 file in the directory
