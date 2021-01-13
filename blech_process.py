@@ -170,8 +170,8 @@ for dat, spikes, this_ax in zip(chosen_windows, chosen_window_spikes, ax):
         this_ax.scatter(spikes, np.repeat(mean_val, len(spikes)),s=5,c='red')
     this_ax.set_ylim((mean_val - 1.5*threshold,
                         mean_val + 1.5*threshold))
-    fig.savefig(f'./Plots/{electrode_num:02}/bandapass_trace_snippets.png', 
-        bbox_inches='tight', dpi = 300)
+fig.savefig(f'./Plots/{electrode_num:02}/bandapass_trace_snippets.png', 
+    bbox_inches='tight', dpi = 300)
 plt.close(fig)
 
 # Delete filtered electrode from memory

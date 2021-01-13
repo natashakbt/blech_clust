@@ -53,7 +53,4 @@ def read_files(hdf5_name, ports, dig_in, emg_port, emg_channels):
                 hf5.flush()
 
         hf5.close()
-                                
-        
-
         

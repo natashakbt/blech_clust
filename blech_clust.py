@@ -101,6 +101,19 @@ emg_port = ''
 #        Click clear all and ok if you did not use an EMG electrode', 
 #        choices = tuple([i for i in range(32)]))
 
+with open(json_path[0], 'r') as params_file:
+    info_dict = json.load(params_file)
+if 'emg' in info_dict['electrode_layout'].keys():
+    # Get ALL OTHER electrodes
+    all_car_group_vals = []
+    for region_name, region_elecs in info_dict['electrode_layout'].items():
+        if not region_name == 'emg':
+            for group in region_elecs:
+                if len(group) > 0:
+                    all_car_group_vals.append(group)
+    all_electrodes = [electrode for region in all_car_group_vals \
+                            for electrode in region]
+
 emg_port = 'A'
 emg_channels = []
 if emg_channels:
@@ -184,18 +197,6 @@ num_cpu = multiprocessing.cpu_count()
 # If EMG is present, don't add EMG electrode to list of electrodes
 # to be processed
 # Check if EMG present
-with open(json_path[0], 'r') as params_file:
-    info_dict = json.load(params_file)
-if 'emg' in info_dict['electrode_layout'].keys():
-    # Get ALL OTHER electrodes
-    all_car_group_vals = []
-    for region_name, region_elecs in info_dict['electrode_layout'].items():
-        if not region_name == 'emg':
-            for group in region_elecs:
-                if len(group) > 0:
-                    all_car_group_vals.append(group)
-    all_electrodes = [electrode for region in all_car_group_vals \
-                            for electrode in region]
     # Write appropriate electrodes to file
     f = open('blech_clust_jetstream_parallel.sh', 'w')
     print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\

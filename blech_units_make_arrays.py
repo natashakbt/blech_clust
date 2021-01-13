@@ -239,6 +239,7 @@ hf5.create_group('/', 'spike_trains')
 # and get an experiment end time 
 # (to account for cases where the headstage fell off mid-experiment)
 
+# NOTE: This pulls out units in SORTED order
 units = hf5.list_nodes('/sorted_units')
 expt_end_time = 0
 for unit in units:
