@@ -1,4 +1,8 @@
-
+"""
+Script to reset data folder to (almost) raw form
+Deleting (almost) all processing files
+Info file and sorting table (csv) as kept
+"""
 # Import stuff!
 import os
 import shutil
