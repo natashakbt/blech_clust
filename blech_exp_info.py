@@ -26,6 +26,7 @@ import sys
 import re
 import itertools as it
 import argparse
+import pdb
 
 def entry_checker(msg, check_func, fail_response):
     check_bool = False
@@ -164,26 +165,24 @@ else:
     def count_check(x):
         nums = re.findall('[0-9]+',x)
         return sum([x.isdigit() for x in nums]) == len(nums)
-    if len(ports) > 1:
-        port_vals = list(zip(np.arange(len(ports)), ports))
-        port_str = "\n".join([str(x) for x in port_vals])
-        print(port_str)
-        emg_port_str, continue_bool = entry_checker(\
-                msg = 'EMG Port, <BLANK> for none::: ',
-                check_func = count_check,
-                fail_response = 'Please enter a single, valid integer')
-        if continue_bool:
-            if len(emg_port_str) == 0:
-                emg_port = []
-            else:
-                emg_port = [int(x) for x in emg_port_str]
+
+    port_vals = list(zip(np.arange(len(ports)), ports))
+    port_str = "\n".join([str(x) for x in port_vals])
+    print(port_str)
+    emg_port_str, continue_bool = entry_checker(\
+            msg = 'EMG Port, <BLANK> for none::: ',
+            check_func = count_check,
+            fail_response = 'Please enter a single, valid integer')
+    if continue_bool:
+        if len(emg_port_str) == 0:
+            emg_port = []
         else:
-            exit()
+            emg_port = [int(x) for x in emg_port_str]
     else:
-        emg_port = [0]
+        exit()
 
     if len(emg_port) > 0:
-        potential_electrodes = np.arange(32) + 32*emg_port
+        potential_electrodes = np.arange(32) #+ (32*emg_port[0])
         print(f"Port : {ports[emg_port[0]]}, \n Electrodes : {potential_electrodes}")
         emg_elec_str, continue_bool = entry_checker(\
                 msg = 'EMG Electrodes, <BLANK> for none (ANYTHING separated) ::: ',
@@ -196,6 +195,14 @@ else:
                 emg_electrodes = [int(x) for x in re.findall('[0-9]+',emg_elec_str)]
         else:
             exit()
+
+    #pdb.set_trace()
+    # Make sure emg electrodes numbers fit in with all electrode numbers
+    # e.g. Channel 3 Port B for recording with both Ports A and B
+    # should regiester as emg electrode 34
+    if 'emg_electrodes' in dir():
+        orig_emg_electrodes = emg_electrodes
+        emg_electrodes = [int(x+(31*emg_port[0])) for x in emg_electrodes]
 
     # Walk through fin_perm and delete emg_electrodes where you find them 
     # and add them as a new region
@@ -308,14 +315,23 @@ else:
         onset_time, duration = [None, None]
 
     notes = input('::: Please enter any notes about the experiment. \n ::: ')
+    # Add raw emg electrode number to notes for ease of readibility
 
     ########################################
     ## Finalize dictionary
     ########################################
 
+    if len(emg_port) > 0:
+        fin_emg_port = ports[emg_port[0]] 
+    else:
+        fin_emg_port = []
+
     fin_dict = {**this_dict,
             'regions' : regions,
             'ports' : ports,
+            'emg' : {\
+                    'port': fin_emg_port, 
+                    'electrodes' : orig_emg_electrodes},
             'electrode_layout' : fin_perm,
             'taste_params' : {\
                     'dig_ins' : taste_digins,
@@ -328,6 +344,7 @@ else:
                     'onset' : onset_time,
                     'duration': duration},
             'notes' : notes}
+
 
 json_file_name = os.path.join(dir_path,'.'.join([dir_name,'info']))
 with open(json_file_name,'w') as file:
