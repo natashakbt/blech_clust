@@ -15,7 +15,7 @@ import argparse
 # Get name of directory with the data files
 # Create argument parser
 parser = argparse.ArgumentParser(description = 'Spike extraction and sorting script')
-parser.add_argument('--dir-name',  '-d', help = 'Directory containing data files')
+parser.add_argument('dir_name', help = 'Directory containing data files')
 args = parser.parse_args()
 
 if args.dir_name is not None: 
