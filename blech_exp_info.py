@@ -203,6 +203,8 @@ else:
     if 'emg_electrodes' in dir():
         orig_emg_electrodes = emg_electrodes
         emg_electrodes = [int(x+(31*emg_port[0])) for x in emg_electrodes]
+    else:
+        orig_emg_electrodes = []
 
     # Walk through fin_perm and delete emg_electrodes where you find them 
     # and add them as a new region
