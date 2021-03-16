@@ -12,7 +12,8 @@ def create_hdf_arrays(file_name, ports, dig_in, emg_port, emg_channels):
         
         # Create arrays for digital inputs
         for i in dig_in:
-                dig_inputs = hf5.create_earray('/digital_in', 'dig_in_%i' % i, atom, (0,))
+                dig_inputs = hf5.create_earray(\
+                        '/digital_in', 'dig_in_%i' % i, atom, (0,))
 
         # Create arrays for neural electrodes, and make directories to store 
         # stuff coming out from blech_process
@@ -33,7 +34,8 @@ def read_files(hdf5_name, ports, dig_in, emg_port, emg_channels):
         # Read digital inputs, and append to the respective hdf5 arrays
         print('Reading dig-ins')
         for i in tqdm.tqdm(dig_in):
-                inputs = np.fromfile('board-DIN-%02d'%i + '.dat', dtype = np.dtype('uint16'))
+                inputs = np.fromfile('board-DIN-%02d'%i + '.dat', 
+                                        dtype = np.dtype('uint16'))
                 exec("hf5.root.digital_in.dig_in_"+str(i)+".append(inputs[:])")
 
         # Read data from amplifier channels
@@ -45,10 +47,12 @@ def read_files(hdf5_name, ports, dig_in, emg_port, emg_channels):
                         data = np.fromfile('amp-' + port + '-%03d'%channel + '.dat', 
                                 dtype = np.dtype('int16'))
                         if port == emg_port[0] and channel in emg_channels:
-                            exec(f"hf5.root.raw_emg.emg{emg_counter:02}.append(data[:])")
+                            exec(f"hf5.root.raw_emg.emg{emg_counter:02}."\
+                                    "append(data[:])")
                             emg_counter += 1
                         else:
-                            exec(f"hf5.root.raw.electrode{el_counter:02}.append(data[:])")
+                            exec(f"hf5.root.raw.electrode{el_counter:02}."\
+                                    "append(data[:])")
                             el_counter += 1
                 hf5.flush()
 

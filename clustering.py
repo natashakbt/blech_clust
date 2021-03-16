@@ -14,7 +14,8 @@ def get_filtered_electrode(data, freq = [300.0, 3000.0], sampling_rate = 30000.0
         filt_el = filtfilt(m, n, el)
         return filt_el
 
-def extract_waveforms_abu(filt_el, spike_snapshot = [0.5, 1.0], sampling_rate = 30000.0):
+def extract_waveforms_abu(filt_el, spike_snapshot = [0.5, 1.0], 
+                                    sampling_rate = 30000.0):
 
         m = np.mean(filt_el)
         th = 5.0*np.median(np.abs(filt_el)/0.6745)
@@ -75,8 +76,9 @@ def extract_waveforms(filt_el, spike_snapshot = [0.5, 1.0], sampling_rate = 3000
                         np.min(filt_el[pos[changes[i]:changes[i+1]]]))[0]
 
                 #print minimum, len(slices), len(changes), len(filt_el)
-                # try slicing out the putative waveform, only do this if there are 10ms 
-                # of data points (waveform is not too close to the start or end of the recording)
+                # try slicing out the putative waveform, 
+                # only do this if there are 10ms of data points 
+                # (waveform is not too close to the start or end of the recording)
                 if pos[minimum[0]+changes[i]] \
                         - int((spike_snapshot[0] + 0.1)*(sampling_rate/1000.0))> 0 \
                         and pos[minimum[0]+changes[i]] + int((spike_snapshot[1]+ 0.1)\
