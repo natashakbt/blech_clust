@@ -197,3 +197,53 @@ for this_process in process_list:
     this_process.join()
 end = time.time()
 print(end-start)
+
+# Using pool to handle number of processes at any given timepoint
+# This will prevent memory overflow errors
+array_path = '/amp_data'
+def write_to_file(hdf5_path, array_path, data, block_len, ind):
+    lock.acquire()
+    print(f"Writing {ind} now")
+    with tables.open_file(hdf5_path, 'r+') as hf5:
+        array = hf5.get_node(\
+                os.path.dirname(array_path),os.path.basename(array_path))
+        array[:,ind*block_len : (ind+1)*block_len] = data
+    lock.release()
+
+def load_and_write(num,
+                    file_list,
+                    hdf5_path,
+                    array_path,
+                    block_len):
+    loaded_dict = rhd.read_data(file_list[num], no_floats = True)
+    loaded_dat = loaded_dict['amplifier_data']
+    referenced_dat = loaded_dat - jnp.mean(loaded_dat,axis=0)
+    write_to_file(hdf5_path, array_path, loaded_dat, block_len, num)
+
+def load_and_write_par(num):
+    load_and_write(num,
+                        file_list,
+                        hdf5_path,
+                        array_path,
+                        block_len)
+
+def init(l):
+    global lock
+    lock = l
+
+# Calculate maximum number of processes that should be allowed
+# Check free memory, and size of single binary files
+import psutil
+available_memory = psutil.virtual_memory()[1]
+# Check size of files
+bin_file_size = os.path.getsize(file_list[0])
+
+max_processes_possible = int(np.floor((available_memory//bin_file_size)/2))
+max_processes = np.min((len(file_list), cpu_count(), max_processes_possible))
+
+iterable = range(len(file_list)-1) 
+l = multiprocessing.Lock()
+pool = multiprocessing.Pool(max_processes, initializer=init, initargs=(l,))
+pool.map(load_and_write_par, iterable)
+pool.close()
+pool.join()
