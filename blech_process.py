@@ -51,7 +51,7 @@ dir_list = [f'./Plots/{electrode_num:02}',
             f'./clustering_results/electrode{electrode_num:02}']
 for this_dir in dir_list:
     ifisdir_rmdir(this_dir)
-    os.mkdir(this_dir)
+    os.makedirs(this_dir)
 
 # Get the names of all files in the current directory, and find the .params and hdf5 (.h5) file
 file_list = os.listdir('./')
@@ -183,7 +183,7 @@ def img_plot(array):
 # Dejitter these spike waveforms, and get their maximum amplitudes
 # Slices are returned sorted by amplitude polaity
 slices_dejittered, times_dejittered = \
-    dejitter_abu2(slices, 
+        dejitter_abu3(slices,
                     spike_times,
                     polarity = polarity,
                     spike_snapshot = [spike_snapshot_before, spike_snapshot_after], 
@@ -206,7 +206,7 @@ slices_autocorr = fftconvolve(slices_dejittered, slices_dejittered, axes = -1)
 # as a proxy for spike shape templates
 # Assuming sampling frequency remains the same, the size of the kernel
 # can remain constant
-template0 = gaussian(400,40)
+template0 = gaussian(40,4)
 template1 = np.diff(template0)
 template2 = np.diff(template1)
 
@@ -359,7 +359,7 @@ for i in range(max_clusters-1):
         # Plot 10 times downsampled dejittered/smoothed waveforms.
         # Additionally plot the ISI distribution of each cluster 
         os.mkdir(f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs')
-        x = np.arange(len(slices_dejittered[0])/10) + 1
+        x = np.arange(len(slices_dejittered[0])) + 1
         for cluster in range(i+2):
                 cluster_points = np.where(predictions[:] == cluster)[0]
 
@@ -368,6 +368,7 @@ for i in range(max_clusters-1):
                             blech_waveforms_datashader.waveforms_datashader(\
                                 slices_dejittered[cluster_points, :], 
                                 x, 
+                                downsample = False,
                                 dir_name = "datashader_temp_el" + str(electrode_num))
                     ax.set_xlabel('Sample ({:d} samples per ms)'.\
                             format(int(sampling_rate/1000)))

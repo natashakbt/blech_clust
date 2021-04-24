@@ -33,7 +33,8 @@ if args.sort_file is not None:
     sort_table = pd.read_csv(args.sort_file)
     sort_table.fillna('',inplace=True)
     # Check when more than one cluster is specified
-    sort_table['len_cluster'] = [len(re.findall('[0-9]+',str(x))) for x in sort_table.Cluster]
+    sort_table['len_cluster'] = \
+            [len(re.findall('[0-9]+',str(x))) for x in sort_table.Cluster]
     # Get splits and merges out of the way first
     sort_table.sort_values(['len_cluster','Split'],ascending=False, inplace=True)
     true_index = sort_table.index
@@ -108,7 +109,8 @@ class unit_descriptor(tables.IsDescription):
 # Make a table under /sorted_units describing the sorted units. 
 # If unit_descriptor already exists, just open it up in the variable table
 try:
-        table = hf5.create_table('/', 'unit_descriptor', description = unit_descriptor)
+        table = hf5.create_table('/', 'unit_descriptor', 
+                description = unit_descriptor)
 except:
         table = hf5.root.unit_descriptor
 
@@ -295,7 +297,8 @@ while True:
             data = np.zeros((len(this_cluster), n_pc + 3))  
             data[:,3:] = pca_slices[this_cluster,:n_pc]
             data[:,0] = energy[this_cluster]/np.max(energy[this_cluster])
-            data[:,1] = np.abs(amplitudes[this_cluster])/np.max(np.abs(amplitudes[this_cluster]))
+            data[:,1] = np.abs(amplitudes[this_cluster])/\
+                    np.max(np.abs(amplitudes[this_cluster]))
             data = np.concatenate((data,autocorrs[this_cluster,:3]),axis=-1)
 
             # Cluster the data
@@ -310,7 +313,7 @@ while True:
             # Show the cluster plots if the solution converged
             if g.converged_:
                 split_predictions = g.predict(data)
-                x = np.arange(len(spike_waveforms[0])/10) + 1
+                x = np.arange(len(spike_waveforms[0])) + 1
                 #fig, ax = gen_square_subplots(n_clusters,sharex=True,sharey=True)
                 for cluster in range(n_clusters):
                     split_points = np.where(split_predictions == cluster)[0]
@@ -323,7 +326,7 @@ while True:
                     violations1 = 100.0*float(np.sum(ISIs < 1.0)/split_points.shape[0])
                     violations2 = 100.0*float(np.sum(ISIs < 2.0)/split_points.shape[0])
                     fig, ax = blech_waveforms_datashader.waveforms_datashader(\
-                            slices_dejittered[split_points, :], x)
+                            slices_dejittered[split_points, :], x, downsample = False)
                     ax.set_xlabel('Sample (30 samples per ms)')
                     ax.set_ylabel('Voltage (microvolts)')
                     print_str = (f'\nSplit Cluster {cluster} \n'
@@ -397,25 +400,27 @@ while True:
             unit_description['unit_number'] = int(max_unit + 1)
 
 
-        # If the user re-clustered/split clusters, add the chosen clusters in split_clusters
+        # If the user re-clustered/split clusters, 
+        # add the chosen clusters in split_clusters
         if re_cluster:
                 hf5.create_group('/sorted_units', unit_name)
                 # Waveforms of originally chosen cluster
-                unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]    
-                # Subsetting this set of waveforms to include only the chosen split
-                unit_waveforms = np.concatenate(\
-                        [unit_waveforms[np.where(split_predictions == this_split)[0], :] \
+                cluster_inds = np.where(predictions == int(clusters([0]))[0] 
+                fin_inds = np.concatenate(\
+                        [[np.where(split_predictions == this_split)[0], :] \
                                     for this_split in chosen_split])
+                unit_waveforms = spike_waveforms[cluster_inds, :]    
+                # Subsetting this set of waveforms to include only the chosen split
+                unit_waveforms = unit_waveforms[fin_inds]
 
                 # Do the same thing for the spike times
-                unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
-                unit_times = np.concatenate(\
-                        [unit_times[np.where(split_predictions == this_split)[0]] \
-                                    for this_split in chosen_split])
+                unit_times = spike_times[cluster_inds]
+                unit_times = unit_times[fin_inds] 
                 # Add to HDF5
                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
                                 'waveforms', unit_waveforms)
-                times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                times = hf5.create_array('/sorted_units/%s' % unit_name, \
+                                            'times', unit_times)
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
 
@@ -431,11 +436,13 @@ while True:
         # Ask if the isolated unit is an almost-SURE single unit
         elif len(clusters) == 1:
                 hf5.create_group('/sorted_units', unit_name)
-                unit_waveforms = spike_waveforms[np.where(predictions == int(clusters[0]))[0], :]
-                unit_times = spike_times[np.where(predictions == int(clusters[0]))[0]]
+                fin_inds = np.where(predictions == int(clusters[0]))[0]
+                unit_waveforms = spike_waveforms[fin_inds, :]
+                unit_times = spike_times[fin_inds]
                 waveforms = hf5.create_array('/sorted_units/%s' % unit_name, 
                         'waveforms', unit_waveforms)
-                times = hf5.create_array('/sorted_units/%s' % unit_name, 'times', unit_times)
+                times = hf5.create_array('/sorted_units/%s' % unit_name, \
+                                        'times', unit_times)
                 unit_description['waveform_count'] = int(len(unit_times))
                 unit_description['electrode_number'] = electrode_num
 
@@ -449,28 +456,27 @@ while True:
         else:
             # If the chosen units are going to be merged, merge them
             if merge:
-                unit_waveforms = []
-                unit_times = []
-                for cluster in clusters:
-                    if unit_waveforms == []:
-                        unit_waveforms = spike_waveforms[np.where(predictions == int(cluster))[0], :]
-                        unit_times = spike_times[np.where(predictions == int(cluster))[0]]
-                    else:
-                        unit_waveforms = np.concatenate((unit_waveforms, 
-                            spike_waveforms[np.where(predictions == int(cluster))[0], :]))
-                        unit_times = np.concatenate((unit_times, 
-                            spike_times[np.where(predictions == int(cluster))[0]]))
+                fin_inds = np.concatenate(\
+                        [np.where(predictions == int(cluster))[0] \
+                        for cluster in clusters])
+                unit_waveforms = spike_waveforms[fin_inds, :]
+                unit_times = spike_times[fin_inds]
 
-                # Show the merged cluster to the user, and ask if they still want to merge
-                x = np.arange(len(unit_waveforms[0])/10) + 1
-                fig, ax = blech_waveforms_datashader.waveforms_datashader(unit_waveforms, x)
-                # plt.plot(x - 15, unit_waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+                # Show the merged cluster to the user, 
+                # and ask if they still want to merge
+                x = np.arange(len(unit_waveforms[0])) + 1
+                fig, ax = blech_waveforms_datashader.\
+                        waveforms_datashader(unit_waveforms, x, downsample = False)
+                # plt.plot(x - 15, unit_waveforms[:, ::10].T, 
+                #                   linewidth = 0.01, color = 'red')
                 ax.set_xlabel('Sample (30 samples per ms)')
                 ax.set_ylabel('Voltage (microvolts)')
-                ax.set_title('Merged cluster, No. of waveforms={:d}'.format(unit_waveforms.shape[0]))
+                ax.set_title('Merged cluster, No. of waveforms={:d}'.\
+                                    format(unit_waveforms.shape[0]))
                 plt.show()
  
-                # Warn the user about the frequency of ISI violations in the merged unit
+                # Warn the user about the frequency of ISI violations 
+                # in the merged unit
                 ISIs = np.ediff1d(np.sort(unit_times))/30.0
                 violations1 = 100.0*float(np.sum(ISIs < 1.0)/len(unit_times))
                 violations2 = 100.0*float(np.sum(ISIs < 2.0)/len(unit_times))
@@ -565,6 +571,15 @@ while True:
             unit_description.append()
             table.flush()
             hf5.flush()
+
+        is_nrn_path = f'./clustering_results/electrode{electrode_num:02}/'\
+                    f'clusters{num_clusters}/is_nrn.npy'
+        if not os.path.exists(is_nrn_path):
+            is_nrn_list = [[fin_inds]]
+        else:
+            is_nrn_list = np.load(is_nrn_path)
+            is_nrn_list.append([fin_inds])
+        np.save(is_nrn_path, is_nrn_list)
 
         print('==== {} Complete ===\n'.format(unit_name))
         print('==== Iteration Ended ===\n')

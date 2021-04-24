@@ -109,8 +109,8 @@ for i in range(num_units):
     # Second plot
     plt.subplot(122)
     exec('waveforms = hf5.root.sorted_units.unit%03d.waveforms[:]' % (chosen_units[i]))
-    t = np.arange(waveforms.shape[1]/10)
-    plt.plot(t - 15, waveforms[:, ::10].T, linewidth = 0.01, color = 'red')
+    t = np.arange(waveforms.shape[1])
+    plt.plot(t - 15, waveforms.T, linewidth = 0.01, color = 'red')
     plt.xlabel('Time (samples (30 per ms))')
     plt.ylabel('Voltage (microvolts)')
     title_str = f"Unit {chosen_units[i]}," \

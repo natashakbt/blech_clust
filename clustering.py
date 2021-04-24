@@ -235,6 +235,51 @@ def dejitter_abu2(slices,
 
         return slices_dejittered, spike_times
 
+def dejitter_abu3(slices, 
+                spike_times, 
+                polarity,
+                spike_snapshot = [0.5, 1.0], 
+                sampling_rate = 30000.0):
+
+        """
+        Dejitter without interpolation and see what breaks :P
+        """
+        # Calculate the number of samples to be sliced 
+        #out around each spike's minimum
+        before = int((sampling_rate/1000.0)*(spike_snapshot[0]))
+        after = int((sampling_rate/1000.0)*(spike_snapshot[1]))
+
+        # Determine positive or negative spike and flip
+        # positive spikes so everything is aligned by minimum
+        # Then flip positive spikes back to being positive
+        flipped_slices = np.copy(slices)
+        flipped_slices[polarity > 0] *= -1
+
+        #interp_slices = np.array([interp1d(x, this_slice)(xnew) \
+        #        for this_slice in flipped_slices])
+
+        # Cut out part around focus of spike snapshot to use
+        # for finding minima
+        # 3 bins (0.1 ms) is the wiggle room we gave ourselves 
+        # when extracting spikes, therefore, each spike is organized as
+        #   0.1 ms |-| Before |-| Minimum |-| After |-| 0.1 ms
+        # We will use 0.1ms around the minimum to dejitter the spike 
+        cut_radius = 3
+        cut_tuple = (int((before) + (cut_radius/2)), 
+                int(flipped_slices.shape[1] - (after) - (cut_radius/2)))
+        # minima will tell us how much each spike needs to be shifted
+        minima = np.argmin(flipped_slices[:,cut_tuple[0]:cut_tuple[1]],
+                        axis=-1) + (before) + (cut_radius/2) 
+
+        # Extract windows AROUND minima
+        slices_dejittered = np.array([this_slice[\
+            int(this_min - (before)) : int(this_min + (after))] \
+            for this_slice, this_min in zip(flipped_slices, minima)])
+
+        # Flip positive slices
+        slices_dejittered[polarity > 0] *= -1
+
+        return slices_dejittered, spike_times
 
 def scale_waveforms(slices_dejittered):
         energy = np.sqrt(np.sum(slices_dejittered**2, axis = 1))/len(slices_dejittered[0])

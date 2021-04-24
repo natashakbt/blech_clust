@@ -42,8 +42,9 @@ os.mkdir("unit_waveforms_plots")
 # Now plot the waveforms from the units in this directory one by one
 for unit in range(len(units)):
         waveforms = units[unit].waveforms[:]
-        x = np.arange(waveforms.shape[1]/10) + 1
-        fig, ax = blech_waveforms_datashader.waveforms_datashader(waveforms, x)
+        x = np.arange(waveforms.shape[1]) + 1
+        fig, ax = blech_waveforms_datashader.\
+                waveforms_datashader(waveforms, x, downsample=False)
         ax.set_xlabel('Sample (30 samples per ms)')
         ax.set_ylabel('Voltage (microvolts)')
         ax.set_title('Unit %i, total waveforms = %i' % (unit, waveforms.shape[0]) \
@@ -58,11 +59,11 @@ for unit in range(len(units)):
         # Also plot the mean and SD for every unit - 
         # downsample the waveforms 10 times to remove effects of upsampling during de-jittering
         fig = plt.figure()
-        plt.plot(x, np.mean(waveforms[:, ::10], axis = 0), linewidth = 4.0)
+        plt.plot(x, np.mean(waveforms, axis = 0), linewidth = 4.0)
         plt.fill_between(
                 x, 
-                np.mean(waveforms[:, ::10], axis = 0) - np.std(waveforms[:, ::10], axis = 0), 
-                np.mean(waveforms[:, ::10], axis = 0) + np.std(waveforms[:, ::10], axis = 0), 
+                np.mean(waveforms, axis = 0) - np.std(waveforms, axis = 0), 
+                np.mean(waveforms, axis = 0) + np.std(waveforms, axis = 0), 
                 alpha = 0.4)
         plt.xlabel('Sample (30 samples per ms)')
         plt.ylabel('Voltage (microvolts)')
