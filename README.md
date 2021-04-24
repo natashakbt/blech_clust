@@ -9,8 +9,8 @@ can be easily modified to work in any parallel environment. Visit the Katz lab
 website at https://sites.google.com/a/brandeis.edu/katzlab/
 
 ### Convenience scripts
-- blech_clust_pre.sh : Runs steps 1-4  
-- blech_clust_post.sh : Runs steps 6-12   
+- blech_clust_pre.sh : Runs steps 2-5  
+- blech_clust_post.sh : Runs steps 7-14   
 
 ### Order of operations  
 1. python blech_exp_info.py  
