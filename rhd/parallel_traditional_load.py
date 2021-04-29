@@ -1,15 +1,26 @@
+import sys
+import os
+sys.path.append('/home/abuzarmahmood/Desktop/blech_clust/rhd')
+#os.chdir('/home/abuzarmahmood/Desktop/blech_clust/rhd')
+from load_intan_test import *
+import rhd
+
 import numpy as np
 import jax.numpy as jnp
 from glob import glob
-import os
-from load_intan_test import *
 import tables
-import rhd
-from joblib import Parallel, delayed, cpu_count
+#from joblib import Parallel, delayed, cpu_count
 from tqdm import tqdm, trange
 import time
+import psutil
+import multiprocessing as mp
+import pylab as plt
 
-file_path = '/media/bigdata/Abuzar_Data/trad_intan_test'
+from sklearn.cluster import KMeans
+
+
+file_path = '/media/bigdata/Abuzar_Data/trad_intan_test2'
+hdf5_path = os.path.join(file_path, 'test.h5')
 
 file_list = sorted(glob(os.path.join(file_path,'*.rhd')))
 
@@ -21,193 +32,39 @@ last_size = get_file_info(file_list[-1])
 
 full_size = first_size*(len(file_list)-1) + last_size
 
-test = rhd.read_data(file_list[0], no_floats = True)
+test = rhd.read_data(file_list[-1], no_floats = True)
 test_data = test['amplifier_data']
 
 atom = tables.Int16Atom()
-hdf5_path = os.path.join(file_path, 'test.h5')
 hf5 = tables.open_file(hdf5_path, 'w')
 hf5.close()
 hf5 = tables.open_file(hdf5_path, 'r+')
 
-amp_array = hf5.create_array('/','amp_data', atom = atom, shape = (32, full_size))
+amp_array = hf5.create_array('/','amp_data', atom = atom, \
+        shape = (test_data.shape[0], full_size))
+hf5.close()
 
-#write_bool_name = 'WRITE_BOOL'
-#os.environ[write_bool_name] = '0'
-
-class write_handler():
-    def __init__(self):
-        pass
-        #    #self.write_bool = 0
-        #    os.environ['write_bool'] = '0'
-
-    def write_off(self):
-        #self.write_bool = 0
-        os.environ['write_bool'] = '0'
-
-    def write_on(self):
-        #self.write_bool = 1
-        os.environ['write_bool'] = '1'
-
-    def get_write_bool(self):
-        #return self.write_bool
-        return int(os.environ['write_bool'])
-
-#def write_off():
-#    globals()['write_bool'] = 0
-#def write_on():
-#    globals()['write_bool'] = 1
-
-def write_to_array(array, data, block_len, ind, write_handler):
-    if write_handler.get_write_bool():
-        write_handler.write_off()
-        array[:,ind*block_len : (ind+1)*block_len] = data
-        write_handler.write_on()
-
-array_path = '/amp_data'
-def write_to_file(hdf5_path, array_path, data, block_len, ind, write_handler):
-    if write_handler.get_write_bool():
-        write_handler.write_off()
-        print("Writing now")
-        print(f"{os.environ['write_bool']}")
-        with tables.open_file(hdf5_path, 'r+') as hf5:
-            array = hf5.get_node(\
-                    os.path.dirname(array_path),os.path.basename(array_path))
-            array[:,ind*block_len : (ind+1)*block_len] = data
-            write_handler.write_on()
-    else:
-        print("Can't write currently...waiting")
-
-#for num, name in tqdm(enumerate(file_list[:-1])):
-#    data_dict = rhd.read_data(name)
-#    write_to_array(array = amp_array, 
-#                data = data_dict['amplifier_data'],
-#                block_len = first_size,
-#                ind = num,
-#                write_handler = write_handler()
-#                )
-#
-#    write_to_file(hdf5_path = hdf5_path,
-#                array_path = array_path,
-#                data = data_dict['amplifier_data'],
-#                block_len = first_size,
-#                ind = num,
-#                write_handler = write_handler()
-#                )
-
-def write_to_file_par(num):
-    time.sleep(0.2*num)
-    write_to_file(hdf5_path = hdf5_path,
-                array_path = array_path,
-                data = data_dict['amplifier_data'],
-                block_len = first_size,
-                ind = num,
-                write_handler = write_handler()
-                )
-
-#Parallel(n_jobs = 8)(delayed(write_to_array)\
-#        (amp_array, data_dict['amplifier_data'], first_size, num, write_handler()) \
-#        for num in range(3))
-
-this_write_handler = write_handler()
-Parallel(n_jobs = 8)(delayed(write_to_file)\
-        (hdf5_path, array_path, data_dict['amplifier_data'], \
-        first_size, num, this_write_handler) \
-        for num in range(5))
-
-Parallel(n_jobs = 8)(delayed(write_to_file_par)\
-        (num) for num in range(2))
-
-## ========================================##
-
-import multiprocessing
-import sys
-
-def worker_with(lock, stream, num):
-    print(f'Before lock {num}')
-    with lock:
-        stream.write(f'Lock acquired via with ({num})\n')
-        time.sleep(10)
-        
-lock = multiprocessing.Lock()
-w = multiprocessing.Process(target=worker_with, args=(lock, sys.stdout,0))
-w1 = multiprocessing.Process(target=worker_with, args=(lock, sys.stdout,1))
-
-w.start()
-w1.start()
-
-w.join()
-w1.join()
-
-
-import multiprocessing as mp
-lock = mp.Lock()
-pool = mp.Pool(processes=4)
-results = pool.map(write_to_file_par, range(1,7))
-
-
-array_path = '/amp_data'
-def write_to_file(hdf5_path, array_path, data, block_len, ind, lock):
-    with lock:
-        print(f"Writing {ind} now")
-        with tables.open_file(hdf5_path, 'r+') as hf5:
-            array = hf5.get_node(\
-                    os.path.dirname(array_path),os.path.basename(array_path))
-            array[:,ind*block_len : (ind+1)*block_len] = data
-
-def load_and_write(num,
-                    file_list,
-                    hdf5_path,
-                    array_path,
-                    block_len,
-                    lock):
-    loaded_dict = rhd.read_data(file_list[num], no_floats = True)
-    loaded_dat = loaded_dict['amplifier_data']
-    referenced_dat = loaded_dat - jnp.mean(loaded_dat,axis=0)
-    write_to_file(hdf5_path, array_path, loaded_dat, block_len, num, lock)
-
-def load_and_write_par(num,lock):
-    load_and_write(num,
-                        file_list,
-                        hdf5_path,
-                        array_path,
-                        block_len,
-                        lock)
-
-
-#def write_to_file_par(num, lock):
-#    print(f'Iteration {num}')
-#    write_to_file(hdf5_path = hdf5_path,
-#                array_path = array_path,
-#                data = data_dict['amplifier_data'],
-#                block_len = first_size,
-#                ind = num,
-#                lock = lock 
-#                )
-
-os.environ['JAX_PLATFORM_NAME'] = 'cpu'
-
-start = time.time()
-lock = mp.Lock()
-process_list = [mp.Process(target = load_and_write_par, args=(num, lock)) \
-                    for num in range(len(file_list)-1)]
-for this_process in process_list:
-    this_process.start()
-for this_process in process_list:
-    this_process.join()
-end = time.time()
-print(end-start)
 
 # Using pool to handle number of processes at any given timepoint
 # This will prevent memory overflow errors
 array_path = '/amp_data'
+# For now, ignore the last file
+block_len = first_size
+
 def write_to_file(hdf5_path, array_path, data, block_len, ind):
+    """
+    Use -1 for final ind
+    """
     lock.acquire()
     print(f"Writing {ind} now")
     with tables.open_file(hdf5_path, 'r+') as hf5:
         array = hf5.get_node(\
                 os.path.dirname(array_path),os.path.basename(array_path))
-        array[:,ind*block_len : (ind+1)*block_len] = data
+        if ind == -1:
+            array[:,-data.shape[1]:] = data
+        else:
+            array[:,ind*block_len : (ind+1)*block_len] = data
+        hf5.flush()
     lock.release()
 
 def load_and_write(num,
@@ -217,8 +74,9 @@ def load_and_write(num,
                     block_len):
     loaded_dict = rhd.read_data(file_list[num], no_floats = True)
     loaded_dat = loaded_dict['amplifier_data']
-    referenced_dat = loaded_dat - jnp.mean(loaded_dat,axis=0)
-    write_to_file(hdf5_path, array_path, loaded_dat, block_len, num)
+    referenced_dat = loaded_dat - np.mean(loaded_dat,axis=0)
+    #write_to_file(hdf5_path, array_path, loaded_dat, block_len, num)
+    write_to_file(hdf5_path, array_path, referenced_dat, block_len, num)
 
 def load_and_write_par(num):
     load_and_write(num,
@@ -231,19 +89,64 @@ def init(l):
     global lock
     lock = l
 
+
 # Calculate maximum number of processes that should be allowed
 # Check free memory, and size of single binary files
-import psutil
 available_memory = psutil.virtual_memory()[1]
 # Check size of files
 bin_file_size = os.path.getsize(file_list[0])
 
-max_processes_possible = int(np.floor((available_memory//bin_file_size)/2))
-max_processes = np.min((len(file_list), cpu_count(), max_processes_possible))
+max_processes_possible = \
+        int(np.floor((available_memory//bin_file_size)/2))
+max_processes = \
+        np.min((len(file_list), mp.cpu_count(), max_processes_possible))
 
-iterable = range(len(file_list)-1) 
-l = multiprocessing.Lock()
-pool = multiprocessing.Pool(max_processes, initializer=init, initargs=(l,))
+start_t = time.time()
+iterable = list(range(len(file_list)-1))
+iterable.append(-1)
+l = mp.Lock()
+pool = mp.Pool(max_processes, initializer=init, initargs=(l,))
 pool.map(load_and_write_par, iterable)
 pool.close()
 pool.join()
+end_t = time.time()
+print(end_t - start_t)
+
+# Plot some data
+with tables.open_file(hdf5_path, 'r') as hf5:
+    full_test = hf5.root.amp_data[:,:]
+    test = hf5.root.amp_data[0,:]
+full_test_down = full_test[:,::100]
+
+from scipy.stats import zscore
+zscore_full = zscore(full_test_down,axis=0)
+
+plt.imshow(zscore_full,aspect='auto')
+plt.show()
+
+plt.plot(test[::100])
+# Plot vlines at block_lens to check if there are breaks
+min_val,max_val = np.min(test), np.max(test)
+plt.vlines(block_len*np.arange(len(iterable))//100, min_val, max_val)
+plt.show()
+
+### Create CAR groups using kmeans
+from sklearn.metrics import pairwise_distances as distmat
+num_clusters = 4
+max_points = 1000
+selected_inds = np.random.choice(np.arange(zscore_full.shape[-1]),
+                                max_points, replace = False)
+dist_sample = zscore_full[:,selected_inds]
+channel_dists = distmat(dist_sample)
+
+kmeans = KMeans(n_clusters=num_clusters).fit(channel_dists)
+cluster_labels = kmeans.labels_
+
+sorted_inds = np.argsort(cluster_labels)
+sorted_dists = channel_dists[sorted_inds,:]
+sorted_dists = sorted_dists[:,sorted_inds]
+
+fig,ax = plt.subplots(1,2)
+ax[0].imshow(channel_dists)
+ax[1].imshow(sorted_dists)
+plt.show()
