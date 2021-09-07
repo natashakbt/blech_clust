@@ -130,42 +130,9 @@ else:
         print(':: Exiting ::')
         exit()
     
-# Ask the user which digital input channels should be used for getting 
-# spike train data, and convert the channel numbers into integers for pulling 
-# stuff out of change_points
-#def cluster_check(x):
-#    clusters = re.findall('[0-9]+',x)
-#    return sum([i.isdigit() for i in clusters]) == len(clusters)
-#chosen_msg, continue_bool = entry_checker(\
-#        msg = f'Please select digins from {dig_in_pathname} (anything separated) '\
-#        '\n:: "111" for all ::\n',
-#        check_func = cluster_check,
-#        fail_response = 'Please enter integers')
-#if continue_bool:
-#    chosen_digin = re.findall('[0-9]+|-[0-9]+',chosen_msg)
-#    dig_in_channel_inds = [int(x) for x in chosen_digin]
-#    # If 111, select all
-#    if 111 in dig_in_channel_inds:
-#        dig_in_channel_inds = np.arange(len(dig_in_pathname))    
-#    dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_inds]
-#    print(f'Chosen dig_ins {dig_in_channels}'\
-#            '\n=====================\n')
-#else:
-#    print(':: Exiting ::')
-#    exit()
-
-#dig_in_channels = easygui.multchoicebox(\
-#        msg = 'Which digital input channels should be used to '\
-#                'produce spike train data trial-wise?', 
-#        choices = ([path for path in dig_in_pathname]))
-
-#dig_in_channel_inds = []
-#for i in range(len(dig_in_pathname)):
-#	if dig_in_pathname[i] in dig_in_channels:
-#		dig_in_channel_inds.append(i)
 
 # Extract laser dig-in from params file
-laser_nums = info_dict['laser_params']['dig_in']
+laser_nums = [info_dict['laser_params']['dig_in']]
 if len(laser_nums) == 0:
     lasers = []
     laser_str = 'None'
@@ -178,46 +145,11 @@ taste_str = "\n".join(dig_in_channels)
 #print(f'Taste dig_ins ::: \n{taste_str}\n')
 print(f'Laser dig_in ::: \n{laser_str}\n')
 
-# Ask the user which digital input channels should be used for conditioning 
-# the stimuli channels above (laser channels for instance)
-#chosen_msg, continue_bool = entry_checker(\
-#        msg = f'Please select LASER from {dig_in_pathname} (anything separated) '\
-#        '\n:: "111" for all ::\n <BLANK> for None',
-#        check_func = cluster_check,
-#        fail_response = 'Please enter integers')
-#if continue_bool:
-#    chosen_digin = re.findall('[0-9]+|-[0-9]+',chosen_msg)
-#    if len(chosen_digin) == 0:
-#        lasers = []
-#    else:
-#        laser_nums = [int(x) for x in chosen_digin]
-#        # If 111, select all
-#        if 111 in laser_nums:
-#            laser_nums = range(len(dig_in_pathname))   
-#        lasers = [dig_in_pathname[i] for i in laser_nums]
-#    print(f'Chosen LASER {lasers}'\
-#        '\n=====================\n')
-#else:
-#    print(':: Exiting ::')
-#    exit()
-
-#lasers = easygui.multchoicebox(\
-#        msg = 'Which digital input channels were used for lasers? '\
-#                'Click clear all and continue if you did not use lasers', 
-#        choices = ([path for path in dig_in_pathname]))
 laser_nums = []
 if lasers:
 	for i in range(len(dig_in_pathname)):
 		if dig_in_pathname[i] in lasers:
 			laser_nums.append(i)
-
-# Ask the user for the pre and post stimulus durations to be pulled out, 
-# and convert to integers
-#durations = easygui.multenterbox(\
-#        msg = 'What are the signal durations pre and post stimulus that you want to pull out', 
-#        fields = ['Pre stimulus (ms)', 'Post stimulus (ms)'])
-#for i in range(len(durations)):
-#	durations[i] = int(durations[i])
 
 # Write out durations to the params (json) file 
 #params_file = hdf5_name.split('.')[0] + ".params"
@@ -279,13 +211,6 @@ for i in range(len(dig_in_channel_inds)):
                                 np.where((spike_times >= 0)*(spike_times < durations[0] + \
                                 durations[1]))[0]]
                         spikes[k, spike_times] = 1
-                        #for l in range(durations[0] + durations[1]):
-                        #	spikes[k, l] = \
-                        #        len(np.where((units[k].times[:] >= \
-                        #        start_points[dig_in_channel_inds[i]][j] - \
-                        #        (durations[0]-l)*30)*(units[k].times[:] < \
-                        #        start_points[dig_in_channel_inds[i]][j] - \
-                        #        (durations[0]-l-1)*30))[0])
                                 
         # Append the spikes array to spike_train 
         spike_train.append(spikes)
