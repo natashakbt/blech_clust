@@ -216,13 +216,13 @@ print("Modified electrode arrays written to HDF5 file after "\
         "subtracting the common average reference")
 
 # Compress the file to clean up all the deleting and creating of arrays
-print("Compressing the modified HDF5 file to save up on space")
+#print("Compressing the modified HDF5 file to save up on space")
 # Use ptrepack to save a clean and fresh copy of the hdf5 file as tmp.hf5
-os.system("ptrepack --chunkshape=auto --propindexes --complevel=9 --complib=blosc " \
-        + hdf5_name + " " +  "tmp.h5")
-
-# Delete the old hdf5 file
-os.system("rm " + hdf5_name)
-
-# And rename the new file with the same old name
-os.system("mv tmp.h5 " + hdf5_name)
+#os.system("ptrepack --chunkshape=auto --propindexes --complevel=9 --complib=blosc " \
+#        + hdf5_name + " " +  "tmp.h5")
+#
+## Delete the old hdf5 file
+#os.system("rm " + hdf5_name)
+#
+## And rename the new file with the same old name
+#os.system("mv tmp.h5 " + hdf5_name)
