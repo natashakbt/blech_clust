@@ -11,7 +11,7 @@ import shutil
 
 # A function that accepts a numpy array of waveforms and creates a datashader image from them
 def waveforms_datashader(waveforms, x_values, 
-        downsample = True, dir_name = "datashader_temp"):
+        downsample = True, threshold = None, dir_name = "datashader_temp"):
 
     # Make a pandas dataframe with two columns, x and y, 
     # holding all the data. The individual waveforms are separated by a row of NaNs
@@ -20,6 +20,7 @@ def waveforms_datashader(waveforms, x_values,
         # (to remove the effects of 10 times upsampling during de-jittering)
         if downsample:
             waveforms = waveforms[:, ::10]
+
         # Then make a new array of waveforms - 
         # the last element of each waveform is a NaN
         new_waveforms = np.zeros((waveforms.shape[0], waveforms.shape[1] + 1))
@@ -44,8 +45,9 @@ def waveforms_datashader(waveforms, x_values,
                 plot_height=1200, plot_width=1600)
         # Aggregate the data
         agg = canvas.line(df, 'x', 'y', ds.count())   
-        # Transfer the aggregated data to image using 
-        # log transform and export the temporary image file
+
+        # Transfer the aggregated data to image using log 
+        # transform and export the temporary image file
         export(tf.shade(agg, how='eq_hist'),'tempfile')
 
         # Read in the temporary image file
@@ -62,6 +64,21 @@ def waveforms_datashader(waveforms, x_values,
         ax.set_yticks(np.linspace(0, 1200, 10))
         ax.set_yticklabels(\
                 np.floor(np.linspace(df['y'].max() + 10, df['y'].min() - 10, 10)))
+
+        # Mark threshold for spike selection
+        # This shit too confusing...just do it the hard way
+
+        if threshold is not None:
+            def y_transform(val):
+                fin_line = np.linspace(0, 1200, 1000)
+                orig_line = np.linspace(df['y'].max() + 10, df['y'].min() - 10, 1000)
+                ind = np.argmin(np.abs(orig_line - val))
+                return fin_line[ind]
+
+            ax.axhline(y_transform(threshold), color ='red', 
+                    linewidth = 1, linestyle = '--', alpha = 0.5)
+            ax.axhline(y_transform(-threshold), color ='red', 
+                    linewidth = 1, linestyle = '--', alpha = 0.5)
 
         # Delete the dataframe
         del df, waveforms, new_waveforms

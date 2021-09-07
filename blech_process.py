@@ -364,12 +364,17 @@ for i in range(max_clusters-1):
                 cluster_points = np.where(predictions[:] == cluster)[0]
 
                 if len(cluster_points) > 0:
+                    # downsample = False, Prevents waveforms_datashader
+                    # from FURTHER downsampling the given waveforms for plotting
+                    # Because in the previous version they were upsampled for clustering
                     fig, ax = \
                             blech_waveforms_datashader.waveforms_datashader(\
                                 slices_dejittered[cluster_points, :], 
                                 x, 
-                                downsample = False,
+                                downsample = False, 
+                                threshold = threshold,
                                 dir_name = "datashader_temp_el" + str(electrode_num))
+
                     ax.set_xlabel('Sample ({:d} samples per ms)'.\
                             format(int(sampling_rate/1000)))
                     ax.set_ylabel('Voltage (microvolts)')
