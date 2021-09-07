@@ -103,16 +103,15 @@ emg_port = ''
 
 with open(json_path[0], 'r') as params_file:
     info_dict = json.load(params_file)
-if 'emg' in info_dict['electrode_layout'].keys():
-    # Get ALL OTHER electrodes
-    all_car_group_vals = []
-    for region_name, region_elecs in info_dict['electrode_layout'].items():
-        if not region_name == 'emg':
-            for group in region_elecs:
-                if len(group) > 0:
-                    all_car_group_vals.append(group)
-    all_electrodes = [electrode for region in all_car_group_vals \
-                            for electrode in region]
+
+all_car_group_vals = []
+for region_name, region_elecs in info_dict['electrode_layout'].items():
+    if not region_name == 'emg':
+        for group in region_elecs:
+            if len(group) > 0:
+                all_car_group_vals.append(group)
+all_electrodes = [electrode for region in all_car_group_vals \
+                        for electrode in region]
 
 emg_port = 'A'
 emg_channels = []
@@ -197,21 +196,23 @@ num_cpu = multiprocessing.cpu_count()
 # If EMG is present, don't add EMG electrode to list of electrodes
 # to be processed
 # Check if EMG present
-    # Write appropriate electrodes to file
-    f = open('blech_clust_jetstream_parallel.sh', 'w')
-    print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
-            "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
-            .format(int(num_cpu//4), dir_name, ",".join([str(x) for x in all_electrodes]))
-            , file = f)
-    f.close()
+# Write appropriate electrodes to file
 
-else:
-    f = open('blech_clust_jetstream_parallel.sh', 'w')
-    print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
-            "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}"\
-            .format(int(num_cpu//4), dir_name, int(len(ports)*32-len(emg_channels)))
-            , file = f)
-    f.close()
+# Electrode + 1 because blech_process does -1
+f = open('blech_clust_jetstream_parallel.sh', 'w')
+print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
+        "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
+        .format(int(num_cpu//4), dir_name, ",".join([str(x+1) for x in all_electrodes]))
+        , file = f)
+f.close()
+
+#else:
+#    f = open('blech_clust_jetstream_parallel.sh', 'w')
+#    print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
+#            "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}"\
+#            .format(int(num_cpu//4), dir_name, int(len(ports)*32-len(emg_channels)))
+#            , file = f)
+#    f.close()
 
 # Then produce the file that runs blech_process.py
 f = open('blech_clust_jetstream_parallel1.sh', 'w')
