@@ -7,6 +7,7 @@ import numpy as np
 import multiprocessing
 import json
 import glob
+import pandas as pd
 
 # Necessary blech_clust modules
 import read_file
@@ -84,6 +85,8 @@ sampling_rate = int(sampling_rate[2])
 check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
             f'\n digital inputs on intan board: {dig_in}'
 
+print(check_str)
+
 # Get the emg electrode ports and channel numbers from the user
 # If only one amplifier port was used in the experiment, that's the emg_port. 
 # Else ask the user to specify
@@ -123,12 +126,16 @@ if emg_channels is None:
 	emg_channels = []
 emg_channels.sort()
 
+layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
+electrode_layout_frame = pd.read_csv(layout_path) 
+
 # Create arrays for each electrode
-read_file.create_hdf_arrays(hdf5_name[-1]+'.h5', ports, dig_in, emg_port, emg_channels)
+read_file.create_hdf_arrays(hdf5_name[-1]+'.h5', electrode_layout_frame.shape[0], 
+                            dig_in, emg_port, emg_channels)
 
 # Read data files, and append to electrode arrays
 if file_type[0] == 'one file per channel':
-	read_file.read_files(hdf5_name[-1]+'.h5', ports, dig_in, emg_port, emg_channels)
+	read_file.read_files_abu(hdf5_name[-1]+'.h5', dig_in, electrode_layout_frame) 
 else:
 	print("Only files structured as one file per channel can be read at this time...")
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
