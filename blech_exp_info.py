@@ -49,6 +49,8 @@ parser = argparse.ArgumentParser(description = 'Creates files with experiment in
 parser.add_argument('dir_name',  help = 'Directory containing data files')
 parser.add_argument('--template', '-t', 
         help = 'Template (.info) file to copy experimental details from')
+parser.add_argument('--mode', '-m', default = 'legacy', 
+                    choices = ['legacy','updated'])
 args = parser.parse_args()
 
 if args.dir_name:
@@ -208,6 +210,7 @@ else:
 
     # Walk through fin_perm and delete emg_electrodes where you find them 
     # and add them as a new region
+                
     if 'emg_electrodes' in dir():
         for region_name, region_vals in fin_perm.items():
             for group in region_vals:
@@ -216,8 +219,26 @@ else:
                     if len(ind) > 0:
                         del group[ind[0]]
 
-        fin_perm['emg'] = [emg_electrodes]
+        if args.mode == 'legacy':
+            all_vals = [x for region_name, region_vals in fin_perm.items() \
+                    for group in region_vals for x in group]
+            all_vals = sorted(all_vals)
+            all_vals = [x for x in all_vals if x not in emg_electrodes]
+            order = np.argsort(all_vals).tolist()
+            mapping = dict(zip(all_vals, order))
 
+            for region_name in fin_perm.keys():
+                fin_perm[region_name] = \
+                        [[mapping[x] for x in group] \
+                        for group in fin_perm[region_name]]
+            emg_notes = '\\n Legacy mode : Region electrode numbers correspond'\
+            'to electrode numbers AFTER sorting, NOT the electrode files,'\
+            'this is because old blech_clust simply doesnt count emg electrodes.'\
+            ' However, the emg electrode numbers correspond to the actual files'
+        else:
+            emg_notes = []
+
+        fin_perm['emg'] = [emg_electrodes]
 
     ##################################################
     ## Dig-Ins
@@ -317,6 +338,7 @@ else:
         onset_time, duration = [None, None]
 
     notes = input('::: Please enter any notes about the experiment. \n ::: ')
+    notes = notes + emg_notes
     # Add raw emg electrode number to notes for ease of readibility
 
     ########################################
