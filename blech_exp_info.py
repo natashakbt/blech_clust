@@ -236,7 +236,7 @@ else:
             'this is because old blech_clust simply doesnt count emg electrodes.'\
             ' However, the emg electrode numbers correspond to the actual files'
         else:
-            emg_notes = []
+            emg_notes = ''
 
         fin_perm['emg'] = [emg_electrodes]
 
