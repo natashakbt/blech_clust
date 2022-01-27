@@ -104,40 +104,54 @@ else:
     ports.sort()
 
     # Write out file and ask user to define regions in file
-    electrode_files = sorted([x for x in file_list if 'amp' in x])
-    port_list = [x.split('-')[1] for x in electrode_files]
-    electrode_num_list = [x.split('-')[2].split('.')[0] for x in electrode_files]
-    layout_frame = pd.DataFrame()
-    layout_frame['filename'] = electrode_files
-    layout_frame['port'] = port_list
-    layout_frame['electrode_num'] = electrode_num_list
-    layout_frame['electrode_ind'] = layout_frame.index
-    layout_frame['CAR_group'] = pd.Series()
-
-    layout_frame = \
-            layout_frame[['filename','electrode_ind',
-                'electrode_num','port','CAR_group']]
-
     layout_file_path = os.path.join(dir_path, dir_name + "_electrode_layout.csv")
-    layout_frame.to_csv(layout_file_path, index=False) 
+    if os.path.exists(layout_file_path):
+        def yn_check(x):
+            yes = x in ['y','yes']
+            no = x in ['n','no']
+            if yes:
+                return True
+            return False
 
-    acceptable_cars = regions.copy()
-    acceptable_cars.append('emg')
-    prompt_str = 'Please fill in car groups / regions' + "\n" + \
-            f"Acceptable inputs are {acceptable_cars}" + "\n" +\
-            "Indicate different CARS from same region as GC1,GC2...etc"
-    print(prompt_str)
+        use_csv_str, continue_bool = entry_checker(\
+                msg = "Layout file detected...use what's there?",
+                check_func = yn_check,
+                fail_response = 'Please [y, yes, n, no]')
 
-    def confirm_check(x):
-        this_bool = x in ['y','yes']
-        return this_bool 
-    perm_str, continue_bool = entry_checker(\
-            msg = f'Lemme know when its done ::: ',
-            check_func = confirm_check,
-            fail_response = 'Please say y or yes')
-    if not continue_bool:
-        print('Welp...')
-        exit()
+    if use_csv_str in ['n','no']:
+        electrode_files = sorted([x for x in file_list if 'amp' in x])
+        port_list = [x.split('-')[1] for x in electrode_files]
+        electrode_num_list = [x.split('-')[2].split('.')[0] for x in electrode_files]
+        layout_frame = pd.DataFrame()
+        layout_frame['filename'] = electrode_files
+        layout_frame['port'] = port_list
+        layout_frame['electrode_num'] = electrode_num_list
+        layout_frame['electrode_ind'] = layout_frame.index
+        layout_frame['CAR_group'] = pd.Series()
+
+        layout_frame = \
+                layout_frame[['filename','electrode_ind',
+                    'electrode_num','port','CAR_group']]
+
+        layout_frame.to_csv(layout_file_path, index=False) 
+
+        acceptable_cars = regions.copy()
+        acceptable_cars.append('emg')
+        prompt_str = 'Please fill in car groups / regions' + "\n" + \
+                f"Acceptable inputs are {acceptable_cars}" + "\n" +\
+                "Indicate different CARS from same region as GC1,GC2...etc"
+        print(prompt_str)
+
+        def confirm_check(x):
+            this_bool = x in ['y','yes']
+            return this_bool 
+        perm_str, continue_bool = entry_checker(\
+                msg = f'Lemme know when its done ::: ',
+                check_func = confirm_check,
+                fail_response = 'Please say y or yes')
+        if not continue_bool:
+            print('Welp...')
+            exit()
 
     layout_frame_filled = pd.read_csv(layout_file_path)
     layout_frame_filled['CAR_group'] = layout_frame_filled['CAR_group'].str.lower() 
@@ -146,140 +160,22 @@ else:
         layout_dict[key] = [layout_dict[key].to_list()]
 
     if 'emg' in layout_dict.keys():
-        orig_emg_electrodes = layout_dict.pop('emg').values()
-        fin_emg_port = layout_frame_filled.port.iloc[
+        #orig_emg_electrodes = layout_dict.pop('emg').values()
+        orig_emg_electrodes = layout_dict.pop('emg')[0]
+        fin_emg_port = layout_frame_filled.port.loc[
                         layout_frame_filled.electrode_ind.isin(orig_emg_electrodes)].\
                         unique()
+        fin_emg_port = list(fin_emg_port)
     else:
         fin_emg_port = []
         orig_emg_electrodes = []
 
     fin_perm = layout_dict
 
-    #layout_filled_dict = \
-    #        layout_frame_filled.groupby('CAR_group').\
-    #                apply(lambda x: x.to_dict(orient='split'))[0]
-
-    #layout_json = json.dumps(layout_filled_dict, indent = 4)
-    #print(layout_json)
-
-
-    # Depending on number of regions and ports, list all permutations
-    # of electrode and ask user to select from them
-
-    #type_16_16_vals = [list(map(int,np.arange(8)))+list(map(int,np.arange(24,32))),
-    #                list(map(int, np.arange(8,24)))]
-    #type_16_16_keys = ['0-7,24-31','8-23']
-    #type_16_16 = dict(zip(type_16_16_keys,type_16_16_vals))
-    #type_32 = {'0-31' : list(map(int,np.arange(32)))}
-    #port_vals = [np.arange(32)+(32*num) for num in range(len(ports))]
-    #ports_dict = dict(zip(ports,port_vals))
-
-    #if len(ports) == 1:
-    #    if len(regions) > 1:
-    #        region_permutations = list(it.permutations(regions))
-    #        split_permutations = [list(zip(perm,type_16_16.keys())) \
-    #                for perm in region_permutations]
-    #        permutations = split_permutations 
-    #    else:
-    #        permutations = list(zip(regions,type_32.keys())) 
-
-    #else: # Assuming there would be no splitting if you have multiple ports
-    #    if len(regions) == 1:
-    #        permutations = [tuple((zip(regions,[ports])))]
-    #    elif len(regions) ==2:
-    #        region_permutations = list(it.permutations(regions))
-    #        permutations = []
-    #        for this_region_perm in region_permutations:
-    #            for count in np.arange(1,len(ports)):
-    #                permutations.append(\
-    #                        [(this_region_perm[0],ports[:count]),
-    #                            (this_region_perm[1],ports[count:])])
-
-    ## Ask user to select appropriate permutation
-    #perm_msg = "\n".join([str(x) \
-    #        for x in (list(zip(range(len(permutations)),permutations)))])
-    #def select_check(x):
-    #    global permutations
-    #    return x.isdigit() and len(re.findall('[0-9]+',x))==1 and 0<=int(x)<=len(permutations)
-
-    #perm_str, continue_bool = entry_checker(\
-    #        msg = f'{perm_msg} \n Please select the correct layout ::: ',
-    #        check_func = select_check,
-    #        fail_response = 'Please enter a single, valid integer')
-    #if continue_bool:
-    #    select_ind = int(perm_str)
-    #    selected_perm = permutations[select_ind]
-    #    fin_perm = {}
-    #    if len(ports) == 1:
-    #        if len(regions) == 1:
-    #            fin_perm[selected_perm[0]] = [type_32[selected_perm[1]]]
-    #        else:
-    #            for this_region in selected_perm:
-    #                fin_perm[this_region[0]] = [type_16_16[this_region[1]]]
-    #    else:
-    #        for this_region in selected_perm:
-    #            fin_perm[this_region[0]] = \
-    #                        [ports_dict[x].tolist() for x in this_region[1]]
-    #else:
-    #    exit()
-
     ## Ask user for EMG electrodes and add them as a "region" to the fin_perm
     def count_check(x):
         nums = re.findall('[0-9]+',x)
         return sum([x.isdigit() for x in nums]) == len(nums)
-
-    #port_vals = list(zip(np.arange(len(ports)), ports))
-    #port_str = "\n".join([str(x) for x in port_vals])
-    #print(port_str)
-    #emg_port_str, continue_bool = entry_checker(\
-    #        msg = 'EMG Port, <BLANK> for none::: ',
-    #        check_func = count_check,
-    #        fail_response = 'Please enter a single, valid integer')
-    #if continue_bool:
-    #    if len(emg_port_str) == 0:
-    #        emg_port = []
-    #    else:
-    #        emg_port = [int(x) for x in emg_port_str]
-    #else:
-    #    exit()
-
-    #if len(emg_port) > 0:
-    #    potential_electrodes = np.arange(32) #+ (32*emg_port[0])
-    #    print(f"Port : {ports[emg_port[0]]}, \n Electrodes : {potential_electrodes}")
-    #    emg_elec_str, continue_bool = entry_checker(\
-    #            msg = 'EMG Electrodes, <BLANK> for none (ANYTHING separated) ::: ',
-    #            check_func = count_check,
-    #            fail_response = 'Please enter integers')
-    #    if continue_bool:
-    #        if len(emg_elec_str) == 0:
-    #            emg_electrodes = []
-    #        else:
-    #            emg_electrodes = [int(x) for x in re.findall('[0-9]+',emg_elec_str)]
-    #    else:
-    #        exit()
-
-    ##pdb.set_trace()
-    ## Make sure emg electrodes numbers fit in with all electrode numbers
-    ## e.g. Channel 3 Port B for recording with both Ports A and B
-    ## should regiester as emg electrode 34
-    #if 'emg_electrodes' in dir():
-    #    orig_emg_electrodes = emg_electrodes
-    #    emg_electrodes = [int(x+(31*emg_port[0])) for x in emg_electrodes]
-    #else:
-    #    orig_emg_electrodes = []
-
-    ## Walk through fin_perm and delete emg_electrodes where you find them 
-    ## and add them as a new region
-    #if 'emg_electrodes' in dir():
-    #    for region_name, region_vals in fin_perm.items():
-    #        for group in region_vals:
-    #            for elec in emg_electrodes:
-    #                ind = np.where(np.array(group) == elec)[0]
-    #                if len(ind) > 0:
-    #                    del group[ind[0]]
-
-    #    fin_perm['emg'] = [emg_electrodes]
 
 
     ##################################################
@@ -385,11 +281,6 @@ else:
     ########################################
     ## Finalize dictionary
     ########################################
-
-    #if len(emg_port) > 0:
-    #    fin_emg_port = ports[emg_port[0]] 
-    #else:
-    #    fin_emg_port = []
 
     fin_dict = {**this_dict,
             'regions' : regions,

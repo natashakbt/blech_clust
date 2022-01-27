@@ -36,7 +36,7 @@ for line in f.readlines():
 f.close()
 os.chdir(dir_name[0][:-1])
 
-electrode_num = int(sys.argv[1]) - 1
+electrode_num = int(sys.argv[1])
 
 # Check if the directories for this electrode number exist - 
 # if they do, delete them (existence of the directories indicates a 

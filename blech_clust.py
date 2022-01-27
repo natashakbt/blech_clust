@@ -116,21 +116,16 @@ for region_name, region_elecs in info_dict['electrode_layout'].items():
 all_electrodes = [electrode for region in all_car_group_vals \
                         for electrode in region]
 
-emg_port = 'A'
-emg_channels = []
-if emg_channels:
-	for i in range(len(emg_channels)):
-		emg_channels[i] = int(emg_channels[i])
-# set emg_channels to an empty list if no channels were chosen
-if emg_channels is None:
-	emg_channels = []
-emg_channels.sort()
+emg_info = info_dict['emg']
+emg_port = emg_info['port']
+emg_channels = sorted(emg_info['electrodes'])
+
 
 layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
 electrode_layout_frame = pd.read_csv(layout_path) 
 
 # Create arrays for each electrode
-read_file.create_hdf_arrays(hdf5_name[-1]+'.h5', electrode_layout_frame.shape[0], 
+read_file.create_hdf_arrays(hdf5_name[-1]+'.h5', all_electrodes, 
                             dig_in, emg_port, emg_channels)
 
 # Read data files, and append to electrode arrays
@@ -209,7 +204,7 @@ num_cpu = multiprocessing.cpu_count()
 f = open('blech_clust_jetstream_parallel.sh', 'w')
 print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
         "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
-        .format(int(num_cpu//4), dir_name, ",".join([str(x+1) for x in all_electrodes]))
+        .format(int(num_cpu//4), dir_name, ",".join([str(x) for x in all_electrodes]))
         , file = f)
 f.close()
 

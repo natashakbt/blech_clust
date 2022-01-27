@@ -164,6 +164,9 @@ raw_electrodes = hf5.list_nodes('/raw')
 # Sort electrodes (just in case) so we can index them directly
 sort_order = np.argsort([x.__str__() for x in raw_electrodes])
 raw_electrodes = [raw_electrodes[i] for i in sort_order]
+raw_electrodes_map = {
+        int(str.split(electrode._v_pathname, 'electrode')[-1]):num \
+                for num, electrode in enumerate(raw_electrodes)}
 
 # First get the common average references by averaging across the electrodes picked for each group
 print("Calculating common average reference for {:d} groups".format(num_groups))
@@ -176,10 +179,11 @@ for group in range(num_groups):
         # In hindsight, don't stack up all the data, it is a huge memory waste. 
         # Instead first add up the voltage values from each electrode to the same array, 
         # and divide by number of electrodes to get the average    
-        for electrode in tqdm(CAR_electrodes[group]):
+        for electrode_name in tqdm(CAR_electrodes[group]):
                 #exec("common_average_reference[group, :] "\
                 #        "+= hf5.root.raw.electrode{electrode:02}[:]")
-                common_average_reference[group,:] += raw_electrodes[electrode][:]
+                electrode_ind = raw_electrodes_map[electrode_name]
+                common_average_reference[group,:] += raw_electrodes[electrode_ind][:]
 
 
         # Average the voltage data across electrodes by dividing by the number 
@@ -196,7 +200,8 @@ for electrode in tqdm(raw_electrodes):
         # Get the common average group number that this electrode belongs to
         # IMPORTANT!
         # We assume that each electrode belongs to only 1 common average reference group 
-        group = int([i for i in range(num_groups) if electrode_num in CAR_electrodes[i]][0])
+        group = int([i for i in range(num_groups) \
+                if electrode_num in CAR_electrodes[i]][0])
 
         # Subtract the common average reference for that group from the 
         # voltage data of the electrode
