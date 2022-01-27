@@ -21,11 +21,6 @@ else:
     dir_name = easygui.diropenbox(msg = 'Please select data directory')
 
 print(f'Processing : {dir_name}')
-#cont = 'a'
-#while cont not in ['y','n']:
-#    cont = input('Is this the correct directory (y/n): \n{}\n::'.format(dir_name))
-#if cont == 'n':
-#    sys.exit('Incorrect dir')
 
 # Get the type of data files (.rhd or .dat)
 file_type = ['one file per channel']
@@ -86,23 +81,6 @@ check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
             f'\n digital inputs on intan board: {dig_in}'
 
 print(check_str)
-
-# Get the emg electrode ports and channel numbers from the user
-# If only one amplifier port was used in the experiment, that's the emg_port. 
-# Else ask the user to specify
-emg_port = ''
-#if len(ports) == 1:
-#	emg_port = list(ports[0])
-#else:
-#	emg_port = easygui.multchoicebox(\
-#        msg = 'Which amplifier port were the EMG electrodes hooked up to? '\
-#        'Just choose any amplifier port if you did not hook up an EMG at all.', 
-#        choices = tuple(ports))
-## Now get the emg channel numbers, and convert them to integers
-#emg_channels = easygui.multchoicebox(\
-#        msg = 'Choose the channel numbers for the EMG electrodes. 
-#        Click clear all and ok if you did not use an EMG electrode', 
-#        choices = tuple([i for i in range(32)]))
 
 with open(json_path[0], 'r') as params_file:
     info_dict = json.load(params_file)
@@ -194,27 +172,13 @@ f.close()
 # Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
 # First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
 num_cpu = multiprocessing.cpu_count()
-# Then produce the file generating the parallel command
-# If EMG is present, don't add EMG electrode to list of electrodes
-# to be processed
-# Check if EMG present
-# Write appropriate electrodes to file
 
-# Electrode + 1 because blech_process does -1
 f = open('blech_clust_jetstream_parallel.sh', 'w')
 print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
         "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
         .format(int(num_cpu//4), dir_name, ",".join([str(x) for x in all_electrodes]))
         , file = f)
 f.close()
-
-#else:
-#    f = open('blech_clust_jetstream_parallel.sh', 'w')
-#    print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
-#            "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{1..{:d}}}"\
-#            .format(int(num_cpu//4), dir_name, int(len(ports)*32-len(emg_channels)))
-#            , file = f)
-#    f.close()
 
 # Then produce the file that runs blech_process.py
 f = open('blech_clust_jetstream_parallel1.sh', 'w')
