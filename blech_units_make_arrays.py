@@ -132,7 +132,7 @@ else:
     
 
 # Extract laser dig-in from params file
-laser_nums = [info_dict['laser_params']['dig_in']]
+laser_nums = [info_dict['laser_params']['dig_in']][0]
 if len(laser_nums) == 0:
     lasers = []
     laser_str = 'None'

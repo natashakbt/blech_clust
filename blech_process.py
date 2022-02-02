@@ -36,7 +36,7 @@ for line in f.readlines():
 f.close()
 os.chdir(dir_name[0][:-1])
 
-electrode_num = int(sys.argv[1]) - 1
+electrode_num = int(sys.argv[1])
 
 # Check if the directories for this electrode number exist - 
 # if they do, delete them (existence of the directories indicates a 
@@ -221,21 +221,6 @@ def conv_scale_pca(array, template):
     pca_conv = pca_conv[:,0]
     return pca_conv
 
-# Test plots
-#fig, ax = plt.subplots(1,5)
-#plt.sca(ax[0])
-#img_plot(scaled_slices)
-#plt.sca(ax[1])
-#img_plot(np.tile(template[np.newaxis,:], (array.shape[0],1)))
-#ax[1].set_xlim((0,slices_dejittered.shape[1]))
-#plt.sca(ax[2])
-#img_plot(zscore(conv,axis=-1))
-#plt.sca(ax[3])
-#img_plot(pca_conv[:,np.newaxis])
-#ax[4].plot(zscore(np.mean(scaled_slices,axis=0),axis=-1))
-#ax[4].plot(zscore(template))
-#plt.show()
-
 conv_pca_slices = np.array([conv_scale_pca(slices_dejittered, template) \
         for template in [template1, template2]]).T
 
@@ -267,21 +252,6 @@ save_paths = \
 
 for key,path in zip(to_be_saved, save_paths):
     np.save(path, globals()[key])
-
-#np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy', \
-#                slices_dejittered)
-#np.save(
-#        f'./spike_times/electrode{electrode_num:02}/spike_times.npy', \
-#        times_dejittered)
-#np.save(
-#    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', 
-#    pca_slices)
-#np.save(
-#    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy',
-#    pca_autocorr)
-#np.save(f'./spike_waveforms/electrode{electrode_num:02}/energy.npy', energy)
-#np.save(f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy', 
-#        amplitudes)
 
 # Create file for saving plots, and plot explained variance ratios of the PCA
 fig = plt.figure()
@@ -364,12 +334,17 @@ for i in range(max_clusters-1):
                 cluster_points = np.where(predictions[:] == cluster)[0]
 
                 if len(cluster_points) > 0:
+                    # downsample = False, Prevents waveforms_datashader
+                    # from FURTHER downsampling the given waveforms for plotting
+                    # Because in the previous version they were upsampled for clustering
                     fig, ax = \
                             blech_waveforms_datashader.waveforms_datashader(\
                                 slices_dejittered[cluster_points, :], 
                                 x, 
-                                downsample = False,
+                                downsample = False, 
+                                threshold = threshold,
                                 dir_name = "datashader_temp_el" + str(electrode_num))
+
                     ax.set_xlabel('Sample ({:d} samples per ms)'.\
                             format(int(sampling_rate/1000)))
                     ax.set_ylabel('Voltage (microvolts)')
