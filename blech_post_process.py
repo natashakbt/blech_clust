@@ -405,9 +405,9 @@ while True:
         if re_cluster:
                 hf5.create_group('/sorted_units', unit_name)
                 # Waveforms of originally chosen cluster
-                cluster_inds = np.where(predictions == int(clusters([0]))[0] 
+                cluster_inds = np.where(predictions == int(clusters[0]))[0] 
                 fin_inds = np.concatenate(\
-                        [[np.where(split_predictions == this_split)[0], :] \
+                        [np.where(split_predictions == this_split)[0] \
                                     for this_split in chosen_split])
                 unit_waveforms = spike_waveforms[cluster_inds, :]    
                 # Subsetting this set of waveforms to include only the chosen split
@@ -572,14 +572,14 @@ while True:
             table.flush()
             hf5.flush()
 
-        is_nrn_path = f'./clustering_results/electrode{electrode_num:02}/'\
-                    f'clusters{num_clusters}/is_nrn.npy'
-        if not os.path.exists(is_nrn_path):
-            is_nrn_list = [[fin_inds]]
-        else:
-            is_nrn_list = np.load(is_nrn_path)
-            is_nrn_list.append([fin_inds])
-        np.save(is_nrn_path, is_nrn_list)
+        #is_nrn_path = f'./clustering_results/electrode{electrode_num:02}/'\
+        #            f'clusters{num_clusters}/is_nrn.npy'
+        #if not os.path.exists(is_nrn_path):
+        #    is_nrn_list = [[fin_inds]]
+        #else:
+        #    is_nrn_list = np.load(is_nrn_path)
+        #    is_nrn_list.append([fin_inds])
+        #np.save(is_nrn_path, is_nrn_list)
 
         print('==== {} Complete ===\n'.format(unit_name))
         print('==== Iteration Ended ===\n')
