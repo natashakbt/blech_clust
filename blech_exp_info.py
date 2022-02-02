@@ -108,19 +108,14 @@ else:
     # Write out file and ask user to define regions in file
     layout_file_path = os.path.join(dir_path, dir_name + "_electrode_layout.csv")
     if os.path.exists(layout_file_path):
+
         def yn_check(x):
-            yes = x in ['y','yes']
-            no = x in ['n','no']
-            if yes:
-                return True
-            return False
+            return x in ['y','yes','n','no']
 
         use_csv_str, continue_bool = entry_checker(\
-                msg = "Layout file detected...use what's there?",
+                msg = "Layout file detected...use what's there? (y/yes/no/n)",
                 check_func = yn_check,
                 fail_response = 'Please [y, yes, n, no]')
-    else:
-        use_csv_str = 'n'
 
     if use_csv_str in ['n','no']:
         electrode_files = sorted([x for x in file_list if 'amp' in x])
@@ -150,7 +145,7 @@ else:
             this_bool = x in ['y','yes']
             return this_bool 
         perm_str, continue_bool = entry_checker(\
-                msg = f'Lemme know when its done ::: ',
+                msg = f'Lemme know when its done (y/yes) ::: ',
                 check_func = confirm_check,
                 fail_response = 'Please say y or yes')
         if not continue_bool:
@@ -176,16 +171,13 @@ else:
 
     fin_perm = layout_dict
 
-    ## Ask user for EMG electrodes and add them as a "region" to the fin_perm
+    ##################################################
+    ## Dig-Ins
+    ##################################################
     def count_check(x):
         nums = re.findall('[0-9]+',x)
         return sum([x.isdigit() for x in nums]) == len(nums)
 
-        fin_perm['emg'] = [emg_electrodes]
-
-    ##################################################
-    ## Dig-Ins
-    ##################################################
     taste_dig_in_str, continue_bool = entry_checker(\
             msg = ' Taste dig_ins used (IN ORDER, anything separated)  :: ',
             check_func = count_check,
@@ -281,8 +273,6 @@ else:
         onset_time, duration = [None, None]
 
     notes = input('::: Please enter any notes about the experiment. \n ::: ')
-    notes = notes + emg_notes
-    # Add raw emg electrode number to notes for ease of readibility
 
     ########################################
     ## Finalize dictionary
