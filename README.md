@@ -8,6 +8,15 @@ High performance computing cluster at Brandeis
 can be easily modified to work in any parallel environment. Visit the Katz lab
 website at https://sites.google.com/a/brandeis.edu/katzlab/
 
+### Setup
+```
+conda clean --all # Removes unused packages and caches
+conda create --name blech_clust --file conda_requirements.yml  
+conda activate blech_clust
+mamba update conda -y
+pip install -r pip_requirements.txt
+```
+
 ### Convenience scripts
 - blech_clust_pre.sh : Runs steps 2-5  
 - blech_clust_post.sh : Runs steps 7-14   
