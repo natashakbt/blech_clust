@@ -55,8 +55,10 @@ pip install -r pip_requirements.txt
     - Plot overlayed PSTHs for units with respective waveforms  
 
 ### Example workflow
-\>> DIR=/path/to/raw/data/files  
-\>> python blech_exp_info.py $DIR &nbsp;&nbsp;&nbsp;&nbsp;   # Generate metadata and electrode layout  
-\>> bash blech_clust_pre.sh $DIR  &nbsp;&nbsp;&nbsp;&nbsp;   # Perform steps up to spike extraction and UMAP  
-\>> python blech_post_process.py  &nbsp;&nbsp;&nbsp;&nbsp;   # Add sorted units to HDF5 (CLI or .CSV as input)  
-\>> bash blech_clust_post.sh      &nbsp;&nbsp;&nbsp;&nbsp;   # Perform steps up to PSTH generation
+```
+DIR=/path/to/raw/data/files  
+python blech_exp_info.py $DIR  # Generate metadata and electrode layout  
+bash blech_clust_pre.sh $DIR   # Perform steps up to spike extraction and UMAP  
+python blech_post_process.py   # Add sorted units to HDF5 (CLI or .CSV as input)  
+bash blech_clust_post.sh       # Perform steps up to PSTH generation
+```
