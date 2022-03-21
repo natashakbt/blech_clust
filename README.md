@@ -10,6 +10,7 @@ website at https://sites.google.com/a/brandeis.edu/katzlab/
 
 ### Setup
 ```
+cd <path_to_blech_clust>/requirements
 conda clean --all # Removes unused packages and caches
 conda create --name blech_clust --file conda_requirements.yml  
 conda activate blech_clust
