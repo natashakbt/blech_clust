@@ -116,8 +116,10 @@ else:
                 msg = "Layout file detected...use what's there? (y/yes/no/n)",
                 check_func = yn_check,
                 fail_response = 'Please [y, yes, n, no]')
+    else:
+        use_csv_str = 'n'
 
-    if use_csv_str in ['n','no']:
+    if use_csv_str in ['n','no']: 
         electrode_files = sorted([x for x in file_list if 'amp' in x])
         port_list = [x.split('-')[1] for x in electrode_files]
         electrode_num_list = [x.split('-')[2].split('.')[0] for x in electrode_files]
