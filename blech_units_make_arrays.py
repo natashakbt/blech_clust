@@ -95,8 +95,12 @@ json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 
-dig_in_channel_nums = info_dict['taste_params']['dig_ins']
-dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
+dig_in_channel_nums = sorted(info_dict['taste_params']['dig_ins'])
+#dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
+# Instead of indexing directly, check that the number is present in the name
+dig_in_channels = [[this_path for this_path in dig_in_pathname if str(this_num) in this_path]\
+                        for this_num in dig_in_channel_nums]
+dig_in_channels = [x for y in dig_in_channels for x in y]
 dig_in_channel_inds = np.arange(len(dig_in_channels))
 
 # Check dig-in numbers and trial counts against info file
@@ -107,9 +111,21 @@ trial_count_info = info_dict['taste_params']['trial_count']
 dig_in_check = sorted(dig_in_channel_nums) == sorted(dig_in_num_temp)
 trial_num_check = sorted(trial_count_info) == sorted([len(x) for x in end_points])
 dig_in_pathname_str = '\n'.join(dig_in_channels)
+
+print('\n')
+print('From info file' + '\n' +\
+        '========================================')
+print(f'Dig-ins : {dig_in_channel_nums}') 
+print(f'Trial counts : {trial_count_info}') 
+
 check_str = f'Taste dig_ins channels:\n{dig_in_pathname_str}''\n'\
         f'No. of trials: {[len(ends) for ends in end_points]}''\n'
+
+print('\n')
+print('From DAT files' + '\n' +\
+        '========================================')
 print(check_str)
+
 if dig_in_check and trial_num_check:
     print('=== ALL GOOD ===')
 else:
