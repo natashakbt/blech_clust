@@ -109,9 +109,21 @@ trial_count_info = info_dict['taste_params']['trial_count']
 dig_in_check = sorted(dig_in_channel_nums) == sorted(dig_in_num_temp)
 trial_num_check = sorted(trial_count_info) == sorted([len(x) for x in end_points])
 dig_in_pathname_str = '\n'.join(dig_in_channels)
+
+print('\n')
+print('From info file' + '\n' +\
+        '========================================')
+print(f'Dig-ins : {dig_in_channel_nums}') 
+print(f'Trial counts : {trial_count_info}') 
+
 check_str = f'Taste dig_ins channels:\n{dig_in_pathname_str}''\n'\
         f'No. of trials: {[len(ends) for ends in end_points]}''\n'
+
+print('\n')
+print('From DAT files' + '\n' +\
+        '========================================')
 print(check_str)
+
 if dig_in_check and trial_num_check:
     print('=== ALL GOOD ===')
 else:
