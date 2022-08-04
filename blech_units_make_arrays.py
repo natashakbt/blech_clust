@@ -97,7 +97,9 @@ with open(json_path, 'r') as params_file:
 
 dig_in_channel_nums = info_dict['taste_params']['dig_ins']
 dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
-dig_in_channel_inds = np.arange(len(dig_in_channels))
+#dig_in_channel_inds = np.arange(len(dig_in_channels))
+dig_in_channel_inds = [num for num,x in enumerate([int(x[-1]) for x in dig_in_pathname])
+                     if x in dig_in_channel_nums]
 
 # Check dig-in numbers and trial counts against info file
 # Only if mismatch, check with user, otherwise print details and continue
