@@ -21,10 +21,10 @@ import pandas as pd
 import math
 from sklearn.cluster import AgglomerativeClustering
 from time import time
-from scipy.cluster.hierarchy import cut_tree
-from tqdm import tqdm
 
-def calc_linkage(model):
+def plot_dendrogram(model, **kwargs):
+    # Create linkage matrix and then plot the dendrogram
+
     # create the counts of samples under each node
     counts = np.zeros(model.children_.shape[0])
     n_samples = len(model.labels_)
@@ -36,14 +36,11 @@ def calc_linkage(model):
             else:
                 current_count += counts[child_idx - n_samples]
         counts[i] = current_count
+
     linkage_matrix = np.column_stack(
         [model.children_, model.distances_, counts]
     ).astype(float)
-    return linkage_matrix
 
-def plot_dendrogram(model, **kwargs):
-    # Create linkage matrix and then plot the dendrogram
-    linkage_martix = calc_linkage(model)
     # Plot the corresponding dendrogram
     dendrogram(linkage_matrix, **kwargs)
 
@@ -51,7 +48,7 @@ def plot_dendrogram(model, **kwargs):
 data_dir = '/media/bigdata/projects/neuRecommend/test_data/raw'
 data_files = sorted(glob(os.path.join(data_dir, '*.npy')))
 
-ind = 15
+ind = 13
 #for ind in range(len(data_files)):
 #slices_dejittered = np.load(data_files[ind])[:,::10]
 slices_dejittered = np.load(data_files[ind])
@@ -268,10 +265,10 @@ bin_frame = standard_binned_frame[bin_cols]
 standard_binned_frame = standard_binned_frame.drop(columns = bin_cols)
 standard_binned_frame.shape
 
-#fig,ax = plt.subplots(1,2)
-#ax[0].scatter(*umap_waveforms.T, alpha = 0.7)
-#ax[1].scatter(*standard_binned_frame.to_numpy().T, alpha = 0.7)
-#plt.show()
+fig,ax = plt.subplots(1,2)
+ax[0].scatter(*umap_waveforms.T, alpha = 0.7)
+ax[1].scatter(*standard_binned_frame.to_numpy().T, alpha = 0.7)
+plt.show()
 
 #ward = AgglomerativeClustering(n_clusters=i, linkage="ward").fit(standard_binned_frame)
 ward = AgglomerativeClustering(
@@ -280,93 +277,16 @@ ward = AgglomerativeClustering(
         linkage="ward").fit(standard_binned_frame)
 binned_agg_predictions = ward.labels_
 
-linkage = calc_linkage(ward)
-
-#dendrogram(linkage,truncate_mode="level", p=3)
-#dendrogram(linkage,truncate_mode="lastp", p=7)
-#plt.show()
-
-n_clusters = 7
-cut_pred = cut_tree(linkage, n_clusters = n_clusters).flatten()
-
-clust_range = np.arange(2,8)
-clust_label_list = [
-        cut_tree(
-            linkage, 
-            n_clusters = this_num
-            ).flatten()
-        for this_num in tqdm(clust_range)
-        ]
-
-
-cut_label_array = np.stack(clust_label_list)
-
-#plt.scatter(*standard_binned_frame.to_numpy().T, c = cut_pred)
-#plt.show()
-
-label_cols = [f'label_{i}' for i in clust_range]
-bin_frame[label_cols] = pd.DataFrame(cut_label_array.T)#ward.labels_
+bin_frame['labels'] = ward.labels_
 fin_agg_frame = umap_frame.merge(bin_frame, how = 'left')
 
-fin_label_cols = fin_agg_frame[label_cols]
+fig,ax = plt.subplots(1,3)
+ax[0].scatter(*umap_waveforms.T, alpha = 0.7)
+ax[1].scatter(*standard_binned_frame.to_numpy().T, alpha = 0.7, c = binned_agg_predictions)
+ax[2].scatter(*fin_agg_frame[non_bin_cols].to_numpy().T, alpha = 0.7, c = fin_agg_frame['labels'])
+plt.show()
 
-
-
-def register_labels(x,y):
-    #x = fin_label_cols.iloc[:,2]
-    #y = fin_label_cols.iloc[:,3]
-    unique_x = np.unique(x)
-    x_cluster_y = [np.unique(y[x==i]) for i in unique_x]
-    return dict(zip(unique_x, x_cluster_y))
-
-map_dict = {}
-for i in range(len(clust_range)-1):
-    map_dict[i] = register_labels(
-            fin_label_cols.iloc[:,i],
-            fin_label_cols.iloc[:,i+1]
-            )
-
-from matplotlib.patches import ConnectionPatch
-
-cmap = plt.get_cmap('tab10')
-slice_mid = slices_dejittered.shape[1]//2
-fig,ax = plt.subplots(len(clust_range), np.max(clust_range))
-for row in range(len(clust_range)):
-    #row = 5
-    center = int(np.max(clust_range)//2)
-    labels = fin_label_cols.T.iloc[row]
-    unique_labels = np.unique(labels)
-    med_label = int(np.median(unique_labels))
-    ax_inds = unique_labels - med_label + center
-    parent_unique_labels = np.unique(fin_label_cols.T.iloc[row-1])
-    parent_med_label = int(np.median(parent_unique_labels))
-    parent_ax_inds = parent_unique_labels - parent_med_label + center
-    ax[row,0].set_ylabel(f'{clust_range[row]} Clusters')
-    for x in unique_labels:
-        this_dat = slices_dejittered[labels==x] 
-        ax[row, ax_inds[x]].plot(this_dat[np.random.choice(len(this_dat), 200)].T,
-            color = cmap(0), alpha = 0.15)
-    if row > 0: 
-        this_map = map_dict[row-1]
-        for key,val in this_map.items():
-            for child in val:
-                con = ConnectionPatch(
-                        xyA = (slice_mid,0), coordsA = ax[row-1, parent_ax_inds[key]].transData,
-                        xyB = (slice_mid,0), coordsB = ax[row, ax_inds[child]].transData,
-                        arrowstyle = "-|>"
-                        )
-                fig.add_artist(con)
-#plt.show()
-
-#fin_label_cols.colnames = [str(x) for x in clust_range
-
-#fig,ax = plt.subplots(1,3)
-#ax[0].scatter(*umap_waveforms.T, alpha = 0.7)
-#ax[1].scatter(*standard_binned_frame.to_numpy().T, alpha = 0.7, c = binned_agg_predictions)
-#ax[2].scatter(*fin_agg_frame[non_bin_cols].to_numpy().T, alpha = 0.7, c = fin_agg_frame['labels'])
-#plt.show()
-
-fin_predictions = fin_label_cols.iloc[:,-1]#fin_agg_frame['labels']
+fin_predictions = fin_agg_frame['labels']
 cluster_waveforms = [slices_dejittered[fin_predictions==x] for x in np.unique(fin_predictions)]
 
 end_t = time()
@@ -375,7 +295,7 @@ print(time_taken)
 
 fig = plt.figure()
 ax0 = plt.subplot(1, 2, 1)
-ax_list = [plt.subplot(n_clusters,2,x+2) for x in np.arange(2*n_clusters, step = 2)]
+ax_list = [plt.subplot(i,2,x+2) for x in np.arange(2*i, step = 2)]
 scatter = ax0.scatter(*umap_waveforms.T, 
         #color = 'k', 
         c = fin_predictions,
@@ -389,8 +309,6 @@ for this_ax, this_clust in zip(ax_list, cluster_waveforms):
             color = 'k', alpha = 0.5)
 plt.show()
 
-#from scipy.cluster.hierarchy import dendrogram
-#plot_dendrogram(ward, truncate_mode = 'level', p = 4)
-
-
-#plt.show()
+from scipy.cluster.hierarchy import dendrogram
+plot_dendrogram(ward, truncate_mode = 'level', p = 4)
+plt.show()
