@@ -202,28 +202,6 @@ amplitudes[polarity > 0] =  np.max(slices_dejittered[polarity > 0], axis = 1)
 # periodic noise
 slices_autocorr = fftconvolve(slices_dejittered, slices_dejittered, axes = -1)
 
-# Calculate cross-correlation of spikes with derivatives of gaussian
-# as a proxy for spike shape templates
-# Assuming sampling frequency remains the same, the size of the kernel
-# can remain constant
-template0 = gaussian(40,4)
-template1 = np.diff(template0)
-template2 = np.diff(template1)
-
-# Use PC1 of cross-correlation with each template as a dimension
-def conv_scale_pca(array, template):
-    conv = fftconvolve(array, 
-            np.tile(template[np.newaxis,:], (array.shape[0],1)), 
-            mode = 'valid',axes = -1)
-    scale_conv = zscore(conv,axis=-1); del conv
-    pca_conv, _ = implement_pca(scale_conv); 
-    del scale_conv
-    pca_conv = pca_conv[:,0]
-    return pca_conv
-
-conv_pca_slices = np.array([conv_scale_pca(slices_dejittered, template) \
-        for template in [template1, template2]]).T
-
 # Delete the original slices and times now that dejittering is complete
 del slices; del spike_times
 
@@ -271,7 +249,6 @@ data[:,2:] = pca_slices[:,:n_pc]
 data[:,0] = energy[:]/np.max(energy)
 data[:,1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
 data = np.concatenate((data,pca_autocorr[:,:3]),axis=-1)
-data = np.concatenate((data,conv_pca_slices),axis=-1)
 
 # Standardize features in the data since they 
 # occupy very uneven scales
