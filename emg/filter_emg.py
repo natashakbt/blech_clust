@@ -15,6 +15,7 @@ if len(sys.argv) > 1:
         dir_name += '/'
 else:
     dir_name = easygui.diropenbox(msg = 'Please select data directory')
+
 os.chdir(dir_name)
 
 # Load the data
@@ -27,33 +28,20 @@ pre_stim = easygui.multenterbox(
 pre_stim = int(pre_stim[0])
 
 # Get coefficients for Butterworth filters
-high_freq = 2.0*300.0
-low_freq = 2.0*15.0
-filt_order = 2
-fs = 1000
-m, n = butter(filt_order, high_freq, 'highpass', fs = fs)
-c, d = butter(filt_order, low_freq, 'lowpass', fs = fs)
+m, n = butter(2, 2.0*300.0/1000.0, 'highpass')
+c, d = butter(2, 2.0*15.0/1000.0, 'lowpass')
 
-#w,h = freqz(m,n, fs = fs)
-#plt.semilogx(w, 20 * np.log10(abs(h)))
-#plt.title('Butterworth filter frequency response' + "\n" + f'High pass: {high_freq}Hz')
-#plt.xlabel('Frequency [radians / second]')
-#plt.ylabel('Amplitude [dB]')
-#plt.axvline(high_freq)
-#
-#plt.figure()
-#w,h = freqz(c,d, fs = fs)
-#plt.semilogx(w, 20 * np.log10(abs(h)))
-#plt.title('Butterworth filter frequency response' + "\n" + f'Low pass: {low_freq}Hz')
-#plt.xlabel('Frequency [radians / second]')
-#plt.ylabel('Amplitude [dB]')
-#plt.axvline(low_freq)
-#plt.show()
+#high_freq = 2.0*300.0/1000
+#low_freq = 2.0*15.0/1000
+#filt_order = 2
+#fs = 1000
+#m, n = butter(filt_order, high_freq, 'highpass')#, fs = fs)
+#c, d = butter(filt_order, low_freq, 'lowpass')#, fs = fs)
 
 # check how many EMG channels used in this experiment
-#check = easygui.ynbox(
-#        msg = 'Did you have more than one EMG channel?', 
-#        title = 'Check YES if you did')
+check = easygui.ynbox(
+        msg = 'Did you have more than one EMG channel?', 
+        title = 'Check YES if you did')
 
 # Bandpass filter the emg signals, and store them in a numpy array. 
 # Low pass filter the bandpassed signals, and store them in another array
@@ -77,7 +65,20 @@ for this_iter in tqdm(iters):
 
 ## Get mean and std of baseline emg activity, 
 ## and use it to select trials that have significant post stimulus activity
-#sig_trials = np.zeros((emg_data.shape[1], emg_data.shape[2]))
+sig_trials = np.zeros((emg_data.shape[1], emg_data.shape[2]))
+pre_m = np.mean(np.abs(emg_filt[...,:pre_stim]), axis = (3))
+pre_s = np.std(np.abs(emg_filt[...,:pre_stim]), axis = (3))
+
+post_m = np.mean(np.abs(emg_filt[...,pre_stim:]), axis = (3))
+post_max = np.max(np.abs(emg_filt[...,pre_stim:]), axis = (3))
+
+# If any of the channels passes the criteria, select that trial as significant
+mean_bool = np.sum(post_m > pre_m, axis = 0) > 0
+std_bool = np.sum(post_max > (pre_m + 4.0*pre_s), axis = 0) > 0
+
+# Logical AND
+sig_trials = mean_bool * std_bool
+
 #m = np.mean(np.abs(emg_filt[:, :, :pre_stim]))
 #s = np.std(np.abs(emg_filt[:, :, :pre_stim]))
 #for i in range(emg_data.shape[1]):
@@ -90,4 +91,4 @@ for this_iter in tqdm(iters):
 # the envelope and the indicator of significant trials as a np array
 np.save('emg_filt.npy', emg_filt)
 np.save('env.npy', env)
-#np.save('sig_trials.npy', sig_trials)
+np.save('sig_trials.npy', sig_trials)
