@@ -95,13 +95,11 @@ json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 
-dig_in_channel_nums = sorted(info_dict['taste_params']['dig_ins'])
-#dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
-# Instead of indexing directly, check that the number is present in the name
-dig_in_channels = [[this_path for this_path in dig_in_pathname if str(this_num) in this_path]\
-                        for this_num in dig_in_channel_nums]
-dig_in_channels = [x for y in dig_in_channels for x in y]
-dig_in_channel_inds = np.arange(len(dig_in_channels))
+dig_in_channel_nums = info_dict['taste_params']['dig_ins']
+dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
+#dig_in_channel_inds = np.arange(len(dig_in_channels))
+dig_in_channel_inds = [num for num,x in enumerate([int(x[-1]) for x in dig_in_pathname])
+                     if x in dig_in_channel_nums]
 
 # Check dig-in numbers and trial counts against info file
 # Only if mismatch, check with user, otherwise print details and continue

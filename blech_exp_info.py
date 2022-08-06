@@ -107,10 +107,11 @@ else:
 
     # Write out file and ask user to define regions in file
     layout_file_path = os.path.join(dir_path, dir_name + "_electrode_layout.csv")
-    if os.path.exists(layout_file_path):
 
-        def yn_check(x):
-            return x in ['y','yes','n','no']
+    def yn_check(x):
+        return x in ['y','yes','n','no']
+
+    if os.path.exists(layout_file_path):
 
         use_csv_str, continue_bool = entry_checker(\
                 msg = "Layout file detected...use what's there? (y/yes/no/n)",
