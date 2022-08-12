@@ -393,7 +393,6 @@ if throw_out_noise:
         #ax[num,1].scatter(this_times, this_pca, label = str(num),
         #        alpha = 0.1)
         ax[num,1].hist(this_times, bins = 100)
-        ax[num,1].legend()
     fig.suptitle('Predicted Noise Waveforms' + '\n' + f'Count : {noise_slices.shape[0]}')
     fig.savefig(os.path.join(base_plot_dir, 'pred_noise.png'),
                 bbox_inches='tight')
@@ -537,6 +536,14 @@ for i in range(max_clusters-1):
                     )
             fig.savefig(os.path.join(this_plot_dir,f'Cluster{cluster}_ISIs'))
             plt.close(fig)
+
+            fig,ax = plt.subplots()
+            ax.scatter(times_dejittered[cluster_points], data[cluster_points,0])
+            ax.set_ylim([data[:,0].min(), data[:,0].max()])
+            ax.set_title(f'Cluster {cluster}')
+            fig.savefig(os.path.join(this_plot_dir,f'Cluster{cluster}_raster'))
+            plt.close(fig)
+
         else:
             file_path = os.path.join(this_plot_dir, f'no_spikes_Cluster{cluster}')
             with open(file_path, 'w') as file_connect:
