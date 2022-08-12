@@ -7,18 +7,10 @@ import numpy as np
 from clustering import *
 import sys
 import json
-from matplotlib.backends.backend_pdf import PdfPages
 import pylab as plt
-import matplotlib.cm as cm
-from scipy.spatial.distance import mahalanobis
-from scipy import linalg
 import memory_monitor as mm
 import blech_waveforms_datashader
-from scipy.signal import fftconvolve
-from scipy.signal import gaussian
-from scipy.stats import zscore
 from sklearn.preprocessing import StandardScaler as scaler
-from sklearn.decomposition import PCA as pca
 from sklearn.mixture import GaussianMixture as gmm
 
 ############################################################
@@ -238,11 +230,6 @@ data = np.concatenate((data,pca_autocorr[:,:3]),axis=-1)
 # Standardize features in the data since they 
 # occupy very uneven scales
 standard_data = scaler().fit_transform(data)
-
-# We can whiten the data and potentially use
-# diagonal covariances for the GMM to speed things up
-# Not sure how much this step helps
-data = pca(whiten='True').fit_transform(standard_data)
 
 del pca_slices; del scaled_slices; del energy; 
 del slices_autocorr, scaled_autocorr, pca_autocorr
