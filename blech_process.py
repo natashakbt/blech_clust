@@ -19,6 +19,8 @@ Steps:
 ############################################################
 from sklearn.mixture import GaussianMixture as gmm
 from sklearn.preprocessing import StandardScaler as scaler
+from sklearn.decomposition import PCA
+from scipy.stats import zscore
 import blech_waveforms_datashader
 import memory_monitor as mm
 import pylab as plt
@@ -31,6 +33,9 @@ import os
 import shutil
 import matplotlib
 matplotlib.use('Agg')
+
+sys.path.append('/media/bigdata/projects/neuRecommend/src/create_pipeline')
+from feature_engineering_pipeline import *
 
 ############################################################
 #|  ___|   _ _ __   ___ ___ 
@@ -103,12 +108,11 @@ def gen_datashader_plot(
                   format(int(sampling_rate/1000)))
     ax.set_ylabel('Voltage (microvolts)')
     ax.set_title('Cluster%i' % cluster)
-return fig, ax
+    return fig, ax
 
 def gen_isi_hist(
         times_dejittered,
         cluster_points,
-        cluster_times,
         ):
     fig = plt.figure()
     cluster_times = times_dejittered[cluster_points]
@@ -178,6 +182,7 @@ dir_list = [f'./Plots/{electrode_num:02}',
 for this_dir in dir_list:
     ifisdir_rmdir(this_dir)
     os.makedirs(this_dir)
+base_plot_dir = dir_list[0]
 
 # Get the names of all files in the current directory, and find the .params and hdf5 (.h5) file
 file_list = os.listdir('./')
@@ -250,7 +255,7 @@ plt.plot((recording_cutoff, recording_cutoff),
 plt.xlabel('Recording time (secs)')
 plt.ylabel('Average voltage recorded per sec (microvolts)')
 plt.title('Recording cutoff time (indicated by the black horizontal line)')
-fig.savefig(f'./Plots/{electrode_num:02}/cutoff_time.png', bbox_inches='tight')
+fig.savefig(os.path.join(base_plot_dir, 'cutoff_time.png'), bbox_inches='tight')
 plt.close("all")
 
 #############################################################
@@ -283,7 +288,7 @@ fig = gen_window_plots(
     mean_val,
     threshold,
 )
-fig.savefig(f'./Plots/{electrode_num:02}/bandapass_trace_snippets.png',
+fig.savefig(os.path.join(base_plot_dir, 'bandapass_trace_snippets.png'),
             bbox_inches='tight', dpi=300)
 plt.close(fig)
 ############################################################
@@ -299,6 +304,98 @@ slices_dejittered, times_dejittered = \
                   polarity=polarity,
                   spike_snapshot=[spike_snapshot_before, spike_snapshot_after],
                   sampling_rate=sampling_rate)
+
+############################################################
+# Load full pipeline and perform prediction on slices_dejittered
+from joblib import load
+pred_pipeline_path = '/media/bigdata/projects/neuRecommend/model/xgboost_full_pipeline.dump'
+feature_pipeline_path = '/media/bigdata/projects/neuRecommend/model/feature_engineering_pipeline.dump'
+feature_pipeline = load(feature_pipeline_path)
+pred_pipeline = load(pred_pipeline_path)
+
+#clf_pred = pred_pipeline.predict(slices_dejittered)
+clf_threshold = 0.23
+clf_prob = pred_pipeline.predict_proba(slices_dejittered)[:,1]
+clf_pred = clf_prob >= clf_threshold
+
+#fig,ax = plt.subplots(1,2, figsize = (10,5))
+fig = plt.figure(figsize = (10,5))
+ax0 = fig.add_subplot(1,2,1)
+ax1 = fig.add_subplot(2,2,2)
+ax2 = fig.add_subplot(2,2,4)
+spike_dat = slices_dejittered[clf_pred==1]
+spike_times = times_dejittered[clf_pred==1] 
+spike_prob = clf_prob[clf_pred==1]
+x = np.arange(spike_dat.shape[1])
+ax0.plot(x, spike_dat[::10].T, c = 'k', alpha = 0.1)
+ax1.scatter(spike_times, spike_prob, s = 1) 
+ax1.set_ylabel('Spike probability')
+ax2.hist(spike_times, bins = 50)
+ax2.set_ylabel('Binned Counts')
+ax2.set_xlabel('Time')
+fig.suptitle(f'Count : {spike_dat.shape[0]}')
+fig.savefig(os.path.join(base_plot_dir, 'pred_spikes.png'),
+            bbox_inches='tight')
+plt.close(fig)
+
+throw_out_noise = True
+if throw_out_noise:
+    # Pull out noise info
+    noise_slices = slices_dejittered[clf_pred==0]
+    noise_times = times_dejittered[clf_pred==0]
+    noise_prob = clf_prob[clf_pred==0]
+
+    # Remaining data is now only spikes
+    slices_dejittered = slices_dejittered[clf_pred==1]
+    times_dejittered = times_dejittered[clf_pred==1]
+    clf_prob = clf_prob[clf_pred==1]
+
+    # Cluster noise and plot waveforms + times on single plot
+    dat_thresh = 10000
+    zscore_noise_slices = zscore(noise_slices, axis=-1)
+    noise_train_set = zscore_noise_slices[np.random.choice(np.arange(noise_slices.shape[0]),
+                                      int(np.min((noise_slices.shape[0], dat_thresh))))]
+    noise_pca_obj = PCA(n_components=1).fit(noise_train_set)
+    noise_pca = noise_pca_obj.transform(zscore_noise_slices)
+    # Don't need multiple restarts, this is just for visualization, not actual clustering
+    model = gmm(
+        n_components=5,
+        max_iter=num_iter,
+        n_init=1,
+        tol=thresh).fit(noise_train_set)
+
+    predictions = model.predict(zscore_noise_slices)
+
+    clust_num = len(np.unique(predictions))
+    fig = plt.figure(figsize = (20,10))
+    wav_ax_list = [fig.add_subplot(clust_num, 2, (2*i)+1) for i in range(clust_num)]
+    times_ax = fig.add_subplot(1,2,2)
+    plot_max = 200 # Plot at most this many waveforms
+    for num, this_ax in enumerate(wav_ax_list):
+        this_dat = zscore_noise_slices[predictions==num]
+        inds = np.random.choice(
+                np.arange(this_dat.shape[0]),
+                int(np.min((
+                    this_dat.shape[0],
+                    plot_max
+                    )))
+                )
+        this_dat = this_dat[inds]
+        this_ax.plot(this_dat.T, color = 'k', alpha = 0.1)
+        this_ax.set_ylabel(f'Clust {num}')
+        this_times = noise_times[predictions==num]
+        this_pca = noise_pca[predictions==num]
+        #this_prob = noise_prob[predictions==num]
+        times_ax.scatter(this_times, this_pca, label = str(num),
+                alpha = 0.1)
+        times_ax.legend()
+    fig.suptitle(f'Count : {noise_slices.shape[0]}')
+    fig.savefig(os.path.join(base_plot_dir, 'pred_noise.png'),
+                bbox_inches='tight')
+    plt.close(fig)
+    #plt.show()
+
+############################################################
 
 spike_order = np.argsort(times_dejittered)
 times_dejittered = times_dejittered[spike_order]
@@ -343,9 +440,10 @@ plt.plot(x, explained_variance_ratio, 'x')
 plt.title('Variance ratios explained by PCs')
 plt.xlabel('PC #')
 plt.ylabel('Explained variance ratio')
-fig.savefig(f'./Plots/{electrode_num:02}/pca_variance.png',
+fig.savefig(os.path.join(base_plot_dir, 'pca_variance.png'),
             bbox_inches='tight')
 plt.close("all")
+
 
 # Make an array of the data to be used for clustering,
 # and delete pca_slices, scaled_slices, energy and amplitudes
@@ -354,6 +452,7 @@ data = np.zeros((len(pca_slices), n_pc + 2))
 data[:, 2:] = pca_slices[:, :n_pc]
 data[:, 0] = energy[:]/np.max(energy)
 data[:, 1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
+data = np.concatenate([data, clf_prob[:,np.newaxis]],axis=-1)
 
 # Standardize features in the data since they
 # occupy very uneven scales
@@ -394,16 +493,18 @@ for i in range(max_clusters-1):
         predictions[cluster_points] = this_cluster
 
     # Make folder for results of i+2 clusters, and store results there
-    os.mkdir(f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}')
-    np.save(
-        f'./clustering_results/electrode{electrode_num:02}/'
-        f'clusters{i+2}/predictions.npy',
-        predictions)
+    clustering_results_dir = f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}'
+    ifisdir_rmdir(clustering_results_dir)
+    os.mkdir(clustering_results_dir)
+    np.save(os.path.join(clustering_results_dir, 'predictions.npy'), predictions)
 
     # Create file, and plot spike waveforms for the different clusters.
     # Plot 10 times downsampled dejittered/smoothed waveforms.
     # Additionally plot the ISI distribution of each cluster
-    os.mkdir(f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs')
+    this_plot_dir = os.path.join(base_plot_dir, f'{i+2}_clusters_waveforms_ISIs')
+    ifisdir_rmdir(this_plot_dir)
+    os.mkdir(this_plot_dir)
+
     x = np.arange(len(slices_dejittered[0])) + 1
     for cluster in range(i+2):
         cluster_points = np.where(predictions[:] == cluster)[0]
@@ -422,21 +523,17 @@ for i in range(max_clusters-1):
                         sampling_rate,
                         cluster,
                     )
-            fig.savefig(f'./Plots/{electrode_num:02}/'
-                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
-            plt.close("all")
+            fig.savefig(os.path.join(this_plot_dir,f'Cluster{cluster}_waveforms'))
+            plt.close(fig)
 
             fig = gen_isi_hist(
                         times_dejittered,
                         cluster_points,
-                        cluster_times,
                     )
-            fig.savefig(f'./Plots/{electrode_num:02}/'
-                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
-            plt.close("all")
+            fig.savefig(os.path.join(this_plot_dir,f'Cluster{cluster}_ISIs'))
+            plt.close(fig)
         else:
-            file_path = f'./Plots/{electrode_num:02}/'\
-                f'{i+2}_clusters_waveforms_ISIs/no_spikes_Cluster{cluster}'
+            file_path = os.path.join(this_plot_dir, f'no_spikes_Cluster{cluster}')
             with open(file_path, 'w') as file_connect:
                 file_connect.write('')
 
