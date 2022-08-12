@@ -33,6 +33,7 @@ import os
 import shutil
 import matplotlib
 matplotlib.use('Agg')
+from joblib import load
 
 sys.path.append('/media/bigdata/projects/neuRecommend/src/create_pipeline')
 from feature_engineering_pipeline import *
@@ -307,7 +308,6 @@ slices_dejittered, times_dejittered = \
 
 ############################################################
 # Load full pipeline and perform prediction on slices_dejittered
-from joblib import load
 pred_pipeline_path = '/media/bigdata/projects/neuRecommend/model/xgboost_full_pipeline.dump'
 feature_pipeline_path = '/media/bigdata/projects/neuRecommend/model/feature_engineering_pipeline.dump'
 feature_pipeline = load(feature_pipeline_path)
@@ -333,7 +333,7 @@ ax1.set_ylabel('Spike probability')
 ax2.hist(spike_times, bins = 50)
 ax2.set_ylabel('Binned Counts')
 ax2.set_xlabel('Time')
-fig.suptitle(f'Count : {spike_dat.shape[0]}')
+fig.suptitle('Predicted Spike Waveforms' + '\n' + f'Count : {spike_dat.shape[0]}')
 fig.savefig(os.path.join(base_plot_dir, 'pred_spikes.png'),
             bbox_inches='tight')
 plt.close(fig)
@@ -367,11 +367,15 @@ if throw_out_noise:
     predictions = model.predict(zscore_noise_slices)
 
     clust_num = len(np.unique(predictions))
-    fig = plt.figure(figsize = (20,10))
-    wav_ax_list = [fig.add_subplot(clust_num, 2, (2*i)+1) for i in range(clust_num)]
-    times_ax = fig.add_subplot(1,2,2)
+    #fig = plt.figure(figsize = (20,10))
+    #wav_ax_list = [fig.add_subplot(clust_num, 2, (2*i)+1) for i in range(clust_num)]
+    #times_ax = fig.add_subplot(1,2,2)
+    fig,ax = plt.subplots(clust_num, 2, figsize = (20,10), sharex='col')
+    ax[0,0].set_title('Waveforms')
+    ax[0,1].set_title('Spike Times')
     plot_max = 200 # Plot at most this many waveforms
-    for num, this_ax in enumerate(wav_ax_list):
+    #for num, this_ax in enumerate(wav_ax_list):
+    for num in range(clust_num):
         this_dat = zscore_noise_slices[predictions==num]
         inds = np.random.choice(
                 np.arange(this_dat.shape[0]),
@@ -381,15 +385,16 @@ if throw_out_noise:
                     )))
                 )
         this_dat = this_dat[inds]
-        this_ax.plot(this_dat.T, color = 'k', alpha = 0.1)
-        this_ax.set_ylabel(f'Clust {num}')
+        ax[num,0].plot(this_dat.T, color = 'k', alpha = 0.1)
+        ax[num,0].set_ylabel(f'Clust {num}')
         this_times = noise_times[predictions==num]
         this_pca = noise_pca[predictions==num]
         #this_prob = noise_prob[predictions==num]
-        times_ax.scatter(this_times, this_pca, label = str(num),
-                alpha = 0.1)
-        times_ax.legend()
-    fig.suptitle(f'Count : {noise_slices.shape[0]}')
+        #ax[num,1].scatter(this_times, this_pca, label = str(num),
+        #        alpha = 0.1)
+        ax[num,1].hist(this_times, bins = 100)
+        ax[num,1].legend()
+    fig.suptitle('Predicted Noise Waveforms' + '\n' + f'Count : {noise_slices.shape[0]}')
     fig.savefig(os.path.join(base_plot_dir, 'pred_noise.png'),
                 bbox_inches='tight')
     plt.close(fig)
