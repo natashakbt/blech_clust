@@ -1,3 +1,12 @@
+"""
+Steps:
+    1) Load Data
+    2) Preprocess
+        a) Bandpass filter
+        b) Extract and dejitter spikes
+        c) 
+"""
+
 import matplotlib
 matplotlib.use('Agg')
 import shutil
@@ -193,6 +202,12 @@ amplitudes[polarity > 0] =  np.max(slices_dejittered[polarity > 0], axis = 1)
 # Delete the original slices and times now that dejittering is complete
 del slices; del spike_times
 
+# Scale the dejittered slices by the energy of the waveforms
+scaled_slices, energy = scale_waveforms(slices_dejittered)
+
+# Run PCA on the scaled waveforms
+pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
+
 # Save the pca_slices, energy and amplitudes to the 
 # spike_waveforms folder for this electrode
 # Save slices/spike waveforms and their times to their respective folders
@@ -225,7 +240,6 @@ data = np.zeros((len(pca_slices), n_pc + 2))
 data[:,2:] = pca_slices[:,:n_pc]
 data[:,0] = energy[:]/np.max(energy)
 data[:,1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
-data = np.concatenate((data,pca_autocorr[:,:3]),axis=-1)
 
 # Standardize features in the data since they 
 # occupy very uneven scales
