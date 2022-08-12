@@ -198,33 +198,18 @@ amplitudes = np.zeros((slices_dejittered.shape[0]))
 amplitudes[polarity < 0] =  np.min(slices_dejittered[polarity < 0], axis = 1)
 amplitudes[polarity > 0] =  np.max(slices_dejittered[polarity > 0], axis = 1)
 
-# Calculate autocorrelation of dejittered slices to attempt to remove 
-# periodic noise
-slices_autocorr = fftconvolve(slices_dejittered, slices_dejittered, axes = -1)
-
 # Delete the original slices and times now that dejittering is complete
 del slices; del spike_times
-
-# Scale the dejittered slices by the energy of the waveforms
-scaled_slices, energy = scale_waveforms(slices_dejittered)
-# Scale the autocorrelations by zscoring the autocorr for each waveform
-scaled_autocorr = zscore(slices_autocorr, axis=-1) 
-
-# Run PCA on the scaled waveforms
-pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
-# Perform PCA on scaled autocorrelations
-pca_autocorr, autocorr_explained_variance_ratio = implement_pca(scaled_autocorr)
 
 # Save the pca_slices, energy and amplitudes to the 
 # spike_waveforms folder for this electrode
 # Save slices/spike waveforms and their times to their respective folders
 to_be_saved = ['slices_dejittered','times_dejittered',
-                'pca_slices','pca_autocorr','energy','amplitudes']
+                'pca_slices','energy','amplitudes']
 save_paths = \
     [f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy',
     f'./spike_times/electrode{electrode_num:02}/spike_times.npy',
     f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy', 
-    f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy',
     f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
     f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy']
 
