@@ -10,7 +10,13 @@ Steps:
         f) Scale all features using StandardScaler
     3) Perform clustering
 """
-
+############################################################
+#|_ _|_ __ ___  _ __   ___  _ __| |_ ___  
+# | || '_ ` _ \| '_ \ / _ \| '__| __/ __| 
+# | || | | | | | |_) | (_) | |  | |_\__ \ 
+#|___|_| |_| |_| .__/ \___/|_|   \__|___/ 
+#              |_|                        
+############################################################
 from sklearn.mixture import GaussianMixture as gmm
 from sklearn.preprocessing import StandardScaler as scaler
 import blech_waveforms_datashader
@@ -26,6 +32,12 @@ import shutil
 import matplotlib
 matplotlib.use('Agg')
 
+############################################################
+#|  ___|   _ _ __   ___ ___ 
+#| |_ | | | | '_ \ / __/ __|
+#|  _|| |_| | | | | (__\__ \
+#|_|   \__,_|_| |_|\___|___/
+############################################################
 
 def ifisdir_rmdir(dir_name):
     if os.path.isdir(dir_name):
@@ -312,12 +324,14 @@ pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
 # Save slices/spike waveforms and their times to their respective folders
 to_be_saved = ['slices_dejittered', 'times_dejittered',
                'pca_slices', 'energy', 'amplitudes']
+
+this_waveform_path = f'./spike_waveforms/electrode{electrode_num:02}'
 save_paths = \
-    [f'./spike_waveforms/electrode{electrode_num:02}/spike_waveforms.npy',
+    [f'{this_waveform_path}/spike_waveforms.npy',
      f'./spike_times/electrode{electrode_num:02}/spike_times.npy',
-     f'./spike_waveforms/electrode{electrode_num:02}/pca_waveforms.npy',
-     f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
-     f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy']
+     f'{this_waveform_path}/pca_waveforms.npy',
+     f'{this_waveform_path}/energy.npy',
+     f'{this_waveform_path}/spike_amplitudes.npy']
 
 for key, path in zip(to_be_saved, save_paths):
     np.save(path, globals()[key])
