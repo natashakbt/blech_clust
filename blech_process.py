@@ -56,6 +56,11 @@ feature_pipeline_path = f'{model_dir}/feature_engineering_pipeline.dump'
 sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
 from feature_engineering_pipeline import *
 
+clf_threshold_path = f'{model_dir}/proba_threshold.json'
+with open(clf_threshold_path,'r') as this_file:
+    out_dict = json.load(this_file)
+clf_threshold = out_dict['threshold']
+
 
 ############################################################
 #|  ___|   _ _ __   ___ ___ 
@@ -331,7 +336,6 @@ feature_pipeline = load(feature_pipeline_path)
 pred_pipeline = load(pred_pipeline_path)
 
 #clf_pred = pred_pipeline.predict(slices_dejittered)
-clf_threshold = 0.23
 clf_prob = pred_pipeline.predict_proba(slices_dejittered)[:,1]
 clf_pred = clf_prob >= clf_threshold
 
