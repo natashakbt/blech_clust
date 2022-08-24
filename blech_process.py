@@ -1,4 +1,14 @@
 """
+Changes to be made:
+    1) Add flag for throwing out waveforms at blech_clust step
+    2) Convert pred_spikes + pred_noice plots to datashader
+    3) Number of noise clusters = 7
+    4) Number of spikes clusters = 3
+    5) Save predictions so they can be used in UMAP plot
+
+Model monitoring:
+    1) Monitoring input and output data distributions
+
 Steps:
     1) Load Data
     2) Preprocess
@@ -10,6 +20,7 @@ Steps:
         f) Scale all features using StandardScaler
     3) Perform clustering
 """
+
 ############################################################
 #|_ _|_ __ ___  _ __   ___  _ __| |_ ___  
 # | || '_ ` _ \| '_ \ / _ \| '__| __/ __| 
@@ -17,6 +28,7 @@ Steps:
 #|___|_| |_| |_| .__/ \___/|_|   \__|___/ 
 #              |_|                        
 ############################################################
+
 from sklearn.mixture import GaussianMixture as gmm
 from sklearn.preprocessing import StandardScaler as scaler
 from sklearn.decomposition import PCA
