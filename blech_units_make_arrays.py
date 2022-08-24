@@ -203,7 +203,8 @@ for unit in units:
 
 # Go through the dig_in_channel_inds and make an array of spike trains 
 # of dimensions (# trials x # units x trial duration (ms)) - 
-# use END of digital input pulse as the time of taste delivery
+# use START of digital input pulse as the time of taste delivery
+# Refer to https://github.com/narendramukherjee/blech_clust/pull/14
 for i in range(len(dig_in_channel_inds)):
     spike_train = []
     for j in range(len(start_points[dig_in_channel_inds[i]])):
