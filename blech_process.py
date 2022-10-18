@@ -103,12 +103,11 @@ def gen_datashader_plot(
                   format(int(sampling_rate/1000)))
     ax.set_ylabel('Voltage (microvolts)')
     ax.set_title('Cluster%i' % cluster)
-return fig, ax
+    return fig, ax
 
 def gen_isi_hist(
         times_dejittered,
         cluster_points,
-        cluster_times,
         ):
     fig = plt.figure()
     cluster_times = times_dejittered[cluster_points]
@@ -429,7 +428,6 @@ for i in range(max_clusters-1):
             fig = gen_isi_hist(
                         times_dejittered,
                         cluster_points,
-                        cluster_times,
                     )
             fig.savefig(f'./Plots/{electrode_num:02}/'
                         f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
