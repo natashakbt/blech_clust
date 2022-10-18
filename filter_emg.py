@@ -20,9 +20,11 @@ else:
 os.chdir(dir_name)
 
 # Load the data
+# shape : channels x tastes x trials x time
 emg_data = np.load('emg_data.npy')
 
 # Ask the user for stimulus delivery time in each trial, and convert to an integer
+# TODO : Can be pulled from info file
 pre_stim = easygui.multenterbox(
         msg = 'Enter the pre-stimulus time included in each trial', 
         fields = ['Pre-stimulus time (ms)']) 
@@ -32,22 +34,21 @@ pre_stim = int(pre_stim[0])
 m, n = butter(2, 2.0*300.0/1000.0, 'highpass')
 c, d = butter(2, 2.0*15.0/1000.0, 'lowpass')
 
-#high_freq = 2.0*300.0/1000
-#low_freq = 2.0*15.0/1000
-#filt_order = 2
-#fs = 1000
-#m, n = butter(filt_order, high_freq, 'highpass')#, fs = fs)
-#c, d = butter(filt_order, low_freq, 'lowpass')#, fs = fs)
-
+# TODO: This can be pulled from info file
 # check how many EMG channels used in this experiment
 check = easygui.ynbox(
         msg = 'Did you have more than one EMG channel?', 
         title = 'Check YES if you did')
 
+# TODO: Ask about differencing pairs
+# Difference by CAR emg labels
+# If only 1 channel per emg CAR, do not difference if asked
+
+# TODO: This question can go into an EMG params file
 # Bandpass filter the emg signals, and store them in a numpy array. 
 # Low pass filter the bandpassed signals, and store them in another array
 # Take difference between pairs of channels
-if len(emg_data)//2 > 1:
+if len(emg_data) > 2:
 	emg_list = np.split(emg_data,2,axis=0)
 	emg_data = np.squeeze(np.stack([np.diff(x,axis=0) for x in emg_list]))
 else:
@@ -58,7 +59,7 @@ else:
 iters = list(np.ndindex(emg_data.shape[:-1])) 
 emg_filt = np.zeros(emg_data.shape)
 env = np.zeros(emg_data.shape)
-for this_iter in tqdm(iters):
+for this_iter in iters:
     temp_filt = filtfilt(m, n, emg_data[this_iter])
     emg_filt[this_iter] = temp_filt 
     env[this_iter] = filtfilt(c, d, np.abs(temp_filt))

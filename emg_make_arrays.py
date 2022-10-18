@@ -1,3 +1,6 @@
+# TODO: This code doesn't allow for uneven numbers of trials
+# TODO: Replace exec statements
+
 # Import stuff!
 import numpy as np
 import tables
@@ -31,7 +34,8 @@ dig_in = []
 dig_in_pathname = []
 for node in dig_in_nodes:
     dig_in_pathname.append(node._v_pathname)
-    exec("dig_in.append(hf5.root.digital_in.%s[:])" % dig_in_pathname[-1].split('/')[-1])
+    exec("dig_in.append(hf5.root.digital_in.%s[:])" 
+            % dig_in_pathname[-1].split('/')[-1])
 dig_in = np.array(dig_in)
 
 # Get the stimulus delivery times - 
@@ -46,16 +50,19 @@ for on_times in dig_on:
         if np.abs(on_times[j] - on_times[j+1]) > 30:
             changes.append(on_times[j])
     try:
-        changes.append(on_times[-1]) # append the last trial which will be missed by this method
+        # append the last trial which will be missed by this method
+        changes.append(on_times[-1]) 
     except:
         pass # Continue without appending anything if this port wasn't on at all
     change_points.append(changes)
 
-# Show the user the number of trials on each digital input channel, and ask them to confirm
+# Show the user the number of trials on each digital input channel, 
+# and ask them to confirm
 check = easygui.ynbox(msg = 'Digital input channels: ' + str(dig_in_pathname) \
         + '\n' + 'No. of trials: ' + \
         str([len(changes) for changes in change_points]), 
-        title = 'Check and confirm the number of trials detected on digital input channels')
+        title = 'Check and confirm the number of trials detected '\
+                'on digital input channels')
 # Go ahead only if the user approves by saying yes
 if check:
     pass
@@ -70,11 +77,18 @@ dig_in_channels = easygui.multchoicebox(
         msg = 'Which digital input channels should be '
         'used to slice out EMG data trial-wise?', 
         choices = ([path for path in dig_in_pathname]))
+
+# TODO: Check selected dig-ins against info file
+# There is no reason to select laser dig-ins at this stage
+
+# TODO: This numbering is potentially dangerous.
+# nums should correspond to the name of the dig_in, not indices
 dig_in_channel_nums = []
 for i in range(len(dig_in_pathname)):
     if dig_in_pathname[i] in dig_in_channels:
         dig_in_channel_nums.append(i)
 
+# TODO: This can be pulled from info file
 # Ask the user for the pre and post stimulus durations to be pulled out, 
 # and convert to integers
 durations = easygui.multenterbox(
@@ -91,6 +105,7 @@ for node in emg_nodes:
     emg_pathname.append(node._v_pathname)
 
 # Create a numpy array to store emg data by trials
+# Shape : Channels x Tastes x Trials x Time
 emg_data = np.ndarray((len(emg_pathname), 
     len(dig_in_channels), 
     len(change_points[dig_in_channel_nums[0]]), 
