@@ -80,7 +80,7 @@ def read_files_abu(hdf5_name, dig_in, electrode_layout_frame):
             # multiple boards are written into a monotonic sequence
             channel_ind = row.electrode_ind
             data = np.fromfile(row.filename, dtype = np.dtype('int16'))
-            if row.CAR_group == 'emg':
+            if 'emg' in row.CAR_group.lower():
                 exec(f"hf5.root.raw_emg.emg{emg_counter:02}."\
                         "append(data[:])")
                 emg_counter += 1

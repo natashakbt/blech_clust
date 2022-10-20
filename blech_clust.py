@@ -159,7 +159,7 @@ os.mkdir('memory_monitor_clustering')
 # Ask for the HPC queue to use - was in previous version, now just use all.q
 
 # Grab Brandeis unet username
-username = ['abuzarmahmood']
+username = ['natasha']
 
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
@@ -176,7 +176,7 @@ num_cpu = multiprocessing.cpu_count()
 f = open('blech_clust_jetstream_parallel.sh', 'w')
 print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
         "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
-        .format(int(num_cpu//4), dir_name, ",".join([str(x) for x in all_electrodes]))
+        .format(int(num_cpu-2), dir_name, ",".join([str(x) for x in all_electrodes]))
         , file = f)
 f.close()
 
