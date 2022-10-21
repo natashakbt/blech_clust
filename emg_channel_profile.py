@@ -33,7 +33,7 @@ emg_data = np.load('emg_data.npy')
 # Ask the user for the names of the tastes in the dataset
 tastes = easygui.multenterbox(
         msg = 'Enter the names of the tastes used in the experiments', 
-        fields = ['Taste{:d}'.format(i+1) for i in range(emg_env.shape[0])])
+        fields = ['Taste{:d}'.format(i+1) for i in range(emg_data.shape[1])])
 
 time_limits = easygui.multenterbox(
         msg = 'Time limits for plotting [relative to stim delivery]', 
