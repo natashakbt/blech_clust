@@ -45,13 +45,18 @@ check = easygui.ynbox(
 # If only 1 channel per emg CAR, do not difference if asked
 
 # TODO: This question can go into an EMG params file
+# TODO: Rename to diff_data at this stage
 # Bandpass filter the emg signals, and store them in a numpy array. 
 # Low pass filter the bandpassed signals, and store them in another array
 # Take difference between pairs of channels
 if len(emg_data) > 2:
 	emg_list = np.split(emg_data,2,axis=0)
 	emg_data = np.squeeze(np.stack([np.diff(x,axis=0) for x in emg_list]))
+elif len(emg_data) == 1:
+        # If only single channel
+        emg_data = emg_data[np.newaxis]
 else:
+        # If only one pair of channels
 	# Keep as 4D array so shape is consistent
 	emg_data = np.diff(emg_data, axis=0) 
 
@@ -76,8 +81,7 @@ for this_iter in iters:
 ## Get mean and std of baseline emg activity, 
 ## and use it to select trials that have significant post stimulus activity
 # sig_trials (assumed shape) : tastes x trials
-#sig_trials = np.zeros((emg_data.shape[1], emg_data.shape[2]))
-sig_trials = np.zeros((emg_data.shape[0], emg_data.shape[2]))
+sig_trials = np.zeros((emg_data.shape[1], emg_data.shape[2]))
 pre_m = np.mean(np.abs(emg_filt[...,:pre_stim]), axis = (3))
 pre_s = np.std(np.abs(emg_filt[...,:pre_stim]), axis = (3))
 
@@ -87,8 +91,8 @@ post_max = np.max(np.abs(emg_filt[...,pre_stim:]), axis = (3))
 # If any of the channels passes the criteria, select that trial as significant
 #mean_bool = np.sum(post_m > pre_m, axis = 0) > 0
 #std_bool = np.sum(post_max > (pre_m + 4.0*pre_s), axis = 0) > 0
-mean_bool = np.sum(post_m > pre_m, axis = 1) > 0
-std_bool = np.sum(post_max > (pre_m + 4.0*pre_s), axis = 1) > 0
+mean_bool = post_m > pre_m
+std_bool = post_max > (pre_m + 4.0*pre_s)
 
 # Logical AND
 sig_trials = mean_bool * std_bool
@@ -101,17 +105,18 @@ sig_trials = mean_bool * std_bool
 #                and np.max(np.abs(emg_filt[i, j, pre_stim:])) > m + 4.0*s:
 #            sig_trials[i, j] = 1
 
+# NOTE: Currently same sig_trials for all channels
 # Save the highpass filtered signal, 
 # the envelope and the indicator of significant trials as a np array
 # Iterate over channels and save them in different directories 
-for num in range(env.shape[1]):
+for num in range(env.shape[0]):
 	dir_path = f'emg_{num}'
 	if os.path.exists(dir_path):
 		shutil.rmtree(dir_path)
 	os.makedirs(dir_path)
 	# emg_filt (output shape): tastes x trials x time
-	np.save(os.path.join(dir_path, f'emg_filt.npy'), emg_filt[:,num])
+	np.save(os.path.join(dir_path, f'emg_filt.npy'), emg_filt[num])
 	# env (output shape): tastes x trials x time
-	np.save(os.path.join(dir_path, f'env.npy'), env[:,num])
+	np.save(os.path.join(dir_path, f'env.npy'), env[num])
 	# sig_trials (output shape): tastes x trials
 	np.save(os.path.join(dir_path, 'sig_trials.npy'), sig_trials)
