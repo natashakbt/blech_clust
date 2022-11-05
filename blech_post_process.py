@@ -122,6 +122,7 @@ def entry_checker(msg, check_func, fail_response):
         msg_input = input(msg.join([' ',exit_str]))
         if msg_input == 'x':
             continue_bool = False
+            print('=== Exiting ===' + '\n')
             break
         check_bool = check_func(msg_input)
         if not check_bool:
