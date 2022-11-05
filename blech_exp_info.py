@@ -157,6 +157,8 @@ else:
 
     layout_frame_filled = pd.read_csv(layout_file_path)
     layout_frame_filled['CAR_group'] = layout_frame_filled['CAR_group'].str.lower() 
+    layout_frame_filled['CAR_group'] = [x.strip() for x in \
+            layout_frame_filled['CAR_group'] ]
     layout_dict = dict(list(layout_frame_filled.groupby('CAR_group').electrode_ind))
     for key,vals in layout_dict.items():
         layout_dict[key] = [layout_dict[key].to_list()]
