@@ -236,7 +236,7 @@ else:
 
     taste_fin = str(list(zip(taste_digins, list(zip(tastes,concs)))))
     palatability_str, continue_bool = entry_checker(\
-            msg = f' {taste_fin} \n Enter palatability rankings used (anything separated)  :: ',
+            msg = f' {taste_fin} \n Enter palatability rankings used (anything separated), higher number = more palatable  :: ',
             check_func = pal_check,
             fail_response = 'Please enter numbers 1<=x<len(tastes)')
     if continue_bool:
