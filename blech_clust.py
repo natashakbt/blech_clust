@@ -8,9 +8,27 @@ import multiprocessing
 import json
 import glob
 import pandas as pd
+import shutil
 
 # Necessary blech_clust modules
 import read_file
+
+def entry_checker(msg, check_func, fail_response):
+    check_bool = False
+    continue_bool = True
+    exit_str = '"x" to exit :: '
+    while not check_bool:
+        msg_input = input(msg.join([' ',exit_str]))
+        if msg_input == 'x':
+            continue_bool = False
+            print('=== Exiting ===' + '\n')
+            break
+        check_bool = check_func(msg_input)
+        if not check_bool:
+            print(fail_response)
+    return msg_input, continue_bool
+
+############################################################
 
 # Get name of directory with the data files
 if len(sys.argv) > 1:
@@ -55,10 +73,46 @@ hf5.close()
 print('Created nodes in HF5')
 
 # Create directories to store waveforms, spike times, clustering results, and plots
-os.mkdir('spike_waveforms')
-os.mkdir('spike_times')
-os.mkdir('clustering_results')
-os.mkdir('Plots')
+# And a directory for dumping files talking about memory usage in blech_process.py
+# Check if dirs are already present, if they are, ask to delete and continue
+# or abort
+dir_list = ['spike_waveforms',
+            'spike_times',
+            'clustering_results',
+            'Plots',
+            'memory_monitor_clustering']
+dir_exists = [x for x in dir_list if os.path.exists(x)]
+recreate_msg = f'Following dirs are present :' + '\n' + f'{dir_exists}' + \
+                '\n' + 'Overwrite dirs? (yes/y/n/no) ::: '
+
+# If dirs exist, check with user
+if len(dir_exists) > 0:
+    recreate_str, continue_bool = entry_checker(\
+            msg = recreate_msg,
+            check_func = lambda x: x in ['y','yes','n','no'], 
+            fail_response = 'Please enter (yes/y/n/no)')
+# Otherwise, create all of them
+else:
+    continue_bool = True
+    recreate_str = 'y'
+
+# Break if user said n/no or gave exit signal
+if continue_bool:
+    if recreate_str in ['y','yes']:
+        for x in dir_list:
+            if os.path.exists(x):
+                shutil.rmtree(x)
+            os.makedirs(x)
+    else:
+        quit()
+else:
+    quit()
+
+#os.mkdir('spike_waveforms')
+#os.mkdir('spike_times')
+#os.mkdir('clustering_results')
+#os.mkdir('Plots')
+#os.mkdir('memory_monitor_clustering')
 print('Created dirs in data folder')
 
 # Get the amplifier ports used
@@ -153,13 +207,11 @@ all_params_dict = {**clustering_params, **data_params,
 with open(hdf5_name[-1]+'.params', 'w') as params_file:
     json.dump(all_params_dict, params_file, indent = 4)
 
-# Make a directory for dumping files talking about memory usage in blech_process.py
-os.mkdir('memory_monitor_clustering')
 
 # Ask for the HPC queue to use - was in previous version, now just use all.q
 
 # Grab Brandeis unet username
-username = ['natasha']
+username = ['abuzarmahmood']
 
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir('/home/%s/Desktop/blech_clust' % username[0])
