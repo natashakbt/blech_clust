@@ -105,7 +105,7 @@ sig_trials = mean_bool * std_bool
 #                and np.max(np.abs(emg_filt[i, j, pre_stim:])) > m + 4.0*s:
 #            sig_trials[i, j] = 1
 
-# NOTE: Currently same sig_trials for all channels
+# NOTE: Currently DIFFERENT sig_trials for each channel 
 # Save the highpass filtered signal, 
 # the envelope and the indicator of significant trials as a np array
 # Iterate over channels and save them in different directories 
@@ -119,4 +119,4 @@ for num in range(env.shape[0]):
 	# env (output shape): tastes x trials x time
 	np.save(os.path.join(dir_path, f'env.npy'), env[num])
 	# sig_trials (output shape): tastes x trials
-	np.save(os.path.join(dir_path, 'sig_trials.npy'), sig_trials)
+	np.save(os.path.join(dir_path, 'sig_trials.npy'), sig_trials[num])

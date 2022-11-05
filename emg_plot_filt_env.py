@@ -39,7 +39,7 @@ cut_emg_filt = emg_filt[...,fin_inds[0]:fin_inds[1]]
 cut_emg_env = emg_env[...,fin_inds[0]:fin_inds[1]]
 
 fig,ax = plt.subplots(*emg_filt.shape[:2][::-1], 
-        sharey=True, sharex=True, figsize = (20,10))
+        sharey=True, sharex=True, figsize = (20,30))
 inds = list(np.ndindex(ax.shape))
 for trial, taste in inds:
     this_color = colors[int(sig_trials[taste,trial])]
@@ -52,10 +52,10 @@ for trial, taste in inds:
         ax[trial,taste].set_xlabel('Time post-sitm (ms)')
 fig.savefig('emg_filtered_plots.png', bbox_inches = 'tight')
 plt.close(fig)
-plt.show()
+#plt.show()
 
 fig,ax = plt.subplots(*emg_filt.shape[:2][::-1], 
-        sharey=True, sharex=True, figsize = (20,10))
+        sharey=True, sharex=True, figsize = (20,30))
 inds = list(np.ndindex(ax.shape))
 for trial, taste in inds:
     this_color = colors[int(sig_trials[taste,trial])]
