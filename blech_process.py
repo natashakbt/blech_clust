@@ -442,14 +442,17 @@ for i in range(max_clusters-1):
             plt.close("all")
 
             # Create features timeseries plot
+            # And plot histogram of spiketimes
             this_standard_data = standard_data[cluster_points]
             this_spiketimes = spike_times[cluster_points]
-            fig,ax = plt.subplots(this_standard_data.shape[1],1,
-                    figsize = (7,7))
+            fig,ax = plt.subplots(this_standard_data.shape[1] + 1, 1,
+                    figsize = (7,9), sharex=True)
             for this_label, this_dat, this_ax in \
-                    zip(data_labels, this_standard_data.T, ax):
+                    zip(data_labels, this_standard_data.T, ax[:-1]):
                 this_ax.scatter(this_spiketimes, this_dat, s=0.5, alpha = 0.5)
                 this_ax.set_ylabel(this_label)
+            ax[-1].hist(this_spiketimes, bins = 50)
+            ax[-1].set_ylabel('Spiketime' + '\n' + 'Histogram')
             fig.savefig(os.path.join(
                 clust_plot_dir,f'Cluster{cluster}_features'))
             plt.close(fig)

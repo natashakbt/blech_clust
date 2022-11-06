@@ -118,22 +118,6 @@ def umap_plots(data_dir, electrode_num):
                     dpi = 300)
                 plt.close(fig4)
 
-                # Plot rasters for each individual cluster
-                max_time = np.max(spike_times)
-                min_y, max_y = np.min(umap_waveforms), np.max(umap_waveforms)
-                for clust_num in np.sort(np.unique(this_clust))[1:]:
-                    relevant_waveforms = umap_waveforms[this_clust == clust_num,0]
-                    relevant_spiketimes = spike_times[this_clust == clust_num]
-                    fig,ax  = plt.subplots()
-                    ax.scatter(relevant_spiketimes,relevant_waveforms, s = 2, alpha = 0.8)
-                    ax.set_xlim(0, max_time)
-                    ax.set_ylim(min_y, max_y)
-                    fig.savefig(data_dir + \
-                        '/Plots/{0:02d}/{1}_clusters_waveforms_ISIs/Cluster{2}_raster.png'.\
-                        format(electrode_num, cluster, clust_num),
-                        dpi = 300)
-                    plt.close(fig)
-
         except:
             # In other words, I'm too lazy to actually debug shit
             pass
