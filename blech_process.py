@@ -52,7 +52,7 @@ def gen_window_plots(
         spike_times,
         mean_val,
         threshold,
-):
+                ):
     windows_in_data = len(filt_el) // (window_len * sampling_rate)
     window_markers = np.linspace(0,
                                  int(windows_in_data*(window_len * sampling_rate)),
@@ -198,7 +198,8 @@ for key, value in params_dict.items():
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
-exec(f"raw_el = hf5.root.raw.electrode{electrode_num:02}[:]")
+raw_el = hf5.get_node(f'/raw/electrode{electrode_num:02}')[:]
+#exec(f"raw_el = hf5.root.raw.electrode{electrode_num:02}[:]")
 hf5.close()
 
 ############################################################
@@ -310,7 +311,8 @@ amplitudes[polarity > 0] = np.max(slices_dejittered[polarity > 0], axis=1)
 
 # Delete the original slices and times now that dejittering is complete
 del slices
-del spike_times
+# Save spiketimes for feature timeseries plots
+#del spike_times
 
 # Scale the dejittered slices by the energy of the waveforms
 scaled_slices, energy = scale_waveforms(slices_dejittered)
@@ -348,11 +350,16 @@ plt.close("all")
 
 # Make an array of the data to be used for clustering,
 # and delete pca_slices, scaled_slices, energy and amplitudes
+
 n_pc = 3
 data = np.zeros((len(pca_slices), n_pc + 2))
 data[:, 2:] = pca_slices[:, :n_pc]
 data[:, 0] = energy[:]/np.max(energy)
 data[:, 1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
+
+data_labels = [*[f'pc{x}' for x in range(n_pc)],
+               'energy',
+               'amplitude']
 
 # Standardize features in the data since they
 # occupy very uneven scales
@@ -393,16 +400,15 @@ for i in range(max_clusters-1):
         predictions[cluster_points] = this_cluster
 
     # Make folder for results of i+2 clusters, and store results there
-    os.mkdir(f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}')
-    np.save(
-        f'./clustering_results/electrode{electrode_num:02}/'
-        f'clusters{i+2}/predictions.npy',
-        predictions)
+    clust_results_dir = f'./clustering_results/electrode{electrode_num:02}/clusters{i+2}'
+    os.mkdir(clust_results_dir)
+    np.save(os.path.join(clust_results_dir, 'predictions.npy'), predictions)
 
     # Create file, and plot spike waveforms for the different clusters.
     # Plot 10 times downsampled dejittered/smoothed waveforms.
     # Additionally plot the ISI distribution of each cluster
-    os.mkdir(f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs')
+    clust_plot_dir = f'./Plots/{electrode_num:02}/{i+2}_clusters_waveforms_ISIs'
+    os.mkdir(clust_plot_dir)
     x = np.arange(len(slices_dejittered[0])) + 1
     for cluster in range(i+2):
         cluster_points = np.where(predictions[:] == cluster)[0]
@@ -412,6 +418,7 @@ for i in range(max_clusters-1):
             # from FURTHER downsampling the given waveforms for plotting
             # Because in the previous version they were upsampled for clustering
 
+            # Create waveform datashader plot
             fig,ax = gen_datashader_plot(
                         slices_dejittered,
                         cluster_points,
@@ -421,20 +428,34 @@ for i in range(max_clusters-1):
                         sampling_rate,
                         cluster,
                     )
-            fig.savefig(f'./Plots/{electrode_num:02}/'
-                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_waveforms')
+            fig.savefig(os.path.join(
+                clust_plot_dir,f'Cluster{cluster}_waveforms'))
             plt.close("all")
 
+            # Create ISI distribution plot
             fig = gen_isi_hist(
                         times_dejittered,
                         cluster_points,
                     )
-            fig.savefig(f'./Plots/{electrode_num:02}/'
-                        f'{i+2}_clusters_waveforms_ISIs/Cluster{cluster}_ISIs')
+            fig.savefig(os.path.join(
+                clust_plot_dir,f'Cluster{cluster}_ISIs'))
             plt.close("all")
+
+            # Create features timeseries plot
+            this_standard_data = standard_data[cluster_points]
+            this_spiketimes = spike_times[cluster_points]
+            fig,ax = plt.subplots(this_standard_data.shape[1],1,
+                    figsize = (7,7))
+            for this_label, this_dat, this_ax in \
+                    zip(data_labels, this_standard_data.T, ax):
+                this_ax.scatter(this_spiketimes, this_dat, s=0.5, alpha = 0.5)
+                this_ax.set_ylabel(this_label)
+            fig.savefig(os.path.join(
+                clust_plot_dir,f'Cluster{cluster}_features'))
+            plt.close(fig)
+
         else:
-            file_path = f'./Plots/{electrode_num:02}/'\
-                f'{i+2}_clusters_waveforms_ISIs/no_spikes_Cluster{cluster}'
+            file_path = os.path.join(clust_plot_dir,f'no_spikes_Cluster{cluster}')
             with open(file_path, 'w') as file_connect:
                 file_connect.write('')
 
