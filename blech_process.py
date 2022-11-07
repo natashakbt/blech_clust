@@ -55,29 +55,34 @@ from utils.clustering import *
 np.random.seed(0)
 
 ############################################################
+## Load classifier params
+classifier_params = json.load(open('params/waveform_classifier_params.yaml','r'))
+
+############################################################
 # Setting up model
 
-home_dir = os.environ.get("HOME")
-model_dir = f'{home_dir}/Desktop/neuRecommend/model'
-# Run download model script to make sure latest model is being used
-process = subprocess.Popen(f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
-# Forces process to complete before proceeding
-stdout, stderr = process.communicate()
-# If model_dir still doesn't exist, then throw an error
-if not os.path.exists(model_dir):
-    raise Exception("Couldn't download model")
-    
+if classifier_params['use_classifier']:
+    home_dir = os.environ.get("HOME")
+    model_dir = f'{home_dir}/Desktop/neuRecommend/model'
+    # Run download model script to make sure latest model is being used
+    process = subprocess.Popen(f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
+    # Forces process to complete before proceeding
+    stdout, stderr = process.communicate()
+    # If model_dir still doesn't exist, then throw an error
+    if not os.path.exists(model_dir):
+        raise Exception("Couldn't download model")
+        
 
-pred_pipeline_path = f'{model_dir}/xgboost_full_pipeline.dump'
-feature_pipeline_path = f'{model_dir}/feature_engineering_pipeline.dump'
+    pred_pipeline_path = f'{model_dir}/xgboost_full_pipeline.dump'
+    feature_pipeline_path = f'{model_dir}/feature_engineering_pipeline.dump'
 
-sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
-from feature_engineering_pipeline import *
+    sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
+    from feature_engineering_pipeline import *
 
-clf_threshold_path = f'{model_dir}/proba_threshold.json'
-with open(clf_threshold_path,'r') as this_file:
-    out_dict = json.load(this_file)
-clf_threshold = out_dict['threshold']
+    clf_threshold_path = f'{model_dir}/proba_threshold.json'
+    with open(clf_threshold_path,'r') as this_file:
+        out_dict = json.load(this_file)
+    clf_threshold = out_dict['threshold']
 
 ############################################################
 #|  ___|   _ _ __   ___ ___ 
@@ -350,94 +355,96 @@ slices_dejittered, times_dejittered = \
 
 ############################################################
 # Load full pipeline and perform prediction on slices_dejittered
-feature_pipeline = load(feature_pipeline_path)
-pred_pipeline = load(pred_pipeline_path)
 
-#clf_pred = pred_pipeline.predict(slices_dejittered)
-clf_prob = pred_pipeline.predict_proba(slices_dejittered)[:,1]
-clf_pred = clf_prob >= clf_threshold
+if classifier_params['use_classifier']:
+    feature_pipeline = load(feature_pipeline_path)
+    pred_pipeline = load(pred_pipeline_path)
 
-#fig,ax = plt.subplots(1,2, figsize = (10,5))
-fig = plt.figure(figsize = (10,5))
-ax0 = fig.add_subplot(1,2,1)
-ax1 = fig.add_subplot(2,2,2)
-ax2 = fig.add_subplot(2,2,4)
-spike_dat = slices_dejittered[clf_pred==1]
-spike_times = times_dejittered[clf_pred==1] 
-spike_prob = clf_prob[clf_pred==1]
-x = np.arange(spike_dat.shape[1])
-ax0.plot(x, spike_dat[::10].T, c = 'k', alpha = 0.1)
-ax1.scatter(spike_times, spike_prob, s = 1) 
-ax1.set_ylabel('Spike probability')
-ax2.hist(spike_times, bins = 50)
-ax2.set_ylabel('Binned Counts')
-ax2.set_xlabel('Time')
-fig.suptitle('Predicted Spike Waveforms' + '\n' + f'Count : {spike_dat.shape[0]}')
-fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_spikes.png'),
-            bbox_inches='tight')
-plt.close(fig)
+    #clf_pred = pred_pipeline.predict(slices_dejittered)
+    clf_prob = pred_pipeline.predict_proba(slices_dejittered)[:,1]
+    clf_pred = clf_prob >= clf_threshold
 
-# Pull out noise info
-noise_slices = slices_dejittered[clf_pred==0]
-noise_times = times_dejittered[clf_pred==0]
-noise_prob = clf_prob[clf_pred==0]
+    #fig,ax = plt.subplots(1,2, figsize = (10,5))
+    fig = plt.figure(figsize = (10,5))
+    ax0 = fig.add_subplot(1,2,1)
+    ax1 = fig.add_subplot(2,2,2)
+    ax2 = fig.add_subplot(2,2,4)
+    spike_dat = slices_dejittered[clf_pred==1]
+    pos_spike_times = times_dejittered[clf_pred==1] 
+    spike_prob = clf_prob[clf_pred==1]
+    x = np.arange(spike_dat.shape[1])
+    ax0.plot(x, spike_dat[::10].T, c = 'k', alpha = 0.05)
+    ax1.scatter(pos_spike_times, spike_prob, s = 1) 
+    ax1.set_ylabel('Spike probability')
+    ax2.hist(pos_spike_times, bins = 50)
+    ax2.set_ylabel('Binned Counts')
+    ax2.set_xlabel('Time')
+    fig.suptitle('Predicted Spike Waveforms' + '\n' + f'Count : {spike_dat.shape[0]}')
+    fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_spikes.png'),
+                bbox_inches='tight')
+    plt.close(fig)
+
+    # Pull out noise info
+    noise_slices = slices_dejittered[clf_pred==0]
+    noise_times = times_dejittered[clf_pred==0]
+    noise_prob = clf_prob[clf_pred==0]
 
 
-# Cluster noise and plot waveforms + times on single plot
-dat_thresh = 10000
-zscore_noise_slices = zscore(noise_slices, axis=-1)
-noise_train_set = zscore_noise_slices[np.random.choice(np.arange(noise_slices.shape[0]),
-                                  int(np.min((noise_slices.shape[0], dat_thresh))))]
-noise_pca_obj = PCA(n_components=1).fit(noise_train_set)
-noise_pca = noise_pca_obj.transform(zscore_noise_slices)
-# Don't need multiple restarts, this is just for visualization, not actual clustering
-model = gmm(
-    n_components=5,
-    max_iter=num_iter,
-    n_init=1,
-    tol=thresh).fit(noise_train_set)
+    # Cluster noise and plot waveforms + times on single plot
+    dat_thresh = 10000
+    zscore_noise_slices = zscore(noise_slices, axis=-1)
+    noise_train_set = zscore_noise_slices[np.random.choice(np.arange(noise_slices.shape[0]),
+                                      int(np.min((noise_slices.shape[0], dat_thresh))))]
+    noise_pca_obj = PCA(n_components=1).fit(noise_train_set)
+    noise_pca = noise_pca_obj.transform(zscore_noise_slices)
+    # Don't need multiple restarts, this is just for visualization, not actual clustering
+    model = gmm(
+        n_components=5,
+        max_iter=num_iter,
+        n_init=1,
+        tol=thresh).fit(noise_train_set)
 
-predictions = model.predict(zscore_noise_slices)
+    predictions = model.predict(zscore_noise_slices)
 
-clust_num = len(np.unique(predictions))
-#fig = plt.figure(figsize = (20,10))
-#wav_ax_list = [fig.add_subplot(clust_num, 2, (2*i)+1) for i in range(clust_num)]
-#times_ax = fig.add_subplot(1,2,2)
-fig,ax = plt.subplots(clust_num, 2, figsize = (20,10), sharex='col')
-ax[0,0].set_title('Waveforms')
-ax[0,1].set_title('Spike Times')
-plot_max = 500 # Plot at most this many waveforms
-#for num, this_ax in enumerate(wav_ax_list):
-for num in range(clust_num):
-    this_dat = zscore_noise_slices[predictions==num]
-    inds = np.random.choice(
-            np.arange(this_dat.shape[0]),
-            int(np.min((
-                this_dat.shape[0],
-                plot_max
-                )))
-            )
-    this_dat = this_dat[inds]
-    ax[num,0].plot(this_dat.T, color = 'k', alpha = 0.1)
-    ax[num,0].set_ylabel(f'Clust {num}')
-    this_times = noise_times[predictions==num]
-    this_pca = noise_pca[predictions==num]
-    #this_prob = noise_prob[predictions==num]
-    #ax[num,1].scatter(this_times, this_pca, label = str(num),
-    #        alpha = 0.1)
-    ax[num,1].hist(this_times, bins = 100)
-fig.suptitle('Predicted Noise Waveforms' + '\n' + f'Count : {noise_slices.shape[0]}')
-fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_noise.png'),
-            bbox_inches='tight')
-plt.close(fig)
-#plt.show()
+    clust_num = len(np.unique(predictions))
+    #fig = plt.figure(figsize = (20,10))
+    #wav_ax_list = [fig.add_subplot(clust_num, 2, (2*i)+1) for i in range(clust_num)]
+    #times_ax = fig.add_subplot(1,2,2)
+    fig,ax = plt.subplots(clust_num, 2, figsize = (20,10), sharex='col')
+    ax[0,0].set_title('Waveforms')
+    ax[0,1].set_title('Spike Times')
+    plot_max = 1000 # Plot at most this many waveforms
+    #for num, this_ax in enumerate(wav_ax_list):
+    for num in range(clust_num):
+        this_dat = zscore_noise_slices[predictions==num]
+        inds = np.random.choice(
+                np.arange(this_dat.shape[0]),
+                int(np.min((
+                    this_dat.shape[0],
+                    plot_max
+                    )))
+                )
+        this_dat = this_dat[inds]
+        ax[num,0].plot(this_dat.T, color = 'k', alpha = 0.01)
+        ax[num,0].set_ylabel(f'Clust {num}')
+        this_times = noise_times[predictions==num]
+        this_pca = noise_pca[predictions==num]
+        #this_prob = noise_prob[predictions==num]
+        #ax[num,1].scatter(this_times, this_pca, label = str(num),
+        #        alpha = 0.1)
+        ax[num,1].hist(this_times, bins = 100)
+    fig.suptitle('Predicted Noise Waveforms' + '\n' + f'Count : {noise_slices.shape[0]}')
+    fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_noise.png'),
+                bbox_inches='tight')
+    plt.close(fig)
+    #plt.show()
 
-throw_out_noise = True
-if throw_out_noise:
-    # Remaining data is now only spikes
-    slices_dejittered = slices_dejittered[clf_pred==1]
-    times_dejittered = times_dejittered[clf_pred==1]
-    clf_prob = clf_prob[clf_pred==1]
+    #throw_out_noise = True
+    if classifier_params['throw_out_noise']:
+        # Remaining data is now only spikes
+        slices_dejittered = slices_dejittered[clf_pred==1]
+        times_dejittered = times_dejittered[clf_pred==1]
+        clf_prob = clf_prob[clf_pred==1]
 
 ############################################################
 
@@ -498,7 +505,8 @@ data = np.zeros((len(pca_slices), n_pc + 2))
 data[:, 2:] = pca_slices[:, :n_pc]
 data[:, 0] = energy[:]/np.max(energy)
 data[:, 1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
-data = np.concatenate([data, clf_prob[:,np.newaxis]],axis=-1)
+if classifier_params['use_classifier']:
+    data = np.concatenate([data, clf_prob[:,np.newaxis]],axis=-1)
 
 data_labels = [*[f'pc{x}' for x in range(n_pc)],
                'energy',
