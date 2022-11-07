@@ -196,14 +196,12 @@ with open(hdf5_name[-1]+'.params', 'w') as params_file:
 
 # Ask for the HPC queue to use - was in previous version, now just use all.q
 
-# Grab Brandeis unet username
-username = ['abuzarmahmood']
-
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
-os.chdir('/home/%s/Desktop/blech_clust' % username[0])
+home_dir = os.getenv('HOME')
+os.chdir(os.path.join(home_dir,'Desktop/blech_clust'))
 f = open('blech_clust.sh', 'w')
 print("export OMP_NUM_THREADS=1", file = f)
-print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
+print(os.path.join(home_dir, 'Desktop/blech_clust'), file=f)
 print("python blech_process.py", file=f)
 f.close()
 
