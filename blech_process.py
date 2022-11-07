@@ -32,6 +32,10 @@ import shutil
 import matplotlib
 matplotlib.use('Agg')
 
+# Set seed to allow inter-run reliability
+# Also allows reusing the same sorting sheets across runs
+np.random.seed(0)
+
 ############################################################
 #|  ___|   _ _ __   ___ ___ 
 #| |_ | | | | '_ \ / __/ __|

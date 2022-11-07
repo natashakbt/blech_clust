@@ -13,6 +13,10 @@ import argparse
 import pandas as pd
 import ast
 
+# Set seed to allow inter-run reliability
+# Also allows reusing the same sorting sheets across runs
+np.random.seed(0)
+
 def cluster_check(x):
     clusters = re.findall('[0-9]+',x)
     return sum([i.isdigit() for i in clusters]) == len(clusters)
