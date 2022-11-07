@@ -583,7 +583,7 @@ for i in range(max_clusters-1):
                         cluster_points,
                     )
             fig.savefig(os.path.join(
-                clust_plot_dir,f'Cluster{cluster}_ISIs'))
+                this_plot_dir,f'Cluster{cluster}_ISIs'))
             plt.close("all")
 
             # Create features timeseries plot
@@ -599,11 +599,11 @@ for i in range(max_clusters-1):
             ax[-1].hist(this_spiketimes, bins = 50)
             ax[-1].set_ylabel('Spiketime' + '\n' + 'Histogram')
             fig.savefig(os.path.join(
-                clust_plot_dir,f'Cluster{cluster}_features'))
+                this_plot_dir,f'Cluster{cluster}_features'))
             plt.close(fig)
 
         else:
-            file_path = os.path.join(clust_plot_dir,f'no_spikes_Cluster{cluster}')
+            file_path = os.path.join(this_plot_dir,f'no_spikes_Cluster{cluster}')
             with open(file_path, 'w') as file_connect:
                 file_connect.write('')
 
