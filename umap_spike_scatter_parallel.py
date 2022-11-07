@@ -23,6 +23,7 @@ cluster_num = params_dict['max_clusters']
 # Get cluster predictions from clustering_results
 # Plot output in Plots
 electrode_num = int(sys.argv[-1])
+train_set_max = int(1e4)
 
 def umap_plots(data_dir, electrode_num):
     # If processing has happened, the file will exist
@@ -36,8 +37,20 @@ def umap_plots(data_dir, electrode_num):
             pca_waveforms = np.load(data_dir + \
                     '/spike_waveforms/electrode{0:02d}/pca_waveforms.npy'.format(electrode_num))
 
-            umap_waveforms = umap.UMAP(n_components = 2).\
-                    fit_transform(pca_waveforms[:,:20])
+            if len(pca_waveforms) > train_set_max:
+                train_set_inds = np.random.choice(
+                        np.arange(len(pca_waveforms)),
+                        train_set_max,
+                        replace=False)
+                umap_train_set = pca_waveforms[train_set_inds]
+            else:
+                umap_train_set = pca_waveforms
+
+            learnt_umap = umap.UMAP(n_components = 2).\
+                    fit(umap_train_set[:,:20])
+
+            umap_waveforms = learnt_umap.transform(pca_waveforms[:,:20])
+                    #fit_transform(pca_waveforms[:,:20])
             
             clustering_results = [np.load(data_dir + \
                     '/clustering_results/electrode{0:02d}/clusters{1}/predictions.npy'.\
