@@ -28,20 +28,7 @@ import itertools as it
 import argparse
 import pdb
 import pandas as pd
-
-def entry_checker(msg, check_func, fail_response):
-    check_bool = False
-    continue_bool = True
-    exit_str = '"x" to exit :: '
-    while not check_bool:
-        msg_input = input(msg.join([' ',exit_str]))
-        if msg_input == 'x':
-            continue_bool = False
-            break
-        check_bool = check_func(msg_input)
-        if not check_bool:
-            print(fail_response)
-    return msg_input, continue_bool
+from utils.blech_utils import entry_checker
 
 
 # Get name of directory with the data files
@@ -157,6 +144,8 @@ else:
 
     layout_frame_filled = pd.read_csv(layout_file_path)
     layout_frame_filled['CAR_group'] = layout_frame_filled['CAR_group'].str.lower() 
+    layout_frame_filled['CAR_group'] = [x.strip() for x in \
+            layout_frame_filled['CAR_group'] ]
     layout_dict = dict(list(layout_frame_filled.groupby('CAR_group').electrode_ind))
     for key,vals in layout_dict.items():
         layout_dict[key] = [layout_dict[key].to_list()]
@@ -236,7 +225,7 @@ else:
 
     taste_fin = str(list(zip(taste_digins, list(zip(tastes,concs)))))
     palatability_str, continue_bool = entry_checker(\
-            msg = f' {taste_fin} \n Enter palatability rankings used (anything separated)  :: ',
+            msg = f' {taste_fin} \n Enter palatability rankings used (anything separated), higher number = more palatable  :: ',
             check_func = pal_check,
             fail_response = 'Please enter numbers 1<=x<len(tastes)')
     if continue_bool:

@@ -8,9 +8,13 @@ import multiprocessing
 import json
 import glob
 import pandas as pd
+import shutil
 
 # Necessary blech_clust modules
-import read_file
+from utils import read_file
+from utils.blech_utils import entry_checker
+
+############################################################
 
 # Get name of directory with the data files
 if len(sys.argv) > 1:
@@ -55,10 +59,46 @@ hf5.close()
 print('Created nodes in HF5')
 
 # Create directories to store waveforms, spike times, clustering results, and plots
-os.mkdir('spike_waveforms')
-os.mkdir('spike_times')
-os.mkdir('clustering_results')
-os.mkdir('Plots')
+# And a directory for dumping files talking about memory usage in blech_process.py
+# Check if dirs are already present, if they are, ask to delete and continue
+# or abort
+dir_list = ['spike_waveforms',
+            'spike_times',
+            'clustering_results',
+            'Plots',
+            'memory_monitor_clustering']
+dir_exists = [x for x in dir_list if os.path.exists(x)]
+recreate_msg = f'Following dirs are present :' + '\n' + f'{dir_exists}' + \
+                '\n' + 'Overwrite dirs? (yes/y/n/no) ::: '
+
+# If dirs exist, check with user
+if len(dir_exists) > 0:
+    recreate_str, continue_bool = entry_checker(\
+            msg = recreate_msg,
+            check_func = lambda x: x in ['y','yes','n','no'], 
+            fail_response = 'Please enter (yes/y/n/no)')
+# Otherwise, create all of them
+else:
+    continue_bool = True
+    recreate_str = 'y'
+
+# Break if user said n/no or gave exit signal
+if continue_bool:
+    if recreate_str in ['y','yes']:
+        for x in dir_list:
+            if os.path.exists(x):
+                shutil.rmtree(x)
+            os.makedirs(x)
+    else:
+        quit()
+else:
+    quit()
+
+#os.mkdir('spike_waveforms')
+#os.mkdir('spike_times')
+#os.mkdir('clustering_results')
+#os.mkdir('Plots')
+#os.mkdir('memory_monitor_clustering')
 print('Created dirs in data folder')
 
 # Get the amplifier ports used
@@ -153,8 +193,6 @@ all_params_dict = {**clustering_params, **data_params,
 with open(hdf5_name[-1]+'.params', 'w') as params_file:
     json.dump(all_params_dict, params_file, indent = 4)
 
-# Make a directory for dumping files talking about memory usage in blech_process.py
-os.mkdir('memory_monitor_clustering')
 
 # Ask for the HPC queue to use - was in previous version, now just use all.q
 
@@ -176,7 +214,7 @@ num_cpu = multiprocessing.cpu_count()
 f = open('blech_clust_jetstream_parallel.sh', 'w')
 print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
         "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
-        .format(int(num_cpu//4), dir_name, ",".join([str(x) for x in all_electrodes]))
+        .format(int(num_cpu-2), dir_name, ",".join([str(x) for x in all_electrodes]))
         , file = f)
 f.close()
 
