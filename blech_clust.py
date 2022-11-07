@@ -153,51 +153,18 @@ else:
 	print("Only files structured as one file per channel can be read at this time...")
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
 
-# And print them to a blech_params file
-clustering_params = {'max_clusters' : 7,
-                    'num_iter' : 1000, 
-                    'thresh' : 0.0001,
-                    'num_restarts' : 10}
-data_params = {'voltage_cutoff' : 10000,
-                'max_breach_rate' : 1,
-                'max_secs_above_cutoff' : 60,
-                'max_mean_breach_rate_persec' : 100,
-                'wf_amplitude_sd_cutoff' : 3}
-bandpass_params = {'bandpass_lower_cutoff' : 300,
-                    'bandpass_upper_cutoff' : 3000}
-spike_snapshot = {'spike_snapshot_before' : 1,
-                    'spike_snapshot_after' : 1.5}
-psth_params = {'psth_params' : 
-                    {'durations' : [500,2000],
-                        'window_size' : 250,
-                        'step_size' : 25}}
-pal_iden_calc_params = {'pal_iden_calc_params' : {
-                    'window_size' : 250,
-                    'step_size' : 25}}
-discrim_analysis_params = {'discrim_analysis_params' : {
-                    'bin_num' : 4,
-                    'bin_width' : 500,
-                    'p-value' : 0.05}}
 
+home_dir = os.getenv('HOME')
+params_template_path = os.path.join(home_dir,'Desktop/blech_clust/params/sorting_params_template.json')
+params_template = json.load(open(params_template_path,'r'))
 # Info on taste digins and laser should be in exp_info file
-all_params_dict = {**clustering_params, **data_params,
-                **bandpass_params, **spike_snapshot,
-                **psth_params,
-                'sampling_rate' : sampling_rate,
-                'similarity_cutoff' : 50,
-                'spike_array_durations' : [2000,5000],
-                **pal_iden_calc_params,
-                **discrim_analysis_params,
-                'palatability_window' : [700,1200]}
+all_params_dict = params_template.copy() 
+all_params_dict['sampling_rate'] = sampling_rate
 
 with open(hdf5_name[-1]+'.params', 'w') as params_file:
     json.dump(all_params_dict, params_file, indent = 4)
 
-
-# Ask for the HPC queue to use - was in previous version, now just use all.q
-
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
-home_dir = os.getenv('HOME')
 os.chdir(os.path.join(home_dir,'Desktop/blech_clust'))
 f = open('blech_clust.sh', 'w')
 print("export OMP_NUM_THREADS=1", file = f)
