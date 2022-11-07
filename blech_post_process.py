@@ -8,11 +8,13 @@ import re
 import pylab as plt
 import matplotlib.image as mpimg
 from sklearn.mixture import GaussianMixture
-import blech_waveforms_datashader
 import argparse
 import pandas as pd
 import ast
-from blech_utils import entry_checker
+
+# Import 3rd party code
+from utils import blech_waveforms_datashader
+from utils.blech_utils import entry_checker
 
 # Set seed to allow inter-run reliability
 # Also allows reusing the same sorting sheets across runs

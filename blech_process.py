@@ -19,18 +19,20 @@ Steps:
 ############################################################
 from sklearn.mixture import GaussianMixture as gmm
 from sklearn.preprocessing import StandardScaler as scaler
-import blech_waveforms_datashader
-import memory_monitor as mm
 import pylab as plt
 import json
 import sys
-from clustering import *
 import numpy as np
 import tables
 import os
 import shutil
 import matplotlib
 matplotlib.use('Agg')
+
+## Import 3rd party code
+from utils import blech_waveforms_datashader
+from utils import memory_monitor as mm
+from utils.clustering import *
 
 # Set seed to allow inter-run reliability
 # Also allows reusing the same sorting sheets across runs

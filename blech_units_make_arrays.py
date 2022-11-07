@@ -7,7 +7,7 @@ import os
 import re
 import json
 import glob
-from blech_utils import entry_checker
+from utils.blech_utils import entry_checker
 
 
 # _                    _   ____        _        

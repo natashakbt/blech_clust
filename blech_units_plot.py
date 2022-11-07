@@ -5,9 +5,11 @@ import easygui
 import sys
 import os
 import matplotlib.pyplot as plt
-import blech_waveforms_datashader
 import shutil
-import memory_monitor as mm
+
+# Import 3rd part code
+from utils import blech_waveforms_datashader
+from utils import memory_monitor as mm
 
 # Get directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files

@@ -28,7 +28,7 @@ import itertools as it
 import argparse
 import pdb
 import pandas as pd
-from blech_utils import entry_checker
+from utils.blech_utils import entry_checker
 
 
 # Get name of directory with the data files

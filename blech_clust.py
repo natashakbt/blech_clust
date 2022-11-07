@@ -11,8 +11,8 @@ import pandas as pd
 import shutil
 
 # Necessary blech_clust modules
-import read_file
-from blech_utils import entry_checker
+from utils import read_file
+from utils.blech_utils import entry_checker
 
 ############################################################
 
