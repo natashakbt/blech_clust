@@ -1,4 +1,3 @@
-# TODO: This code doesn't allow for uneven numbers of trials
 # TODO: Replace exec statements
 
 # Import stuff!
@@ -37,8 +36,10 @@ dig_in = []
 dig_in_pathname = []
 for node in dig_in_nodes:
     dig_in_pathname.append(node._v_pathname)
-    exec("dig_in.append(hf5.root.digital_in.%s[:])" 
-            % dig_in_pathname[-1].split('/')[-1])
+    _, base, leaf = dig_in_pathname[-1].split('/')
+    dig_in.append(hf5.get_node('/'+base,leaf)[:])
+    #exec("dig_in.append(hf5.root.digital_in.%s[:])" 
+    #        % dig_in_pathname[-1].split('/')[-1])
 dig_in = np.array(dig_in)
 
 # Get the stimulus delivery times - 
