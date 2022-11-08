@@ -8,10 +8,17 @@ import re
 import pylab as plt
 import matplotlib.image as mpimg
 from sklearn.mixture import GaussianMixture
-import blech_waveforms_datashader
 import argparse
 import pandas as pd
 import ast
+
+# Import 3rd party code
+from utils import blech_waveforms_datashader
+from utils.blech_utils import entry_checker
+
+# Set seed to allow inter-run reliability
+# Also allows reusing the same sorting sheets across runs
+np.random.seed(0)
 
 def cluster_check(x):
     clusters = re.findall('[0-9]+',x)
@@ -113,21 +120,6 @@ try:
                 description = unit_descriptor)
 except:
         table = hf5.root.unit_descriptor
-
-def entry_checker(msg, check_func, fail_response):
-    check_bool = False
-    continue_bool = True
-    exit_str = '"x" to exit :: '
-    while not check_bool:
-        msg_input = input(msg.join([' ',exit_str]))
-        if msg_input == 'x':
-            continue_bool = False
-            print('=== Exiting ===' + '\n')
-            break
-        check_bool = check_func(msg_input)
-        if not check_bool:
-            print(fail_response)
-    return msg_input, continue_bool
 
 # Run an infinite loop as long as the user wants to pick clusters from the electrodes   
 counter = len(hf5.root.unit_descriptor) - 1

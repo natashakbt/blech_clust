@@ -63,3 +63,9 @@ bash blech_clust_pre.sh $DIR   # Perform steps up to spike extraction and UMAP
 python blech_post_process.py   # Add sorted units to HDF5 (CLI or .CSV as input)  
 bash blech_clust_post.sh       # Perform steps up to PSTH generation
 ```
+
+### Test Dataset
+We are grateful to Brandeis University Google Filestream for hosting this dataset <br>
+Data to test workflow available at:<br>
+https://drive.google.com/drive/folders/1ne5SNU3Vxf74tbbWvOYbYOE1mSBkJ3u3?usp=sharing
+
