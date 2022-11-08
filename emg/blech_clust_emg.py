@@ -16,7 +16,8 @@ import glob
 import pandas as pd
 
 # Necessary blech_clust modules
-import read_file
+sys.path.append('..')
+from utils import read_file
 
 # Get name of directory with the data files
 if len(sys.argv) > 1:
@@ -100,3 +101,23 @@ dig_in.sort()
 read_file.read_digins(hdf5_name, dig_in)
 read_file.read_emg_channels(hdf5_name, electrode_layout_frame)
 
+# Write out template params file to directory if not present
+# Read the amplifier sampling rate from info.rhd - 
+# look at Intan's website for structure of header files
+sampling_rate = np.fromfile('info.rhd', dtype = np.dtype('float32'))
+sampling_rate = int(sampling_rate[2])
+
+home_dir = os.getenv('HOME')
+params_template_path = os.path.join(home_dir,'Desktop/blech_clust/params/sorting_params_template.json')
+params_template = json.load(open(params_template_path,'r'))
+# Info on taste digins and laser should be in exp_info file
+all_params_dict = params_template.copy() 
+all_params_dict['sampling_rate'] = sampling_rate
+
+params_out_path = hdf5_name.split('.')[0] + '.params'
+if not os.path.exists(params_out_path):
+    print('No params file found...Creating new params file')
+    with open(params_out_path, 'w') as params_file:
+        json.dump(all_params_dict, params_file, indent = 4)
+else:
+    print("Params file already present...not writing a new one")

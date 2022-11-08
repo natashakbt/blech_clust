@@ -163,6 +163,7 @@ else:
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
 
 
+# Write out template params file to directory if not present
 home_dir = os.getenv('HOME')
 params_template_path = os.path.join(home_dir,'Desktop/blech_clust/params/sorting_params_template.json')
 params_template = json.load(open(params_template_path,'r'))
@@ -170,8 +171,13 @@ params_template = json.load(open(params_template_path,'r'))
 all_params_dict = params_template.copy() 
 all_params_dict['sampling_rate'] = sampling_rate
 
-with open(hdf5_name[-1]+'.params', 'w') as params_file:
-    json.dump(all_params_dict, params_file, indent = 4)
+params_out_path = hdf5_name[-1]+'.params'
+if not os.path.exists(params_out_path):
+    print('No params file found...Creating new params file')
+    with open(params_out_path, 'w') as params_file:
+        json.dump(all_params_dict, params_file, indent = 4)
+else:
+    print("Params file already present...not writing a new one")
 
 # Dump shell file for running array job on the user's blech_clust folder on the desktop
 os.chdir(os.path.join(home_dir,'Desktop/blech_clust'))
