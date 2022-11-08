@@ -1,5 +1,3 @@
-# TODO: Replace exec statements
-
 # Import stuff!
 import numpy as np
 import tables
