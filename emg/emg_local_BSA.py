@@ -7,10 +7,26 @@ import numpy as np
 import easygui
 import os
 import multiprocessing
+import sys
+import shutil
 
 # Change to the directory that has the emg data files (env.npy and sig_trials.npy). Make a directory for storing the BSA results
-dir_name = easygui.diropenbox(default="/media/natasha/drive2/Natasha_Data/")
+# Get name of directory with the data files
+if len(sys.argv) > 1:
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+
+if 'emg_channel' not in os.path.basename(dir_name[:-1]):
+    raise Exception('Please point to <data_dir>/emg_output/emg_channel directory')
+    exit()
+
 os.chdir(dir_name)
+
+if os.path.exists('emg_BSA_results'):
+    shutil.rmtree('emg_BSA_results')
 os.makedirs('emg_BSA_results')
 
 # Load the data files
@@ -24,14 +40,18 @@ sig_trials = np.load('./sig_trials.npy')
 #queue = easygui.multchoicebox(msg = 'Which HPC queue do you want to use for EMG analysis?', choices = ('neuro.q', 'dk.q'))
 
 # Grab Brandeis unet username
-username = easygui.multenterbox(msg = 'Enter your Brandeis/Jetstream/personal computer username', fields = ['username'])
+home_dir = os.getenv('HOME')
+#username = easygui.multenterbox(
+#        msg = 'Enter your Brandeis/Jetstream/personal computer username', 
+#        fields = ['username'])
 
 # Dump a shell file for the BSA analysis in the user's blech_clust directory on the desktop
-os.chdir('/home/%s/Desktop/blech_clust' % username[0])
+emg_code_dir = os.path.join(home_dir, 'Desktop/blech_clust/emg')
+os.chdir(emg_code_dir)
 f = open('blech_emg.sh', 'w')
 print("module load PYTHON/ANACONDA-2.5.0", file=f)
 print("module load R", file=f)
-print("cd /home/%s/Desktop/blech_clust" % username[0], file=f)
+print(f"cd {emg_code_dir}", file=f)
 print("python emg_local_BSA_execute.py", file=f)
 f.close()
 
@@ -42,6 +62,7 @@ num_cpu = multiprocessing.cpu_count()
 f = open('blech_emg_jetstream_parallel.sh', 'w')
 print("parallel -k -j {:d} --noswap --load 100% --progress --joblog {:s}/results.log bash blech_emg_jetstream_parallel1.sh ::: {{1..{:d}}}".format(int(num_cpu)-1, dir_name, sig_trials.shape[0]*sig_trials.shape[1]), file = f)
 f.close()
+
 # Then produce the file that runs blech_process.py
 f = open('blech_emg_jetstream_parallel1.sh', 'w')
 print("export OMP_NUM_THREADS=1", file = f)
