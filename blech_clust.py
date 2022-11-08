@@ -41,12 +41,21 @@ if len(json_path) == 0:
 # Get the names of all files in this directory
 file_list = os.listdir('./')
 
-# Grab directory name to create the name of the hdf5 file
-hdf5_name = str(os.path.dirname(dir_name)).split('/')
 
 # Create hdf5 file, and make groups for raw data, raw emgs, 
 # digital outputs and digital inputs, and close
-hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
+
+# Grab directory name to create the name of the hdf5 file
+# If HDF5 present, use that, otherwise, create new one
+h5_search = glob('*.h5')
+if len(h5_search):
+    hdf5_name = h5_search[0] 
+    print(f'HDF5 file found...Using file {hdf5_name}')
+    hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'r+')
+else:
+    hdf5_name = str(os.path.dirname(dir_name)).split('/')
+    print(f'No HDF5 found...Creating file {hdf5_name}')
+    hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
 hf5.create_group('/', 'raw')
 hf5.create_group('/', 'raw_emg')
 hf5.create_group('/', 'digital_in')
