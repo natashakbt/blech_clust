@@ -27,9 +27,9 @@ gapes = []
 ltps = []
 sig_trials = []
 pre_stim = []
-gapes_Li = []
-gape_trials_Li = []
-first_gape_Li = []
+#gapes_Li = []
+#gape_trials_Li = []
+#first_gape_Li = []
 emg_BSA_results = []
 num_trials = 0
 for dir_name in dirs:
@@ -50,9 +50,9 @@ for dir_name in dirs:
 	gapes.append(hf5.root.ancillary_analysis.gapes[:])
 	ltps.append(hf5.root.ancillary_analysis.ltps[:])
 	sig_trials.append(hf5.root.ancillary_analysis.sig_trials[:])
-	gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:])
-	gape_trials_Li.append(hf5.root.ancillary_analysis.gape_trials_Li[:])
-	first_gape_Li.append(hf5.root.ancillary_analysis.first_gape_Li[:])
+	#gapes_Li.append(hf5.root.ancillary_analysis.gapes_Li[:])
+	#gape_trials_Li.append(hf5.root.ancillary_analysis.gape_trials_Li[:])
+	#first_gape_Li.append(hf5.root.ancillary_analysis.first_gape_Li[:])
 	emg_BSA_results.append(hf5.root.ancillary_analysis.emg_BSA_results[:])
 	# Reading single values from the hdf5 file seems hard, needs the read() method to be called
 	pre_stim.append(hf5.root.ancillary_analysis.pre_stim.read())
@@ -93,9 +93,9 @@ if len(laser_order) == 1:
 	gapes = gapes[0]
 	ltps = ltps[0]
 	sig_trials = sig_trials[0]
-	gapes_Li = gapes_Li[0][:, :, :, int(pre_stim[0]):]
-	gape_trials_Li = gape_trials_Li[0]
-	first_gape_Li = first_gape_Li[0]
+	#gapes_Li = gapes_Li[0][:, :, :, int(pre_stim[0]):]
+	#gape_trials_Li = gape_trials_Li[0]
+	#first_gape_Li = first_gape_Li[0]
 	emg_BSA_results = emg_BSA_results[0]
 	
 else:
@@ -104,9 +104,9 @@ else:
 	ltps = np.concatenate(tuple(ltps[i][laser_order[i], :, :, :] for i in range(len(ltps))), axis = 2)
 	sig_trials = np.concatenate(tuple(sig_trials[i][laser_order[i], :, :] for i in range(len(sig_trials))), axis = 2)
 	emg_BSA_results = np.concatenate(tuple(emg_BSA_results[i][laser_order[i], :, :, :, :] for i in range(len(emg_BSA_results))), axis = 2)
-	gapes_Li = np.concatenate(tuple(gapes_Li[i][laser_order[i], :, :, int(pre_stim[0]):] for i in range(len(gapes_Li))), axis = 2)
-	gape_trials_Li = np.concatenate(tuple(gape_trials_Li[i][laser_order[i], :, :] for i in range(len(gape_trials_Li))), axis = 2)
-	first_gape_Li = np.concatenate(tuple(first_gape_Li[i][laser_order[i], :, :] for i in range(len(first_gape_Li))), axis = 2)
+	#gapes_Li = np.concatenate(tuple(gapes_Li[i][laser_order[i], :, :, int(pre_stim[0]):] for i in range(len(gapes_Li))), axis = 2)
+	#gape_trials_Li = np.concatenate(tuple(gape_trials_Li[i][laser_order[i], :, :] for i in range(len(gape_trials_Li))), axis = 2)
+	#first_gape_Li = np.concatenate(tuple(first_gape_Li[i][laser_order[i], :, :] for i in range(len(first_gape_Li))), axis = 2)
 	
 
 # Ask the user for the directory to save plots etc in
@@ -189,32 +189,32 @@ for i in range(ltps.shape[1]):
 np.save('unique_lasers.npy', unique_lasers)
 np.save('gapes.npy', gapes)
 np.save('ltps.npy', ltps)
-np.save('gapes_Li.npy', gapes_Li)
-np.save('gape_trials_Li.npy', gape_trials_Li)
-np.save('first_gape_Li.npy', first_gape_Li)
+#np.save('gapes_Li.npy', gapes_Li)
+#np.save('gape_trials_Li.npy', gape_trials_Li)
+#np.save('first_gape_Li.npy', first_gape_Li)
 np.save('emg_BSA_results.npy', emg_BSA_results)
 
 #.................................
-# Plot the gaping results from the analysis in Li et al., 2016
-# Plots by taste
-for i in range(gape_trials_Li.shape[1]):
-	# Plot gape probabilities first
-	fig = plt.figure()
-	plt.bar(np.arange(gape_trials_Li.shape[0]) + 1, np.mean(gape_trials_Li[:, i, :], axis = -1), 0.35)
-	plt.xticks(np.arange(gape_trials_Li.shape[0]) + 1, [unique_lasers[0][j] for j in range(len(unique_lasers[0]))])
-	plt.ylabel('Fraction of trials with gapes' + '\n' + 'according to Li et al., 2016')
-	plt.title('Taste: %i, Trials: %i' % (i+1, gape_trials_Li.shape[2]))
-	fig.savefig('Gape_probabilities_Li, taste%i.png' %(i+1), bbox_inches = 'tight')
-	plt.close('all')
-
-	# Plot time of first gape next
-	fig = plt.figure()
-	plt.bar(np.arange(first_gape_Li.shape[0]) + 1, np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).mean(axis = -1)), 0.35, yerr = np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).std(axis = -1))/np.sqrt(np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).sum(axis = -1)))) 
-	plt.xticks(np.arange(first_gape_Li.shape[0]) + 1, [unique_lasers[0][j] for j in range(len(unique_lasers[0]))])
-	plt.ylabel('Mean length of gape bouts across trials (ms)' + '\n' + 'according to Li et al., 2016')
-	plt.title('Taste: %i, Trials: %i' % (i+1, first_gape_Li.shape[2]))
-	fig.savefig('Gape_durations_Li, taste%i.png' %(i+1), bbox_inches = 'tight')
-	plt.close('all')
+## Plot the gaping results from the analysis in Li et al., 2016
+## Plots by taste
+#for i in range(gape_trials_Li.shape[1]):
+#	# Plot gape probabilities first
+#	fig = plt.figure()
+#	plt.bar(np.arange(gape_trials_Li.shape[0]) + 1, np.mean(gape_trials_Li[:, i, :], axis = -1), 0.35)
+#	plt.xticks(np.arange(gape_trials_Li.shape[0]) + 1, [unique_lasers[0][j] for j in range(len(unique_lasers[0]))])
+#	plt.ylabel('Fraction of trials with gapes' + '\n' + 'according to Li et al., 2016')
+#	plt.title('Taste: %i, Trials: %i' % (i+1, gape_trials_Li.shape[2]))
+#	fig.savefig('Gape_probabilities_Li, taste%i.png' %(i+1), bbox_inches = 'tight')
+#	plt.close('all')
+#
+#	# Plot time of first gape next
+#	fig = plt.figure()
+#	plt.bar(np.arange(first_gape_Li.shape[0]) + 1, np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).mean(axis = -1)), 0.35, yerr = np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).std(axis = -1))/np.sqrt(np.array(np.ma.masked_equal(first_gape_Li[:, i, :], 0).sum(axis = -1)))) 
+#	plt.xticks(np.arange(first_gape_Li.shape[0]) + 1, [unique_lasers[0][j] for j in range(len(unique_lasers[0]))])
+#	plt.ylabel('Mean length of gape bouts across trials (ms)' + '\n' + 'according to Li et al., 2016')
+#	plt.title('Taste: %i, Trials: %i' % (i+1, first_gape_Li.shape[2]))
+#	fig.savefig('Gape_durations_Li, taste%i.png' %(i+1), bbox_inches = 'tight')
+#	plt.close('all')
 	
 #.................................
 

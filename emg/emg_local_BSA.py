@@ -9,13 +9,15 @@ import os
 import multiprocessing
 
 # Change to the directory that has the emg data files (env.npy and sig_trials.npy). Make a directory for storing the BSA results
-dir_name = easygui.diropenbox()
+dir_name = easygui.diropenbox(default="/media/natasha/drive2/Natasha_Data/")
 os.chdir(dir_name)
 os.makedirs('emg_BSA_results')
 
 # Load the data files
-env = np.load('env.npy')
-sig_trials = np.load('sig_trials.npy')
+#env = np.load('./emg_0/env.npy')
+#sig_trials = np.load('./emg_0/sig_trials.npy')
+env = np.load('./env.npy')
+sig_trials = np.load('./sig_trials.npy')
 
 # Ask for the HPC queue to use
 # No longer asking for this, just submit to all.q
@@ -51,10 +53,3 @@ print(dir_name, file = f)
 f.close()
 
 print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q all.q -ckpt reloc blech_emg.sh")
-
-
-
-
-
-
-
