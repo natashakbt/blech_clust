@@ -1,13 +1,27 @@
-# Post processing cleanup of the mess of files created by emg_local_BSA_execute.py. All the output files will be saved to p (named by tastes) and omega in the hdf5 file under the node emg_BSA_results
+"""
+Post processing cleanup of the mess of files created by emg_local_BSA_execute.py. 
+All the output files will be saved to p (named by tastes) and omega 
+in the hdf5 file under the node emg_BSA_results
+"""
 
 # Import stuff
 import numpy as np
 import easygui
 import os
 import tables
+import glob
+import json
+import sys
 
-# Ask the user to navigate to the directory that hosts the emg_data, and change to it
-dir_name = easygui.diropenbox()
+# Ask the user to navigate to the directory that hosts the emg_data, 
+# and change to it
+if len(sys.argv) > 1:
+    dir_name = os.path.abspath(sys.argv[1])
+    if dir_name[-1] != '/':
+        dir_name += '/'
+else:
+    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+
 os.chdir(dir_name)
 
 # Look for the hdf5 file in the directory
@@ -20,60 +34,96 @@ for files in file_list:
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
-# Delete the raw_emg node, if it exists in the hdf5 file, to cut down on file size
+# Delete the raw_emg node, if it exists in the hdf5 file, 
+# to cut down on file size
 try:
 	hf5.remove_node('/raw_emg', recursive = 1)
 except:
 	print("Raw EMG recordings have already been removed, so moving on ..")
 
+# Extract info experimental info file
+json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
+with open(json_path, 'r') as params_file:
+    info_dict = json.load(params_file)
+taste_names = info_dict['taste_params']['tastes']
+trials = [int(x) for x in info_dict['taste_params']['trial_count']]
 
-# Load sig_trials.npy to get number of tastes
-sig_trials = np.load('sig_trials.npy')
-tastes = sig_trials.shape[0]
+############################################################
+## Following will be looped over emg channels
+# In case there is more than one pair/location or differencing did not happen
+############################################################
+channel_dirs = glob.glob(os.path.join(dir_name,'emg_output/emg_channel*'))
+channels_discovered = [os.path.basename(x) for x in channel_dirs]
+print(f'Creating plots for : {channels_discovered}\n')
 
-# Since number of trials can be unequal between tastes, ask the user for the number of trials for each taste
-trials = easygui.multenterbox(msg = 'Enter the number of trials for each taste', fields = [str(i) for i in range(tastes)])
-for i in range(len(trials)):
-	trials[i] = int(trials[i])	
+for this_dir in channel_dirs:
+    os.chdir(this_dir)
 
-# Change to emg_BSA_results
-os.chdir('emg_BSA_results')
+    # Load sig_trials.npy to get number of tastes
+    sig_trials = np.load('sig_trials.npy')
+    tastes = sig_trials.shape[0]
 
-# Add group to hdf5 file for emg BSA results
-hf5.create_group('/', 'emg_BSA_results')
+    # todo: Can be taken from info file or dig-ins
+    # Since number of trials can be unequal between tastes, 
+    # ask the user for the number of trials for each taste
+    #trials = easygui.multenterbox(
+    #        msg = 'Enter the number of trials for each taste', 
+    #        fields = [str(i) for i in range(tastes)])
+    #for i in range(len(trials)):
+    #    trials[i] = int(trials[i])	
+    print(f'Trials taken from info file ::: {dict(zip(taste_names, trials))}')
 
-# Omega doesn't vary by trial, so just pick it up from the 1st taste and trial, and delete everything else
-omega = np.load('taste0_trial0_omega.npy')
-os.system('rm *omega.npy')
+    # Change to emg_BSA_results
+    os.chdir('emg_BSA_results')
 
-# Add omega to the hdf5 file
-atom = tables.Atom.from_dtype(omega.dtype)
-om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
-om[:] = omega 
-hf5.flush()
+    # Add group to hdf5 file for emg BSA results
+    if '/emg_BSA_results' in hf5:
+        hf5.remove_node('/','emg_BSA_results', recursive = True)
+    hf5.create_group('/', 'emg_BSA_results')
 
-# Load one of the p arrays to find out the time length of the emg data
-p = np.load('taste0_trial0_p.npy')
-time_length = p.shape[0]
+    # Omega doesn't vary by trial, 
+    # so just pick it up from the 1st taste and trial, 
+    # and delete everything else
+    omega = np.load('taste0_trial0_omega.npy')
 
-# Go through the tastes and trials
-for i in range(tastes):
-	# Make an array for posterior probabilities for each taste
-	p = np.zeros((trials[i], time_length, 20))
-	for j in range(trials[i]):
-		p[j, :, :] = np.load('taste%i_trial%i_p.npy' % (i, j))
-	# Save p to hdf5 file
-	atom = tables.Atom.from_dtype(p.dtype)
-	prob = hf5.create_carray('/emg_BSA_results', 'taste%i_p' % i, atom, p.shape)
-	prob[:, :, :] = p
-hf5.flush()
+    # Add omega to the hdf5 file
+    atom = tables.Atom.from_dtype(omega.dtype)
+    om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
+    om[:] = omega 
+    hf5.flush()
 
-# Then delete all p files
-os.system('rm *p.npy')
+    # Load one of the p arrays to find out the time length of the emg data
+    p = np.load('taste0_trial0_p.npy')
+    time_length = p.shape[0]
 
-# And delete the emg_BSA_results directory
-os.chdir('..')
-os.system('rm -r emg_BSA_results')
+    # Go through the tastes and trials
+    for i in range(tastes):
+        # Make an array for posterior probabilities for each taste
+        p = np.zeros((trials[i], time_length, 20))
+        for j in range(trials[i]):
+            p[j, :, :] = np.load('taste%i_trial%i_p.npy' % (i, j))
+        # Save p to hdf5 file
+        atom = tables.Atom.from_dtype(p.dtype)
+        prob = hf5.create_carray('/emg_BSA_results', 'taste%i_p' % i, atom, p.shape)
+        prob[:, :, :] = p
+    hf5.flush()
 
-# Close the hdf5 file
-hf5.close()
+    # TODO: Since BSA returns most dominant frequency, BSA output is 
+    #       HIGHLY compressible. Change to utilizing timeseries rather than
+    #       time-frequency representation
+
+    # Since BSA is an expensive process, don't delete anything
+    # In case things need to be reanalyzed
+
+    ## Delete files once omega has been safely written
+    #os.system('rm *omega.npy')
+
+    ## Then delete all p files
+    #os.system('rm *p.npy')
+
+    ## And delete the emg_BSA_results directory
+    #os.chdir('..')
+    #os.system('rm -r emg_BSA_results')
+
+    # Close the hdf5 file
+    hf5.close()
