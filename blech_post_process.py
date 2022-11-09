@@ -182,11 +182,10 @@ while True:
             f'./spike_waveforms/electrode{electrode_num:02}/energy.npy',
             f'./spike_waveforms/electrode{electrode_num:02}/spike_amplitudes.npy',
             f'./clustering_results/electrode{electrode_num:02}/'\
-                    f'clusters{num_clusters}/predictions.npy',
-            f'./spike_waveforms/electrode{electrode_num:02}/pca_waveform_autocorrelation.npy']
+                    f'clusters{num_clusters}/predictions.npy',]
 
         var_names = ['spike_waveforms','spike_times','pca_slices','energy',\
-                'amplitudes','predictions','autocorrs']
+                'amplitudes','predictions',]
 
         for var, path in zip(var_names, loading_paths):
             globals()[var] = np.load(path)
@@ -292,7 +291,6 @@ while True:
             data[:,0] = energy[this_cluster]/np.max(energy[this_cluster])
             data[:,1] = np.abs(amplitudes[this_cluster])/\
                     np.max(np.abs(amplitudes[this_cluster]))
-            data = np.concatenate((data,autocorrs[this_cluster,:3]),axis=-1)
 
             # Cluster the data
             g = GaussianMixture(
