@@ -50,7 +50,7 @@ with open(json_name,'r') as params_file_connect:
     params_dict = json.load(params_file_connect)
 
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
+json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 
@@ -60,98 +60,87 @@ trains_dig_in = hf5.list_nodes('/spike_trains')
 palatability_rank = info_dict['taste_params']['pal_rankings']
 print(f'Palatability ranks : {palatability_rank}')
 
-#palatability_rank = easygui.multenterbox(\
-#        msg = 'Rank the digital inputs in order of palatability (1 for the lowest, only integers)', \
-#        fields = [train._v_name for train in trains_dig_in])
-#for i in range(len(palatability_rank)):
-#	palatability_rank[i] = int(palatability_rank[i])
-
-# Now ask the user to put in the identities of the digital inputs
-#identities = easygui.multenterbox(\
-#        msg = 'Put in the identities of the digital inputs (only integers)', 
-#        fields = [train._v_name for train in trains_dig_in])
-#for i in range(len(identities)):
-#	identities[i] = int(identities[i])
-
 taste_names = info_dict['taste_params']['tastes']
 tastes_set = set(taste_names)
 identities = [int(dict(zip(tastes_set,range(len(tastes_set))))[x]) for x in taste_names]
 print(f'Taste identities : {identities}')
 
 # Get the palatability/identity calculation paramaters from the user
-#params = easygui.multenterbox(msg = 'Enter the parameters for palatability/identity calculation', fields = ['Window size (ms)', 'Step size (ms)'])
-#for i in range(len(params)):
-#	params[i] = int(params[i])
 params = list(params_dict['pal_iden_calc_params'].values())
 print(f'Params :: Window size : {params[0]}, Step size : {params[1]}')
 
 # Get the pre-stimulus time from the user
-#pre_stim = easygui.multenterbox(msg = 'Enter the pre-stimulus time for the spike trains', fields = ['Pre stim (ms)'])
-#pre_stim = int(pre_stim[0])
 pre_stim = params_dict['spike_array_durations'][0]
 print(f'Pre-stim duration : {pre_stim}')
-
-# Ask the user about the type of units they want to do the calculations on (single or all units)
-#unit_type = easygui.multchoicebox(msg = 'Which type of units do you want to use?', choices = ('All units', 'Single units', 'Multi units', 'Custom choice'))
 
 # Just pick all units
 chosen_units = np.arange(trains_dig_in[0].spike_array.shape[1])
 print('Picking ALL UNITS')
-
-#all_units = np.arange(trains_dig_in[0].spike_array.shape[1])
-#single_units = np.array([i for i in range(len(all_units)) \
-#        if hf5.root.unit_descriptor[i]["single_unit"] == 1])
-#multi_units = np.array([i for i in range(len(all_units)) if hf5.root.unit_descriptor[i]["single_unit"] == 0])
-#chosen_units = []
-#if unit_type[0] == 'All units':
-#	chosen_units = all_units
-#elif unit_type[0] == 'Single units':
-#	chosen_units = single_units
-#elif unit_type[0] == 'Multi units':
-#	chosen_units = multi_units
-#else:
-#	chosen_units = easygui.multchoicebox(msg = 'Which units do you want to choose?', choices = ([i for i in all_units]))
-#	for i in range(len(chosen_units)):
-#		chosen_units[i] = int(chosen_units[i])
-#	chosen_units = np.array(chosen_units)
-
 
 # Now make arrays to pull the data out
 num_trials = trains_dig_in[0].spike_array.shape[0]
 num_units = len(chosen_units)
 time = trains_dig_in[0].spike_array.shape[2]
 num_tastes = len(trains_dig_in)
-palatability = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = int)
-identity = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = int)
-response = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
-unscaled_response = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials), dtype = np.dtype('float64'))
-laser = np.empty(shape = (int((time - params[0])/params[1]) + 1, num_units, num_tastes*num_trials, 2), dtype = float)
+palatability = np.empty(
+        shape = (
+            int((time - params[0])/params[1]) + 1, 
+            num_units, 
+            num_tastes*num_trials), 
+        dtype = int)
+identity = np.empty(
+        shape = (
+            int((time - params[0])/params[1]) + 1, 
+            num_units, 
+            num_tastes*num_trials), 
+        dtype = int)
+response = np.empty(
+        shape = (
+            int((time - params[0])/params[1]) + 1, 
+            num_units, 
+            num_tastes*num_trials), 
+        dtype = np.dtype('float64'))
+unscaled_response = np.empty(
+        shape = (
+            int((time - params[0])/params[1]) + 1, 
+            num_units, 
+            num_tastes*num_trials), 
+        dtype = np.dtype('float64'))
+laser = np.empty(
+        shape = (
+            int((time - params[0])/params[1]) + 1, 
+            num_units, 
+            num_tastes*num_trials, 
+            2), 
+        dtype = float)
 
 # Fill in the palatabilities and identities
 for i in range(num_tastes):
-	palatability[:, :, num_trials*i:num_trials*(i+1)] = palatability_rank[i]*np.ones((palatability.shape[0], palatability.shape[1], num_trials))
-	identity[:, :, num_trials*i:num_trials*(i+1)] = identities[i]*np.ones((palatability.shape[0], palatability.shape[1], num_trials))
+    palatability[:, :, num_trials*i:num_trials*(i+1)] = \
+            palatability_rank[i]*\
+            np.ones((palatability.shape[0], palatability.shape[1], num_trials))
+    identity[:, :, num_trials*i:num_trials*(i+1)] = \
+            identities[i]*\
+            np.ones((palatability.shape[0], palatability.shape[1], num_trials))
 
 # Now fill in the responses and laser (duration,lag) tuples
 for i in range(0, time - params[0] + params[1], params[1]):
-	for j in range(num_units):
-		for k in range(num_tastes):
-			# If the lasers were used, get the appropriate durations and lags. Else assign zeros to both
-			try:
-				laser[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = np.vstack((trains_dig_in[k].laser_durations[:], trains_dig_in[k].laser_onset_lag[:])).T
-			except:
-				laser[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = np.zeros((num_trials, 2))
-			unscaled_response[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = np.mean(trains_dig_in[k].spike_array[:, chosen_units[j], i:i + params[0]], axis = 1)
+    for j in range(num_units):
+        for k in range(num_tastes):
+            # If the lasers were used, 
+            # get the appropriate durations and lags. 
+            # Else assign zeros to both
+            try:
+                laser[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = \
+                        np.vstack((
+                            trains_dig_in[k].laser_durations[:], 
+                            trains_dig_in[k].laser_onset_lag[:])).T
+            except:
+                laser[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = \
+                        np.zeros((num_trials, 2))
 
-# Now scale the responses by the maximum firing of each neuron in each trial, and save that in response
-for j in range(unscaled_response.shape[1]):
-	for k in range(unscaled_response.shape[2]):
-		# Remember to add 1 in the denominator - the max can be 0 sometimes
-		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.max(unscaled_response[:, j, k]))
-		#response[:, j, k] = unscaled_response[:, j, k]/(1.0 + np.sum(unscaled_response[:, :, k], axis = 1)) 
-		response[:, j, k] = unscaled_response[:, j, k]
-
-# Create an ancillary_analysis group in the hdf5 file, and write these arrays to that group
+# Create an ancillary_analysis group in the hdf5 file, 
+# and write these arrays to that group
 try:
 	hf5.remove_node('/ancillary_analysis', recursive = True)
 except:
@@ -160,8 +149,6 @@ hf5.create_group('/', 'ancillary_analysis')
 hf5.create_array('/ancillary_analysis', 'palatability', palatability)
 hf5.create_array('/ancillary_analysis', 'identity', identity)
 hf5.create_array('/ancillary_analysis', 'laser', laser)
-hf5.create_array('/ancillary_analysis', 'scaled_neural_response', response)
-hf5.create_array('/ancillary_analysis', 'unscaled_neural_response', unscaled_response)
 hf5.create_array('/ancillary_analysis', 'params', params)
 hf5.create_array('/ancillary_analysis', 'pre_stim', np.array(pre_stim))
 hf5.flush()
@@ -182,6 +169,32 @@ trials = np.array(trials)
 hf5.create_array('/ancillary_analysis', 'trials', trials)
 hf5.create_array('/ancillary_analysis', 'laser_combination_d_l', unique_lasers)
 hf5.flush()
+
+############################################################
+
+for i in range(0, time - params[0] + params[1], params[1]):
+    for j in range(num_units):
+        for k in range(num_tastes):
+            unscaled_response[int(i/params[1]), j, num_trials*k:num_trials*(k+1)] = \
+                    np.mean(trains_dig_in[k].spike_array[
+                                                    :, 
+                                                    chosen_units[j], 
+                                                    i:i + params[0]], 
+                            axis = 1)
+
+# Now scale the responses by the maximum firing of each neuron in each trial, 
+# and save that in response
+for j in range(unscaled_response.shape[1]):
+    for k in range(unscaled_response.shape[2]):
+        # Remember to add 1 in the denominator - the max can be 0 sometimes
+        response[:, j, k] = unscaled_response[:, j, k]
+
+hf5.create_array('/ancillary_analysis', 'scaled_neural_response', response)
+hf5.create_array('/ancillary_analysis', 'unscaled_neural_response', unscaled_response)
+
+############################################################
+# Further ancillary analyses
+############################################################
 
 #---------Taste similarity calculation (use cosine similarity)----------------------------------------------------
 # Also calculate Euclidean/Mahalanobis distance between each pair of tastes in each laser condition
