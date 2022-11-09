@@ -48,6 +48,11 @@ with open(json_path, 'r') as params_file:
 taste_names = info_dict['taste_params']['tastes']
 trials = [int(x) for x in info_dict['taste_params']['trial_count']]
 
+if len(np.unique(trials)) > 1:
+    print(f'Uneven numbers of trials detected : {trials}')
+    print(f'Using max number of trials for array : {np.max(trials)}') 
+    print(f'!! WARNING !! emg_BSA_results will have trials with zero data')
+
 ############################################################
 ## Following will be looped over emg channels
 # In case there is more than one pair/location or differencing did not happen
@@ -56,35 +61,32 @@ channel_dirs = glob.glob(os.path.join(dir_name,'emg_output/emg_channel*'))
 channels_discovered = [os.path.basename(x) for x in channel_dirs]
 print(f'Creating plots for : {channels_discovered}\n')
 
-for this_dir in channel_dirs:
+# Add group to hdf5 file for emg BSA results
+if '/emg_BSA_results' in hf5:
+    hf5.remove_node('/','emg_BSA_results', recursive = True)
+hf5.create_group('/', 'emg_BSA_results')
+
+for num, this_dir in enumerate(channel_dirs):
     os.chdir(this_dir)
+    this_basename = channels_discovered[num]
 
     # Load sig_trials.npy to get number of tastes
     sig_trials = np.load('sig_trials.npy')
     tastes = sig_trials.shape[0]
 
-    # todo: Can be taken from info file or dig-ins
-    # Since number of trials can be unequal between tastes, 
-    # ask the user for the number of trials for each taste
-    #trials = easygui.multenterbox(
-    #        msg = 'Enter the number of trials for each taste', 
-    #        fields = [str(i) for i in range(tastes)])
-    #for i in range(len(trials)):
-    #    trials[i] = int(trials[i])	
     print(f'Trials taken from info file ::: {dict(zip(taste_names, trials))}')
 
     # Change to emg_BSA_results
     os.chdir('emg_BSA_results')
 
-    # Add group to hdf5 file for emg BSA results
-    if '/emg_BSA_results' in hf5:
-        hf5.remove_node('/','emg_BSA_results', recursive = True)
-    hf5.create_group('/', 'emg_BSA_results')
+    base_dir = '/emg_BSA_results/'
+    if os.path.join(base_dir, this_basename) in hf5:
+        hf5.remove_node(base_dir,this_basename, recursive = True)
+    hf5.create_group(base_dir, this_basename)
 
     # Omega doesn't vary by trial, 
     # so just pick it up from the 1st taste and trial, 
-    # and delete everything else
-    omega = np.load('taste0_trial0_omega.npy')
+    omega = np.load('taste00_trial00_omega.npy')
 
     # Add omega to the hdf5 file
     atom = tables.Atom.from_dtype(omega.dtype)
@@ -93,18 +95,26 @@ for this_dir in channel_dirs:
     hf5.flush()
 
     # Load one of the p arrays to find out the time length of the emg data
-    p = np.load('taste0_trial0_p.npy')
+    p = np.load('taste00_trial00_p.npy')
     time_length = p.shape[0]
 
     # Go through the tastes and trials
+    # TODO: Output to HDF5 needs to be named by channel
     for i in range(tastes):
         # Make an array for posterior probabilities for each taste
-        p = np.zeros((trials[i], time_length, 20))
+        #p = np.zeros((trials[i], time_length, 20))
+        # Make array with highest numbers of trials, so uneven trial numbers
+        # can be accomadated
+        p = np.zeros((np.max(trials), time_length, 20))
         for j in range(trials[i]):
-            p[j, :, :] = np.load('taste%i_trial%i_p.npy' % (i, j))
+            p[j, :, :] = np.load(f'taste{i:02}_trial{j:02}_p.npy')
         # Save p to hdf5 file
         atom = tables.Atom.from_dtype(p.dtype)
-        prob = hf5.create_carray('/emg_BSA_results', 'taste%i_p' % i, atom, p.shape)
+        prob = hf5.create_carray(
+                os.path.join(base_dir, this_basename), 
+                'taste%i_p' % i, 
+                atom, 
+                p.shape)
         prob[:, :, :] = p
     hf5.flush()
 

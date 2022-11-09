@@ -67,5 +67,7 @@ p[:, :] = r_p[:, :]
 omega[:] = np.array(p_r[0]).astype('float')/(2.0*np.pi) 
 
 # Save p and omega by taste and trial number
-np.save('taste%i_trial%i_p.npy' % (taste, trial), p)
-np.save('taste%i_trial%i_omega.npy' % (taste, trial), omega)
+#np.save('taste%i_trial%i_p.npy' % (taste, trial), p)
+#np.save('taste%i_trial%i_omega.npy' % (taste, trial), omega)
+np.save(f'taste{taste:02}_trial{trial:02}_p.npy', p)
+np.save(f'taste{taste:02}_trial{trial:02}_omega.npy', omega)

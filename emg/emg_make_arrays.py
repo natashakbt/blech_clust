@@ -72,7 +72,7 @@ for on_times in dig_on:
 
 # Extract taste dig-ins from experimental info file
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
+json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 
