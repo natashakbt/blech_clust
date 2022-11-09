@@ -68,8 +68,9 @@ f = open('blech_emg_jetstream_parallel1.sh', 'w')
 print("export OMP_NUM_THREADS=1", file = f)
 print("python emg_local_BSA_execute.py $1", file = f)
 f.close()
+
 # Finally dump a file with the data directory's location (blech.dir)
-f = open('blech.dir', 'w')
+f = open('BSA_run.dir', 'w')
 print(dir_name, file = f)
 f.close()
 

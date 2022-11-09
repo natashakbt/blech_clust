@@ -51,19 +51,25 @@ file_list = os.listdir('./')
 
 # Grab directory name to create the name of the hdf5 file
 # If HDF5 present, use that, otherwise, create new one
-h5_search = glob('*.h5')
+h5_search = glob.glob('*.h5')
 if len(h5_search):
     hdf5_name = h5_search[0] 
     print(f'HDF5 file found...Using file {hdf5_name}')
-    hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'r+')
+    hf5 = tables.open_file(hdf5_name, 'r+')
 else:
-    hdf5_name = str(os.path.dirname(dir_name)).split('/')
+    hdf5_name = str(os.path.dirname(dir_name)).split('/')[-1]+'.h5'
     print(f'No HDF5 found...Creating file {hdf5_name}')
-    hf5 = tables.open_file(hdf5_name[-1]+'.h5', 'w', title = hdf5_name[-1])
-hf5.create_group('/', 'raw')
-hf5.create_group('/', 'raw_emg')
-hf5.create_group('/', 'digital_in')
-hf5.create_group('/', 'digital_out')
+    hf5 = tables.open_file(hdf5_name, 'w', title = hdf5_name[-1])
+
+group_list = ['raw','raw_emg','digital_in','digital_out']
+for this_group in group_list:
+    if '/'+this_group in hf5:
+        hf5.remove_node('/', this_group, recursive=True)
+    hf5.create_group('/',this_group)
+#hf5.create_group('/', 'raw')
+#hf5.create_group('/', 'raw_emg')
+#hf5.create_group('/', 'digital_in')
+#hf5.create_group('/', 'digital_out')
 hf5.close()
 print('Created nodes in HF5')
 
@@ -152,12 +158,12 @@ layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
 electrode_layout_frame = pd.read_csv(layout_path) 
 
 # Create arrays for each electrode
-read_file.create_hdf_arrays(hdf5_name[-1]+'.h5', all_electrodes, 
+read_file.create_hdf_arrays(hdf5_name, all_electrodes, 
                             dig_in, emg_port, emg_channels)
 
 # Read data files, and append to electrode arrays
 if file_type[0] == 'one file per channel':
-	read_file.read_files_abu(hdf5_name[-1]+'.h5', dig_in, electrode_layout_frame) 
+	read_file.read_files_abu(hdf5_name, dig_in, electrode_layout_frame) 
 else:
 	print("Only files structured as one file per channel can be read at this time...")
 	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
@@ -171,7 +177,7 @@ params_template = json.load(open(params_template_path,'r'))
 all_params_dict = params_template.copy() 
 all_params_dict['sampling_rate'] = sampling_rate
 
-params_out_path = hdf5_name[-1]+'.params'
+params_out_path = hdf5_name.split('.')[0] + '.params'
 if not os.path.exists(params_out_path):
     print('No params file found...Creating new params file')
     with open(params_out_path, 'w') as params_file:

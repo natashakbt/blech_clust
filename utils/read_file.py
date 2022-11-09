@@ -4,6 +4,8 @@ import os
 import numpy as np
 import tqdm
 
+#TODO: Separate functions for electrode, EMG, and dig-in channels
+
 # Create EArrays in hdf5 file 
 #def create_hdf_arrays(file_name, ports, dig_in, emg_port, emg_channels):
 def create_hdf_arrays(file_name, non_emg_channels, dig_in, emg_port, emg_channels):

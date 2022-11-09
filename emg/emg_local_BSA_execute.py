@@ -7,12 +7,13 @@ import os
 import sys
 
 # Read blech.dir, and cd to that directory. 
-f = open('blech.dir', 'r')
+f = open('BSA_run.dir', 'r')
 dir_name = []
 for line in f.readlines():
 	dir_name.append(line)
 f.close()
-os.chdir(dir_name[0][:-1])
+dir_name = dir_name[0].strip()
+os.chdir(dir_name)
 
 # Read the data files
 env = np.load('env.npy')
@@ -68,7 +69,3 @@ omega[:] = np.array(p_r[0]).astype('float')/(2.0*np.pi)
 # Save p and omega by taste and trial number
 np.save('taste%i_trial%i_p.npy' % (taste, trial), p)
 np.save('taste%i_trial%i_omega.npy' % (taste, trial), omega)
-
-
-
-
