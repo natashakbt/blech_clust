@@ -7,6 +7,7 @@ import os
 import glob
 import json
 import re
+import pandas as pd
 
 # Get name of directory with the data files
 if len(sys.argv) > 1:
@@ -79,8 +80,9 @@ with open(json_path, 'r') as params_file:
 dig_in_channel_nums = info_dict['taste_params']['dig_ins']
 dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
 #dig_in_channel_inds = np.arange(len(dig_in_channels))
-dig_in_channel_inds = [num for num,x in enumerate([int(x[-1]) for x in dig_in_pathname])
-                     if x in dig_in_channel_nums]
+dig_in_channel_inds = [num for num,x in enumerate([int(x[-1]) \
+        for x in dig_in_pathname])
+         if x in dig_in_channel_nums]
 
 # Check dig-in numbers and trial counts against info file
 # Only if mismatch, check with user, otherwise print details and continue
@@ -152,7 +154,9 @@ if len(np.unique(trial_counts)) > 1:
     print(f'Using {np.max(trial_counts)} as trial count')
     print('== EMG ARRAY WILL HAVE EMPTY TRIALS ==')
 
-emg_data = np.ndarray((len(emg_pathname), 
+# Shape : channels x dig_ins x max_trials x duration 
+emg_data = np.ndarray((
+    len(emg_pathname), 
     len(dig_in_channels), 
     np.max(trial_counts), 
     durations[0]+durations[1]))
@@ -181,5 +185,11 @@ if not os.path.exists('emg_output'):
 # Save the emg_data
 np.save('emg_output/emg_data.npy', emg_data)
 np.save('emg_output/nonzero_trials.npy', nonzero_trial)
+
+# Also write out README to explain CAR groups and order of emg_data for user
+with open('emg_output/emg_data_readme.txt','w') as f:
+    f.write(f'Channels used : {emg_pathname}')
+    f.write('\n')
+    f.write('Numbers indicate "electrode_ind" in electrode_layout_frame')
 
 hf5.close()
