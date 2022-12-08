@@ -45,6 +45,7 @@ def read_digins(hdf5_name, dig_in):
         hf5.flush()
         hf5.close()
 
+# TODO: Remove exec statements throughout file
 def read_emg_channels(hdf5_name, electrode_layout_frame):
     # Read EMG data from amplifier channels
     hf5 = tables.open_file(hdf5_name, 'r+')
@@ -59,8 +60,10 @@ def read_emg_channels(hdf5_name, electrode_layout_frame):
             port = row.port
             channel_ind = row.electrode_ind
             data = np.fromfile(row.filename, dtype = np.dtype('int16'))
-            el = hf5.create_earray('/raw_emg', f'emg{emg_counter:02}', atom, (0,))
-            exec(f"hf5.root.raw_emg.emg{emg_counter:02}."\
+            #el = hf5.create_earray('/raw_emg', f'emg{emg_counter:02}', atom, (0,))
+            # Label raw_emg with electrode_ind so it's more easily identifiable
+            el = hf5.create_earray('/raw_emg', f'emg{channel_ind:02}', atom, (0,))
+            exec(f"hf5.root.raw_emg.emg{channel_ind:02}."\
                     "append(data[:])")
             emg_counter += 1
             hf5.flush()
