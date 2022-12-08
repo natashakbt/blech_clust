@@ -66,7 +66,7 @@ for this_dir in channel_dirs:
     os.chdir(this_dir)
     #emg_data = np.load('emg_data.npy')
     emg_filt = np.load('emg_filt.npy')
-    emg_env = np.load('env.npy')
+    emg_env = np.load('emg_env.npy')
     sig_trials = np.load('sig_trials.npy')
 
 
