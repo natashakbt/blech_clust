@@ -110,7 +110,8 @@ else:
     if use_csv_str in ['n','no']: 
         electrode_files = sorted([x for x in file_list if 'amp' in x])
         port_list = [x.split('-')[1] for x in electrode_files]
-        electrode_num_list = [x.split('-')[2].split('.')[0] for x in electrode_files]
+        electrode_num_list = [x.split('-')[2].split('.')[0] \
+                        for x in electrode_files]
         layout_frame = pd.DataFrame()
         layout_frame['filename'] = electrode_files
         layout_frame['port'] = port_list
@@ -150,12 +151,15 @@ else:
     for key,vals in layout_dict.items():
         layout_dict[key] = [layout_dict[key].to_list()]
 
-    if 'emg' in layout_dict.keys():
+    if any(['emg' in x for x in layout_dict.keys()]):
         #orig_emg_electrodes = layout_dict.pop('emg').values()
-        orig_emg_electrodes = layout_dict.pop('emg')[0]
+        #orig_emg_electrodes = layout_dict.pop('emg')[0]
+        orig_emg_electrodes = [layout_dict[x][0] for x in layout_dict.keys() \
+                if 'emg' in x]
+        orig_emg_electrodes = [x for y in orig_emg_electrodes for x in y]
         fin_emg_port = layout_frame_filled.port.loc[
-                        layout_frame_filled.electrode_ind.isin(orig_emg_electrodes)].\
-                        unique()
+                layout_frame_filled.electrode_ind.isin(orig_emg_electrodes)].\
+                unique()
         fin_emg_port = list(fin_emg_port)
     else:
         fin_emg_port = []
