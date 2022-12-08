@@ -19,7 +19,8 @@ if len(sys.argv) > 1:
 else:
     dir_name = easygui.diropenbox(msg = 'Please select data directory')
 
-if 'emg_channel' not in os.path.basename(dir_name[:-1]):
+#if 'emg_channel' not in os.path.basename(dir_name[:-1]):
+if 'emg_env.npy' not in os.listdir(dir_name):
     raise Exception('Please point to <data_dir>/emg_output/emg_channel directory')
     exit()
 
@@ -32,7 +33,7 @@ os.makedirs('emg_BSA_results')
 # Load the data files
 #env = np.load('./emg_0/env.npy')
 #sig_trials = np.load('./emg_0/sig_trials.npy')
-env = np.load('./env.npy')
+env = np.load('./emg_env.npy')
 sig_trials = np.load('./sig_trials.npy')
 
 # Ask for the HPC queue to use
@@ -60,7 +61,13 @@ f.close()
 num_cpu = multiprocessing.cpu_count()
 # Then produce the file generating the parallel command
 f = open('blech_emg_jetstream_parallel.sh', 'w')
-print("parallel -k -j {:d} --noswap --load 100% --progress --joblog {:s}/results.log bash blech_emg_jetstream_parallel1.sh ::: {{1..{:d}}}".format(int(num_cpu)-1, dir_name, sig_trials.shape[0]*sig_trials.shape[1]), file = f)
+format_args = (
+        int(num_cpu)-1, 
+        dir_name, 
+        sig_trials.shape[0]*sig_trials.shape[1])
+print(
+        "parallel -k -j {:d} --noswap --load 100% --progress --joblog {:s}/results.log bash blech_emg_jetstream_parallel1.sh ::: {{1..{:d}}}".format(*format_args), 
+        file = f)
 f.close()
 
 # Then produce the file that runs blech_process.py
@@ -74,4 +81,4 @@ f = open('BSA_run.dir', 'w')
 print(dir_name, file = f)
 f.close()
 
-print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q all.q -ckpt reloc blech_emg.sh")
+#print("Now logout of the compute node and go back to the login node. Then say: qsub -t 1-"+str(sig_trials.shape[0]*sig_trials.shape[1])+" -q all.q -ckpt reloc blech_emg.sh")

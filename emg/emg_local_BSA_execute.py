@@ -7,16 +7,17 @@ import os
 import sys
 
 # Read blech.dir, and cd to that directory. 
-f = open('BSA_run.dir', 'r')
-dir_name = []
-for line in f.readlines():
-	dir_name.append(line)
-f.close()
-dir_name = dir_name[0].strip()
+with open('BSA_run.dir', 'r') as f:
+    dir_name = f.readlines()[0].strip()
+#dir_name = []
+#for line in f.readlines():
+#	dir_name.append(line)
+#f.close()
+#dir_name = dir_name[0].strip()
 os.chdir(dir_name)
 
 # Read the data files
-env = np.load('env.npy')
+emg_env = np.load('emg_env.npy')
 sig_trials = np.load('sig_trials.npy')
 
 # cd to emg_BSA_results
@@ -24,15 +25,19 @@ os.chdir('emg_BSA_results')
 
 # Get SGE_TASK_ID # - this will determine the taste+trial to be looked at
 try:
-	task = int(os.getenv('SGE_TASK_ID'))
+    task = int(os.getenv('SGE_TASK_ID'))
 except:
-# Alternatively, if running on jetstream (or personal computer) using GNU parallel, get sys.argv[1]
-	task = int(sys.argv[1])
+    # Alternatively, if running on jetstream (or personal computer) 
+    # using GNU parallel, get sys.argv[1]
+    task = int(sys.argv[1])
+
 taste = int((task-1)/sig_trials.shape[-1])
 trial = int((task-1)%sig_trials.shape[-1])
 
 # Import R related stuff - use rpy2 for Python->R and pandas for R->Python
-import readline # Needed for the next line to work on Anaconda. Also needed to do conda install -c r rpy2 at the command line
+# Needed for the next line to work on Anaconda. 
+# Also needed to do conda install -c r rpy2 at the command line
+import readline 
 import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
 rpy2.robjects.numpy2ri.activate()
@@ -55,7 +60,7 @@ p = np.zeros((7000, 20))
 omega = np.zeros(20)
 
 # Run BSA on trial 'trial' of taste 'taste' and assign the results to p and omega.
-Br = ro.r.matrix(env[taste, trial, :], nrow = 1, ncol = 7000)
+Br = ro.r.matrix(emg_env[taste, trial, :], nrow = 1, ncol = 7000)
 ro.r.assign('B', Br)
 ro.r('x = c(B[1,])')
 ro.r('r_local = BaSAR.local(x, 0.1, 1, 20, t, 0, 300)') # x is the data, we scan periods from 0.1s (10 Hz) to 1s (1 Hz) in 20 steps. Window size is 300ms. There are no background functions (=0)
