@@ -60,10 +60,21 @@ p = np.zeros((7000, 20))
 omega = np.zeros(20)
 
 # Run BSA on trial 'trial' of taste 'taste' and assign the results to p and omega.
-Br = ro.r.matrix(emg_env[taste, trial, :], nrow = 1, ncol = 7000)
+input_data = emg_env[taste, trial, :]
+# Check that trial is non-zero, if it isn't, don't try to run BSA
+if input_data.sum() == 0:
+    raise Exception('Input data is all zeros, BSA will not run')
+    exit()
+
+Br = ro.r.matrix(input_data, nrow = 1, ncol = 7000)
 ro.r.assign('B', Br)
 ro.r('x = c(B[1,])')
-ro.r('r_local = BaSAR.local(x, 0.1, 1, 20, t, 0, 300)') # x is the data, we scan periods from 0.1s (10 Hz) to 1s (1 Hz) in 20 steps. Window size is 300ms. There are no background functions (=0)
+
+# x is the data, 
+# we scan periods from 0.1s (10 Hz) to 1s (1 Hz) in 20 steps. 
+# Window size is 300ms. 
+# There are no background functions (=0)
+ro.r('r_local = BaSAR.local(x, 0.1, 1, 20, t, 0, 300)') 
 #p_r = com.load_data('r_local')
 p_r = r['r_local']
 # r_local is returned as a length 2 object, with the first element being omega and the second being the posterior probabilities. These need to be recast as floats
