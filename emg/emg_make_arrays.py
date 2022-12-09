@@ -78,11 +78,12 @@ with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 
 dig_in_channel_nums = info_dict['taste_params']['dig_ins']
-dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_nums]
+
 #dig_in_channel_inds = np.arange(len(dig_in_channels))
-dig_in_channel_inds = [num for num,x in enumerate([int(x[-1]) \
+dig_in_channel_inds = [num for num,x in enumerate([int(x.split('_')[-1]) \
         for x in dig_in_pathname])
          if x in dig_in_channel_nums]
+dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_inds]
 
 # Check dig-in numbers and trial counts against info file
 # Only if mismatch, check with user, otherwise print details and continue
@@ -166,9 +167,9 @@ for i in range(len(emg_pathname)):
     data = hf5.get_node(emg_pathname[i])[:]
     #exec("data = hf5.root.raw_emg.%s[:]" % emg_pathname[i].split('/')[-1])
     for j in range(len(dig_in_channels)):
-        for k in range(len(start_points[dig_in_channel_nums[j]])):
-            raw_emg_data = data[start_points[dig_in_channel_nums[j]][k]\
-                    -durations[0]*30:start_points[dig_in_channel_nums[j]][k]\
+        for k in range(len(start_points[dig_in_channel_inds[j]])):
+            raw_emg_data = data[start_points[dig_in_channel_inds[j]][k]\
+                    -durations[0]*30:start_points[dig_in_channel_inds[j]][k]\
                     +durations[1]*30]
             raw_emg_data = 0.195*(raw_emg_data)
             # Downsample the raw data by averaging the 30 samples per millisecond, 
