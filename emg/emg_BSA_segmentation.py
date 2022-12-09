@@ -42,7 +42,8 @@ trials = hf5.root.ancillary_analysis.trials[:]
 unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
 
 # Iterate over channels
-channel_dirs = glob.glob(os.path.join(dir_name,'emg_output/emg_channel*'))
+output_list = glob.glob(os.path.join(dir_name,'emg_output/*'))
+channel_dirs = sorted([x for x in output_list if os.path.isdir(x)])
 channels_discovered = [os.path.basename(x) for x in channel_dirs]
 print(f'Creating plots for : {channels_discovered}\n')
 

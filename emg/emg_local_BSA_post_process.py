@@ -57,7 +57,8 @@ if len(np.unique(trials)) > 1:
 ## Following will be looped over emg channels
 # In case there is more than one pair/location or differencing did not happen
 ############################################################
-channel_dirs = glob.glob(os.path.join(dir_name,'emg_output/emg_channel*'))
+output_list = glob.glob(os.path.join(dir_name,'emg_output/*'))
+channel_dirs = sorted([x for x in output_list if os.path.isdir(x)])
 channels_discovered = [os.path.basename(x) for x in channel_dirs]
 print(f'Creating plots for : {channels_discovered}\n')
 
@@ -65,6 +66,16 @@ print(f'Creating plots for : {channels_discovered}\n')
 if '/emg_BSA_results' in hf5:
     hf5.remove_node('/','emg_BSA_results', recursive = True)
 hf5.create_group('/', 'emg_BSA_results')
+
+# Omega doesn't vary by trial, 
+# so just pick it up from the 1st taste and trial, 
+omega = np.load('taste00_trial00_omega.npy')
+
+# Add omega to the hdf5 file
+atom = tables.Atom.from_dtype(omega.dtype)
+om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
+om[:] = omega 
+hf5.flush()
 
 for num, this_dir in enumerate(channel_dirs):
     os.chdir(this_dir)
@@ -79,27 +90,18 @@ for num, this_dir in enumerate(channel_dirs):
     # Change to emg_BSA_results
     os.chdir('emg_BSA_results')
 
-    base_dir = '/emg_BSA_results/'
+    base_dir = '/emg_BSA_results'
     if os.path.join(base_dir, this_basename) in hf5:
-        hf5.remove_node(base_dir,this_basename, recursive = True)
+        hf5.remove_node(base_dir, this_basename, recursive = True)
     hf5.create_group(base_dir, this_basename)
 
-    # Omega doesn't vary by trial, 
-    # so just pick it up from the 1st taste and trial, 
-    omega = np.load('taste00_trial00_omega.npy')
-
-    # Add omega to the hdf5 file
-    atom = tables.Atom.from_dtype(omega.dtype)
-    om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
-    om[:] = omega 
-    hf5.flush()
 
     # Load one of the p arrays to find out the time length of the emg data
     p = np.load('taste00_trial00_p.npy')
     time_length = p.shape[0]
 
     # Go through the tastes and trials
-    # TODO: Output to HDF5 needs to be named by channel
+    # todo: Output to HDF5 needs to be named by channel
     for i in range(tastes):
         # Make an array for posterior probabilities for each taste
         #p = np.zeros((trials[i], time_length, 20))
@@ -136,4 +138,4 @@ for num, this_dir in enumerate(channel_dirs):
     #os.system('rm -r emg_BSA_results')
 
     # Close the hdf5 file
-    hf5.close()
+hf5.close()
