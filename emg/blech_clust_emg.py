@@ -88,15 +88,22 @@ emg_info = info_dict['emg']
 emg_port = emg_info['port']
 emg_channels = sorted(emg_info['electrodes'])
 
-layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
+layout_path = glob.glob(
+        os.path.join(dir_name,"*layout.csv"))[0]
 electrode_layout_frame = pd.read_csv(layout_path) 
 
 # Read dig-in data
-# Pull out the digital input channels used, and convert them to integers
-dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
-for i in range(len(dig_in)):
-	dig_in[i] = int(dig_in[i][0])
-dig_in.sort()
+# Pull out the digital input channels used, 
+# and convert them to integers
+#if DIN number >10, change f[11:13] to f[10:13]
+dig_in_files = [x for x in file_list if "DIN" in x]
+dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
+dig_in = sorted([int(x) for x in dig_in])
+
+#dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
+#for i in range(len(dig_in)):
+#	dig_in[i] = int(dig_in[i][0])
+#dig_in.sort()
 
 read_file.read_digins(hdf5_name, dig_in)
 read_file.read_emg_channels(hdf5_name, electrode_layout_frame)
