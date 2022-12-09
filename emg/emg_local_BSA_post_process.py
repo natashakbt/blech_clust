@@ -67,19 +67,10 @@ if '/emg_BSA_results' in hf5:
     hf5.remove_node('/','emg_BSA_results', recursive = True)
 hf5.create_group('/', 'emg_BSA_results')
 
-# Omega doesn't vary by trial, 
-# so just pick it up from the 1st taste and trial, 
-omega = np.load('taste00_trial00_omega.npy')
-
-# Add omega to the hdf5 file
-atom = tables.Atom.from_dtype(omega.dtype)
-om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
-om[:] = omega 
-hf5.flush()
-
 for num, this_dir in enumerate(channel_dirs):
     os.chdir(this_dir)
     this_basename = channels_discovered[num]
+    print(f'Processing data for : {this_basename}')
 
     # Load sig_trials.npy to get number of tastes
     sig_trials = np.load('sig_trials.npy')
@@ -90,52 +81,70 @@ for num, this_dir in enumerate(channel_dirs):
     # Change to emg_BSA_results
     os.chdir('emg_BSA_results')
 
-    base_dir = '/emg_BSA_results'
-    if os.path.join(base_dir, this_basename) in hf5:
-        hf5.remove_node(base_dir, this_basename, recursive = True)
-    hf5.create_group(base_dir, this_basename)
+    # Omega doesn't vary by trial, 
+    # so just pick it up from the 1st taste and trial, 
+    first_omega = 'taste00_trial00_omega.npy'
+    if os.path.exists(first_omega):
+        omega = np.load(first_omega)
+
+        # Add omega to the hdf5 file
+        if '/emg_BSA_results/omega' not in hf5:
+            atom = tables.Atom.from_dtype(omega.dtype)
+            om = hf5.create_carray('/emg_BSA_results', 'omega', atom, omega.shape)
+            om[:] = omega 
+            hf5.flush()
+
+        base_dir = '/emg_BSA_results'
+        if os.path.join(base_dir, this_basename) in hf5:
+            hf5.remove_node(base_dir, this_basename, recursive = True)
+        hf5.create_group(base_dir, this_basename)
 
 
-    # Load one of the p arrays to find out the time length of the emg data
-    p = np.load('taste00_trial00_p.npy')
-    time_length = p.shape[0]
+        # Load one of the p arrays to find out the time length of the emg data
+        p = np.load('taste00_trial00_p.npy')
+        time_length = p.shape[0]
 
-    # Go through the tastes and trials
-    # todo: Output to HDF5 needs to be named by channel
-    for i in range(tastes):
-        # Make an array for posterior probabilities for each taste
-        #p = np.zeros((trials[i], time_length, 20))
-        # Make array with highest numbers of trials, so uneven trial numbers
-        # can be accomadated
-        p = np.zeros((np.max(trials), time_length, 20))
-        for j in range(trials[i]):
-            p[j, :, :] = np.load(f'taste{i:02}_trial{j:02}_p.npy')
-        # Save p to hdf5 file
-        atom = tables.Atom.from_dtype(p.dtype)
-        prob = hf5.create_carray(
-                os.path.join(base_dir, this_basename), 
-                'taste%i_p' % i, 
-                atom, 
-                p.shape)
-        prob[:, :, :] = p
-    hf5.flush()
+        # Go through the tastes and trials
+        # todo: Output to HDF5 needs to be named by channel
+        for i in range(tastes):
+            # Make an array for posterior probabilities for each taste
+            #p = np.zeros((trials[i], time_length, 20))
+            # Make array with highest numbers of trials, so uneven trial numbers
+            # can be accomadated
+            p = np.zeros((np.max(trials), time_length, 20))
+            for j in range(trials[i]):
+                p[j, :, :] = np.load(f'taste{i:02}_trial{j:02}_p.npy')
+            # Save p to hdf5 file
+            atom = tables.Atom.from_dtype(p.dtype)
+            prob = hf5.create_carray(
+                    os.path.join(base_dir, this_basename), 
+                    'taste%i_p' % i, 
+                    atom, 
+                    p.shape)
+            prob[:, :, :] = p
+        hf5.flush()
 
-    # TODO: Since BSA returns most dominant frequency, BSA output is 
-    #       HIGHLY compressible. Change to utilizing timeseries rather than
-    #       time-frequency representation
+        # TODO: Since BSA returns most dominant frequency, BSA output is 
+        #       HIGHLY compressible. Change to utilizing timeseries rather than
+        #       time-frequency representation
 
-    # Since BSA is an expensive process, don't delete anything
-    # In case things need to be reanalyzed
+        # Since BSA is an expensive process, don't delete anything
+        # In case things need to be reanalyzed
 
-    ## Delete files once omega has been safely written
-    #os.system('rm *omega.npy')
+        ## Delete files once omega has been safely written
+        #os.system('rm *omega.npy')
 
-    ## Then delete all p files
-    #os.system('rm *p.npy')
+        ## Then delete all p files
+        #os.system('rm *p.npy')
 
-    ## And delete the emg_BSA_results directory
-    #os.chdir('..')
-    #os.system('rm -r emg_BSA_results')
+        ## And delete the emg_BSA_results directory
+        #os.chdir('..')
+        #os.system('rm -r emg_BSA_results')
+    else:
+        print(f'No data found for channel {this_basename}')
+        print('Computer will self-destruct in T minus 10 seconds')
+    print('\n')
+    print('================================')
 
-    # Close the hdf5 file
+# Close the hdf5 file
 hf5.close()
