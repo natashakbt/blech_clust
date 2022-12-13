@@ -1,5 +1,7 @@
 """
-Comparison of information in filtered emg vs envelope
+Since STFT is bounded manually, it is possible it missed slower oscillations
+and directly asigns them to 0.
+Perhaps CWT would perform better
 """
 
 # Import stuff
@@ -16,6 +18,8 @@ sys.path.append('/media/bigdata/firing_space_plot/ephys_data')
 import visualize as vz
 import tables
 from glob import glob
+
+from ssqueezepy import cwt
 
 # Define function to parse out only wanted frequencies in STFT
 def calc_stft(trial, max_freq,time_range_tuple,\
