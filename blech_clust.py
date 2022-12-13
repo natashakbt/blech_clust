@@ -121,11 +121,18 @@ ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
 # Sort the ports in alphabetical order
 ports.sort()
 
-# Pull out the digital input channels used, and convert them to integers
-dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
-for i in range(len(dig_in)):
-	dig_in[i] = int(dig_in[i][0])
-dig_in.sort()
+## Pull out the digital input channels used, and convert them to integers
+#dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
+#for i in range(len(dig_in)):
+#	dig_in[i] = int(dig_in[i][0])
+#dig_in.sort()
+
+# Read dig-in data
+# Pull out the digital input channels used, 
+# and convert them to integers
+dig_in_files = [x for x in file_list if "DIN" in x]
+dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
+dig_in = sorted([int(x) for x in dig_in])
 
 # Read the amplifier sampling rate from info.rhd - 
 # look at Intan's website for structure of header files
@@ -158,20 +165,29 @@ layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
 electrode_layout_frame = pd.read_csv(layout_path) 
 
 # Create arrays for each electrode
-read_file.create_hdf_arrays(hdf5_name, all_electrodes, 
-                            dig_in, emg_port, emg_channels)
+#read_file.create_hdf_arrays(hdf5_name, all_electrodes, 
+#                            dig_in, emg_port, emg_channels)
 
 # Read data files, and append to electrode arrays
-if file_type[0] == 'one file per channel':
-	read_file.read_files_abu(hdf5_name, dig_in, electrode_layout_frame) 
-else:
-	print("Only files structured as one file per channel can be read at this time...")
-	sys.exit() # Terminate blech_clust if something else has been used - to be changed later
+if file_type[0] != 'one file per channel':
+	print("Only files structured as one file per channel "
+    "can be read at this time...")
+    # Terminate blech_clust if something else has been used - to be changed later
+	sys.exit() 
 
+#read_file.read_files_abu(hdf5_name, dig_in, electrode_layout_frame) 
+read_file.read_digins(hdf5_name, dig_in)
+read_file.read_electrode_channels(hdf5_name, electrode_layout_frame)
+if len(emg_channels) > 0:
+    read_file.read_emg_channels(hdf5_name, electrode_layout_frame)
 
 # Write out template params file to directory if not present
 home_dir = os.getenv('HOME')
-params_template_path = os.path.join(home_dir,'Desktop/blech_clust/params/sorting_params_template.json')
+blech_clust_path = os.path.join(home_dir,'Desktop','blech_clust')
+print(blech_clust_path)
+params_template_path = os.path.join(
+        blech_clust_path,
+        'params/sorting_params_template.json')
 params_template = json.load(open(params_template_path,'r'))
 # Info on taste digins and laser should be in exp_info file
 all_params_dict = params_template.copy() 
@@ -185,29 +201,25 @@ if not os.path.exists(params_out_path):
 else:
     print("Params file already present...not writing a new one")
 
-# Dump shell file for running array job on the user's blech_clust folder on the desktop
-os.chdir(os.path.join(home_dir,'Desktop/blech_clust'))
-f = open('blech_clust.sh', 'w')
-print("export OMP_NUM_THREADS=1", file = f)
-print(os.path.join(home_dir, 'Desktop/blech_clust'), file=f)
-print("python blech_process.py", file=f)
-f.close()
-
 # Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
 # First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
 num_cpu = multiprocessing.cpu_count()
 
-f = open('blech_clust_jetstream_parallel.sh', 'w')
-print("parallel -k -j {:d} --noswap --load 100% --progress --memfree 4G --retry-failed "\
-        "--joblog {:s}/results.log bash blech_clust_jetstream_parallel1.sh ::: {{{}}}"\
-        .format(int(num_cpu-2), dir_name, ",".join([str(x) for x in all_electrodes]))
-        , file = f)
+runner_path = os.path.join(blech_clust_path,'blech_clust_jetstream_parallel1.sh') 
+f = open(os.path.join(blech_clust_path,'blech_clust_jetstream_parallel.sh'), 'w')
+print(f"parallel -k -j {int(num_cpu-2)} --noswap --load 100% --progress " +\
+        "--memfree 4G --retry-failed "+\
+        f"--joblog {dir_name}/results.log "+\
+        f"bash {runner_path} "+\
+        f"::: {{{','.join([str(x) for x in all_electrodes])}}}", 
+        file = f)
 f.close()
 
 # Then produce the file that runs blech_process.py
 f = open('blech_clust_jetstream_parallel1.sh', 'w')
 print("export OMP_NUM_THREADS=1", file = f)
-print("python blech_process.py $1", file = f)
+blech_process_path = os.path.join(blech_clust_path,'blech_process.py')
+print(f"python {blech_process_path}", file=f)
 f.close()
 
 # Dump the directory name where blech_process has to cd
