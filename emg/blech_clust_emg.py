@@ -63,18 +63,13 @@ else:
     print(f'No HDF5 found...Creating file {hdf5_name}')
     hf5 = tables.open_file(hdf5_name, 'w', title = hdf5_name[-1])
 
-# Remove any previous raw_emg data
-if '/raw_emg' in hf5:
-    hf5.remove_node('/','raw_emg', recursive=True)
-# Create raw_emg group in HDF5 file
-hf5.create_group('/', 'raw_emg')
-
-if '/digital_in' in hf5:
-    hf5.remove_node('/','digital_in', recursive=True)
-# Create raw_emg group in HDF5 file
-hf5.create_group('/', 'digital_in')
-print('Created nodes in HF5')
+group_list = ['raw','raw_emg','digital_in','digital_out']
+for this_group in group_list:
+    if '/'+this_group in hf5:
+        hf5.remove_node('/', this_group, recursive=True)
+    hf5.create_group('/',this_group)
 hf5.close()
+print('Created nodes in HF5')
 
 # Get the amplifier ports used
 ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
@@ -95,7 +90,6 @@ electrode_layout_frame = pd.read_csv(layout_path)
 # Read dig-in data
 # Pull out the digital input channels used, 
 # and convert them to integers
-#if DIN number >10, change f[11:13] to f[10:13]
 dig_in_files = [x for x in file_list if "DIN" in x]
 dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
 dig_in = sorted([int(x) for x in dig_in])
