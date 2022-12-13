@@ -142,19 +142,6 @@ final_sig_trials_array = np.stack(final_sig_trials_list)
 # SHAPE : channel x laser_cond x taste x trial x time x freq
 final_emg_BSA_array = np.stack(final_emg_BSA_list)
 
-## Save these arrays to file unde the /ancillary_analysis node
-#try:
-#    hf5.remove_node('/ancillary_analysis/gapes')
-#    hf5.remove_node('/ancillary_analysis/ltps')
-#    hf5.remove_node('/ancillary_analysis/sig_trials')
-#    hf5.remove_node('/ancillary_analysis/emg_BSA_results')
-#except:
-#    pass
-#hf5.create_array('/ancillary_analysis', 'gapes', final_gapes)
-#hf5.create_array('/ancillary_analysis', 'ltps', final_ltps)
-#hf5.create_array('/ancillary_analysis', 'sig_trials', final_sig_trials)
-#hf5.create_array('/ancillary_analysis', 'emg_BSA_results', final_emg_BSA_results)
-
 # Save under emg_BSA_results to segregate output better 
 try:
     hf5.remove_node('/emg_BSA_results/gapes')
