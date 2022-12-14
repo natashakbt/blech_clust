@@ -216,14 +216,14 @@ print(f"parallel -k -j {int(num_cpu-2)} --noswap --load 100% --progress " +\
 f.close()
 
 # Then produce the file that runs blech_process.py
-f = open('blech_clust_jetstream_parallel1.sh', 'w')
+f = open(os.path.join(blech_clust_path,'blech_clust_jetstream_parallel1.sh'), 'w')
 print("export OMP_NUM_THREADS=1", file = f)
 blech_process_path = os.path.join(blech_clust_path,'blech_process.py')
-print(f"python {blech_process_path}", file=f)
+print(f"python {blech_process_path} $1", file=f)
 f.close()
 
 # Dump the directory name where blech_process has to cd
-f = open('blech.dir', 'w')
+f = open(os.path.join(blech_clust_path,'blech.dir'), 'w')
 print(dir_name, file=f)
 f.close()
 
