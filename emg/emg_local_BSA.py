@@ -45,6 +45,7 @@ for num, dir_name in enumerate(dir_list):
 
     # Grab Brandeis unet username
     home_dir = os.getenv('HOME')
+    blech_emg_dir = os.path.join(home_dir,'Desktop','blech_clust','emg')
 
     # Dump shell file(s) for running GNU parallel job on the 
     # user's blech_clust folder on the desktop
@@ -52,7 +53,7 @@ for num, dir_name in enumerate(dir_list):
     # threads in parallel
     num_cpu = multiprocessing.cpu_count()
     # Then produce the file generating the parallel command
-    f = open('blech_emg_jetstream_parallel.sh', 'w')
+    f = open(os.path.join(blech_emg_dir,'blech_emg_jetstream_parallel.sh'), 'w')
     format_args = (
             int(num_cpu)-1, 
             dir_name, 
@@ -63,7 +64,7 @@ for num, dir_name in enumerate(dir_list):
     f.close()
 
     # Then produce the file that runs blech_process.py
-    f = open('blech_emg_jetstream_parallel1.sh', 'w')
+    f = open(os.path.join(blech_emg_dir,'blech_emg_jetstream_parallel1.sh'), 'w')
     print("export OMP_NUM_THREADS=1", file = f)
     print("python emg_local_BSA_execute.py $1", file = f)
     f.close()
@@ -71,8 +72,8 @@ for num, dir_name in enumerate(dir_list):
     # Finally dump a file with the data directory's location (blech.dir)
     # If there is more than one emg group, this will iterate over them
     if num == 0:
-        f = open('BSA_run.dir', 'w')
+        f = open(os.path.join(blech_emg_dir,'BSA_run.dir'), 'w')
     else:
-        f = open('BSA_run.dir', 'a')
+        f = open(os.path.join(blech_emg_dir,'BSA_run.dir'), 'a')
     print(dir_name, file = f)
     f.close()
