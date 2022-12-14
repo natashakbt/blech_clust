@@ -58,7 +58,9 @@ print(f'Plotting from {-plot_params[0]}ms pre_stim to {plot_params[1]}ms post_st
 ############################################################
 ## Load data and generate plots 
 ############################################################
-channel_dirs = glob.glob(os.path.join(dir_name,'emg_output/emg_channel*'))
+emg_output_dir = os.path.join(dir_name, 'emg_output')
+channel_dirs = glob.glob(os.path.join(emg_output_dir,'emg*'))
+channel_dirs = [x for x in channel_dirs if os.path.isdir(x)]
 channels_discovered = [os.path.basename(x) for x in channel_dirs]
 print(f'Creating plots for : {channels_discovered}\n')
 
