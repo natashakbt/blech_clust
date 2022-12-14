@@ -38,7 +38,7 @@ def create_grid_plots(array, array_name, plot_type = 'line'):
             this_ax = ax[row,col]
             this_dat = array[chan_num, row, col]
             if col == 0:
-                this_ax.set_ylabel(f"Laser: {unique_lasers[i]}")
+                this_ax.set_ylabel(f"Laser: {unique_lasers[row]}")
             if row == ax.shape[0]-1:
                 this_ax.set_xlabel('Time post-stim (ms)')
             this_ax.set_title(tastes[col])
@@ -90,7 +90,7 @@ channel_names = [x._v_name for x in all_nodes \
         if 'group' in str(x.__class__)]
 
 # Pull the data from the /ancillary_analysis node
-unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:])
+unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
 gapes=hf5.root.emg_BSA_results.gapes[:]
 ltps=hf5.root.emg_BSA_results.ltps[:]
 sig_trials=hf5.root.emg_BSA_results.sig_trials[:]
