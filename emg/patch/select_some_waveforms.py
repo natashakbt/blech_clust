@@ -42,18 +42,26 @@ cluster_num = int(re.findall(num_pattern, cluster_str)[0])
 # Find smallest combination of clusters which passes threshold
 wanted_count = 3000
 cluster_vals = np.unique(preds)
-cluster_counts = [sum(preds==x) for x in np.unique(preds)]
+cluster_counts = np.array([sum(preds==x) for x in np.unique(preds)])
 count_order = np.argsort(cluster_counts)
 
-wanted_clusts = []
-total_count = 0
-for i in count_order:
-    this_val = cluster_vals[i]
-    if this_val != -1:
-        if total_count < wanted_count:
-            this_count = cluster_counts[i]
-            total_count += this_count
-            wanted_clusts.append(this_val)
+# If single cluster can suffice, pick that, else pick smallest combination
+# that will hit wanted_count
+if sum(cluster_counts > wanted_count):
+    wanted_inds = np.where(cluster_counts > wanted_count)[0]
+    min_ind = np.argmin(cluster_counts[wanted_inds])
+    final_ind = wanted_inds[min_ind]
+    wanted_clusts = [cluster_vals[final_ind]]
+else:
+    wanted_clusts = []
+    total_count = 0
+    for i in count_order:
+        this_val = cluster_vals[i]
+        if this_val != -1:
+            if total_count < wanted_count:
+                this_count = cluster_counts[i]
+                total_count += this_count
+                wanted_clusts.append(this_val)
 
 # Use post-process sheet template to write out a new sheet for this dataset
 home_dir = os.getenv('HOME')
