@@ -205,13 +205,20 @@ else:
 # First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
 num_cpu = multiprocessing.cpu_count()
 
+electrode_bool = electrode_layout_frame.loc[
+        electrode_layout_frame.electrode_ind.isin(all_electrodes)]
+not_none_bool = electrode_bool.loc[~electrode_bool.CAR_group.isin(["none","None",'na'])]
+bash_electrode_list = not_none_bool.electrode_ind.values
+job_count = np.min((len(bash_electrode_list), int(num_cpu-2)))
+# todo: Account for electrodes labelled none when writing parallel command
 runner_path = os.path.join(blech_clust_path,'blech_clust_jetstream_parallel1.sh') 
 f = open(os.path.join(blech_clust_path,'blech_clust_jetstream_parallel.sh'), 'w')
-print(f"parallel -k -j {int(num_cpu-2)} --noswap --load 100% --progress " +\
+print(f"parallel -k -j {job_count} --noswap --load 100% --progress " +\
         "--memfree 4G --retry-failed "+\
         f"--joblog {dir_name}/results.log "+\
         f"bash {runner_path} "+\
-        f"::: {{{','.join([str(x) for x in all_electrodes])}}}", 
+        #f"::: {{{','.join([str(x) for x in bash_electrode_list])}}}", 
+        f"::: {' '.join([str(x) for x in bash_electrode_list])}", 
         file = f)
 f.close()
 
