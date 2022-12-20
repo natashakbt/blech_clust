@@ -8,6 +8,11 @@ import glob
 import json
 import re
 import pandas as pd
+# TODO: Fix relative import
+#from ..utils.blech_utils import entry_checker
+sys.path.append('../utils')
+from blech_utils import entry_checker
+
 
 # Get name of directory with the data files
 if len(sys.argv) > 1:
@@ -41,6 +46,25 @@ for node in dig_in_nodes:
     #        % dig_in_pathname[-1].split('/')[-1])
 dig_in = np.array(dig_in)
 
+# Extract taste dig-ins from experimental info file
+dir_basename = os.path.basename(dir_name[:-1])
+json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
+with open(json_path, 'r') as params_file:
+    info_dict = json.load(params_file)
+
+# dig-ins from info dict
+dig_in_channel_nums = info_dict['taste_params']['dig_ins']
+
+# dig-ins from hdf5 file
+dig_in_channel_inds = [num for num,x in enumerate([int(x.split('_')[-1]) \
+        for x in dig_in_pathname])
+         if x in dig_in_channel_nums]
+dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_inds]
+
+# ONLY RUN TASTE DIG_INS
+# Chop dig_in by taste channels
+dig_in = dig_in[np.array(dig_in_channel_inds)]
+
 # Get the stimulus delivery times - 
 # take the end of the stimulus pulse as the time of delivery
 dig_on = []
@@ -71,19 +95,6 @@ for on_times in dig_on:
         start_points.append(np.array(start))
         end_points.append(np.array(end))
 
-# Extract taste dig-ins from experimental info file
-dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
-with open(json_path, 'r') as params_file:
-    info_dict = json.load(params_file)
-
-dig_in_channel_nums = info_dict['taste_params']['dig_ins']
-
-#dig_in_channel_inds = np.arange(len(dig_in_channels))
-dig_in_channel_inds = [num for num,x in enumerate([int(x.split('_')[-1]) \
-        for x in dig_in_pathname])
-         if x in dig_in_channel_nums]
-dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_inds]
 
 # Check dig-in numbers and trial counts against info file
 # Only if mismatch, check with user, otherwise print details and continue
@@ -91,6 +102,7 @@ dig_in_channels = [dig_in_pathname[i] for i in dig_in_channel_inds]
 dig_in_num_temp = [int(re.findall('[0-9]+',x)[0]) for x in dig_in_channels]
 trial_count_info = info_dict['taste_params']['trial_count']
 dig_in_check = sorted(dig_in_channel_nums) == sorted(dig_in_num_temp)
+
 trial_num_check = sorted(trial_count_info) == sorted([len(x) for x in end_points])
 dig_in_pathname_str = '\n'.join(dig_in_channels)
 
@@ -128,6 +140,7 @@ else:
     else:
         print(':: Exiting ::')
         exit()
+
 
 # TODO: Have separate params file for EMG
 # For now, use duration params from spike-sorting
