@@ -164,7 +164,9 @@ def remove_too_large_waveforms(
 
 
 # Read blech.dir, and cd to that directory
-f = open('blech.dir', 'r')
+home_dir = os.getenv('HOME')
+blech_clust_dir = os.path.join(home_dir,'Desktop','blech_clust')
+f = open(os.path.join(blech_clust_dir,'blech.dir'), 'r')
 dir_name = []
 for line in f.readlines():
     dir_name.append(line)
@@ -172,17 +174,6 @@ f.close()
 os.chdir(dir_name[0][:-1])
 
 electrode_num = int(sys.argv[1])
-
-# Check if the directories for this electrode number exist -
-# if they do, delete them (existence of the directories indicates a
-# job restart on the cluster, so restart afresh)
-dir_list = [f'./Plots/{electrode_num:02}',
-            f'./spike_waveforms/electrode{electrode_num:02}',
-            f'./spike_times/electrode{electrode_num:02}',
-            f'./clustering_results/electrode{electrode_num:02}']
-for this_dir in dir_list:
-    ifisdir_rmdir(this_dir)
-    os.makedirs(this_dir)
 
 # Get the names of all files in the current directory, and find the .params and hdf5 (.h5) file
 file_list = os.listdir('./')
@@ -204,9 +195,24 @@ for key, value in params_dict.items():
 
 # Open up hdf5 file, and load this electrode number
 hf5 = tables.open_file(hdf5_name, 'r')
-raw_el = hf5.get_node(f'/raw/electrode{electrode_num:02}')[:]
+el_path = f'/raw/electrode{electrode_num:02}'
+if el_path in hf5:
+    raw_el = hf5.get_node(el_path)[:]
+else:
+    raise Exception(f'{el_path} not in HDF5')
 #exec(f"raw_el = hf5.root.raw.electrode{electrode_num:02}[:]")
 hf5.close()
+
+# Check if the directories for this electrode number exist -
+# if they do, delete them (existence of the directories indicates a
+# job restart on the cluster, so restart afresh)
+dir_list = [f'./Plots/{electrode_num:02}',
+            f'./spike_waveforms/electrode{electrode_num:02}',
+            f'./spike_times/electrode{electrode_num:02}',
+            f'./clustering_results/electrode{electrode_num:02}']
+for this_dir in dir_list:
+    ifisdir_rmdir(this_dir)
+    os.makedirs(this_dir)
 
 ############################################################
 # High bandpass filter the raw electrode recordings
@@ -274,7 +280,8 @@ slices, spike_times, polarity, mean_val, threshold = \
     extract_waveforms_abu(filt_el,
                           spike_snapshot=[spike_snapshot_before,
                                           spike_snapshot_after],
-                          sampling_rate=sampling_rate)
+                          sampling_rate=sampling_rate,
+                          threshold_mult = waveform_threshold)
 
 ############################################################
 # Extract windows from filt_el and plot with threshold overlayed

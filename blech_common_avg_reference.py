@@ -65,6 +65,12 @@ for region_name, region_elecs in info_dict['electrode_layout'].items():
         if len(group) > 0:
             all_car_group_vals.append(group)
             all_car_group_names.append(region_name)
+
+# Select car groups which are not emg
+all_car_group_vals, all_car_group_names = list(zip(*[
+        [x,y] for x,y in zip(all_car_group_vals, all_car_group_names) \
+                if 'emg' not in y
+        ]))
 num_groups = len(all_car_group_vals)
 
 CAR_electrodes = all_car_group_vals
@@ -86,20 +92,18 @@ print("Calculating common average reference for {:d} groups".format(num_groups))
 common_average_reference = np.zeros((num_groups, raw_electrodes[0][:].shape[0]))
 print('Calculating mean values')
 for group in range(num_groups):
-        print('Processing Group {}'.format(group))
-        # Stack up the voltage data from all the electrodes that need 
-        # to be averaged across in this CAR group   
-        # In hindsight, don't stack up all the data, it is a huge memory waste. 
-        # Instead first add up the voltage values from each electrode to the same array, 
-        # and divide by number of electrodes to get the average    
-        for electrode_name in tqdm(CAR_electrodes[group]):
-                electrode_ind = raw_electrodes_map[electrode_name]
-                common_average_reference[group,:] += raw_electrodes[electrode_ind][:]
-
-
-        # Average the voltage data across electrodes by dividing by the number 
-        # of electrodes in this group
-        common_average_reference[group, :] /= float(len(CAR_electrodes[group]))
+    print('Processing Group {}'.format(group))
+    # Stack up the voltage data from all the electrodes that need 
+    # to be averaged across in this CAR group   
+    # In hindsight, don't stack up all the data, it is a huge memory waste. 
+    # Instead first add up the voltage values from each electrode to the same array 
+    # and divide by number of electrodes to get the average    
+    for electrode_name in tqdm(CAR_electrodes[group]):
+        electrode_ind = raw_electrodes_map[electrode_name]
+        common_average_reference[group,:] += raw_electrodes[electrode_ind][:]
+    # Average the voltage data across electrodes by dividing by the number 
+    # of electrodes in this group
+    common_average_reference[group, :] /= float(len(CAR_electrodes[group]))
 
 print("Common average reference for {:d} groups calculated".format(num_groups))
 
