@@ -149,6 +149,8 @@ mean_gapes = gapes.mean(axis=-2)
 mean_ltps = ltps.mean(axis=-2)
 
 
+# TODO: If trials are uneven, mean plots aren't made for tastes with
+#       with fewer trials, likely due to average of NaNs. Needs fixing
 # Generate grid plots
 create_grid_plots(mean_gapes, 'mean_gapes')
 create_grid_plots(mean_ltps, 'mean_ltps')
