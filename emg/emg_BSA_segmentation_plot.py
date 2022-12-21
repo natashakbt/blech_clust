@@ -64,6 +64,49 @@ def create_grid_plots(array, array_name, plot_type = 'line'):
         plt.close(this_fig[0])
     #plt.show()
 
+def create_overlay(array, array_name):
+
+    inds = list(np.ndindex((array.shape[:2])))
+
+    # Create plots
+    fig,ax = plt.subplots(
+                len(channel_names),
+                len(unique_lasers), 
+                sharex=True, sharey=True,
+                figsize = (4*len(unique_lasers), 4*len(channel_names))) 
+
+    # Make sure axes are 2D
+    if len(unique_lasers) == 1:
+        ax = np.array([ax]).T
+    elif len(channel_names) == 1:
+        ax = np.array([ax])
+    elif len(unique_lasers)*len(channel_names) == 1:
+        ax = np.expand_dims(ax,axis=0) 
+
+    for chan_num,laser_num in inds:
+        ax_title = channel_names[chan_num] + ' : ' + array_name
+        this_ax = ax[chan_num,laser_num]
+        this_dat = array[chan_num, laser_num] 
+        if laser_num == 0:
+            this_ax.set_ylabel(f"Channel: {channel_names[chan_num]}")
+        if chan_num == 0:
+            this_ax.set_title(f"Laser: {unique_lasers[laser_num]}")
+        if chan_num == ax.shape[0]-1:
+            this_ax.set_xlabel('Time post-stim (ms)')
+
+        this_ax.plot(x[plot_indices], this_dat[:,plot_indices].T)
+        this_ax.legend(tastes)
+        this_ax.set_ylim([0,1])
+        this_ax.axvline(0, 
+                color = 'red', linestyle = '--', 
+                linewidth = 2, alpha = 0.7)
+    fig.savefig(
+            os.path.join(
+                plot_dir, 
+                f'{array_name}_overlay.png'))
+    plt.close(fig)
+
+
 ############################################################
 
 # Get name of directory with the data files
@@ -158,5 +201,7 @@ create_grid_plots(mean_ltps, 'mean_ltps')
 create_grid_plots(gapes, 'gapes', plot_type = 'im')
 create_grid_plots(ltps, 'ltps', plot_type = 'im')
 
-# TODO: Generate overlay plots
+# todo: Generate overlay plots
+create_overlay(mean_gapes, 'mean_gapes')
+create_overlay(mean_ltps, 'mean_ltps')
 
