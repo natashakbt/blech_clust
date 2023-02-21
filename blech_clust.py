@@ -14,6 +14,9 @@ import shutil
 from utils import read_file
 from utils.blech_utils import entry_checker
 
+# Get blech_clust path
+blech_clust_path = ('/').join(os.path.abspath(__file__).split('/')[0:-1])
+
 ############################################################
 
 # Get name of directory with the data files
@@ -22,12 +25,9 @@ if len(sys.argv) > 1:
     if dir_name[-1] != '/':
         dir_name += '/'
 else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+    dir_name = easygui.diropenbox(msg = 'Please select data directory') + '/'
 
 print(f'Processing : {dir_name}')
-
-# Get the type of data files (.rhd or .dat)
-file_type = ['one file per channel']
 
 # Change to that directory
 os.chdir(dir_name)
@@ -45,6 +45,13 @@ if len(json_path) == 0:
 # Get the names of all files in this directory
 file_list = os.listdir('./')
 
+# Get the type of data files (.rhd or .dat)
+#HANNAH CHANGE: ADDED TEST OF ONE FILE PER SIGNAL TYPE
+try:
+	file_list.index('auxiliary.dat')
+	file_type = ['one file per signal type']
+except:
+	file_type = ['one file per channel']
 
 # Create hdf5 file, and make groups for raw data, raw emgs, 
 # digital outputs and digital inputs, and close
@@ -116,28 +123,64 @@ else:
 #os.mkdir('memory_monitor_clustering')
 print('Created dirs in data folder')
 
-# Get the amplifier ports used
-ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
-# Sort the ports in alphabetical order
-ports.sort()
+#Get lists of amplifier and digital input files
+if file_type == ['one file per signal type']:
+	electrodes_list = ['amplifier.dat']
+	dig_in_list = ['digitalin.dat']
+elif file_type == ['one file per channel']:
+	electrodes_list = [name for name in file_list if name.startswith('amp-')]
+	dig_in_list = [name for name in file_list if name.startswith('board-DI')]
 
-## Pull out the digital input channels used, and convert them to integers
-#dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
-#for i in range(len(dig_in)):
-#	dig_in[i] = int(dig_in[i][0])
-#dig_in.sort()
+#Use info file for port list calculation
+info_file = np.fromfile(dir_name + '/info.rhd', dtype = np.dtype('float32'))
+sampling_rate = int(info_file[2])
 
-# Read dig-in data
-# Pull out the digital input channels used, 
-# and convert them to integers
-dig_in_files = [x for x in file_list if "DIN" in x]
-dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
-dig_in = sorted([int(x) for x in dig_in])
+# Read the time.dat file for use in separating out the one file per signal type data
+num_recorded_samples = len(np.fromfile(dir_name + '/' + 'time.dat', dtype = np.dtype('float32')))
+total_recording_time = num_recorded_samples/sampling_rate #In seconds
 
-# Read the amplifier sampling rate from info.rhd - 
-# look at Intan's website for structure of header files
-sampling_rate = np.fromfile('info.rhd', dtype = np.dtype('float32'))
-sampling_rate = int(sampling_rate[2])
+check_str = f'Amplifier files: {electrodes_list} \nSampling rate: {sampling_rate} Hz'\
+           f'\nDigital input files: {dig_in_list} \n ---------- \n \n'
+print(check_str)
+
+if file_type == ['one file per channel']:
+	# Get the amplifier ports used
+	ports = list(np.unique(np.array([f[4] for f in file_list if f[:4] == 'amp-'])))
+	# Sort the ports in alphabetical order
+	ports.sort()
+	
+	## Pull out the digital input channels used, and convert them to integers
+	#dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
+	#for i in range(len(dig_in)):
+	#	dig_in[i] = int(dig_in[i][0])
+	#dig_in.sort()
+	
+	# Read dig-in data
+	# Pull out the digital input channels used, 
+	# and convert them to integers
+	dig_in_files = [x for x in file_list if "DI" in x]
+	dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
+	dig_in = sorted([int(x) for x in dig_in])
+elif file_type == ['one file per signal type']:
+	print("\tSingle Amplifier File Detected")
+	#Import amplifier data and calculate the number of electrodes
+	print("\t\tCalculating Number of Ports")
+	amplifier_data = np.fromfile(dir_name + '/' + electrodes_list[0], dtype = np.dtype('uint16'))
+	num_electrodes = int(len(amplifier_data)/num_recorded_samples)
+	ports = list(np.arange(num_electrodes))
+	del amplifier_data, num_electrodes
+	#Import digin data and calculate the number of digins
+	print("\t\tCalculating Number of Dig-Ins")
+	dig_in_data = np.fromfile(dir_name + '/' + dig_in_list[0], dtype=np.dtype('uint16'))
+	d_inputs_str = dig_in_data.astype('str')
+	del dig_in_data
+	d_in_str_int = d_inputs_str.astype('int64')
+	del d_inputs_str
+	d_diff = np.diff(d_in_str_int)
+	del d_in_str_int
+	dig_in = list(np.unique(np.abs(d_diff)) - 1)
+	dig_in.remove(-1)
+	del d_diff
 
 check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
             f'\n digital inputs on intan board: {dig_in}'
@@ -169,21 +212,20 @@ electrode_layout_frame = pd.read_csv(layout_path)
 #                            dig_in, emg_port, emg_channels)
 
 # Read data files, and append to electrode arrays
-if file_type[0] != 'one file per channel':
-	print("Only files structured as one file per channel "
-    "can be read at this time...")
-    # Terminate blech_clust if something else has been used - to be changed later
-	sys.exit() 
-
-#read_file.read_files_abu(hdf5_name, dig_in, electrode_layout_frame) 
-read_file.read_digins(hdf5_name, dig_in)
-read_file.read_electrode_channels(hdf5_name, electrode_layout_frame)
-if len(emg_channels) > 0:
-    read_file.read_emg_channels(hdf5_name, electrode_layout_frame)
+if file_type == ['one file per channel']:
+	#read_file.read_files_abu(hdf5_name, dig_in, electrode_layout_frame) 
+	read_file.read_digins(hdf5_name, dig_in, dig_in_list)
+	read_file.read_electrode_channels(hdf5_name, electrode_layout_frame)
+	if len(emg_channels) > 0:
+	    read_file.read_emg_channels(hdf5_name, electrode_layout_frame)
+elif file_type == ['one file per signal type']:
+	read_file.read_digins_single_file(hdf5_name, dig_in, dig_in_list)
+	#This next line takes care of both electrodes and emgs
+	read_file.read_electrode_emg_channels_single_file(hdf5_name, electrode_layout_frame, electrodes_list, num_recorded_samples, emg_channels)
 
 # Write out template params file to directory if not present
-home_dir = os.getenv('HOME')
-blech_clust_path = os.path.join(home_dir,'Desktop','blech_clust')
+#home_dir = os.getenv('HOME')
+#blech_clust_path = os.path.join(home_dir,'Desktop','blech_clust')
 print(blech_clust_path)
 params_template_path = os.path.join(
         blech_clust_path,
