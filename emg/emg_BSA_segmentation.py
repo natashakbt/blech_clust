@@ -45,14 +45,22 @@ unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
 output_list = glob.glob(os.path.join(dir_name,'emg_output/*'))
 channel_dirs = sorted([x for x in output_list if os.path.isdir(x)])
 channels_discovered = [os.path.basename(x) for x in channel_dirs]
+channels_discovered = [x for x in channels_discovered if 'emg' in x]
 print(f'Creating plots for : {channels_discovered}\n')
+
+# Save order of EMG channels to emg_data_readme.txt
+path_to_info = os.path.join(dir_name,'emg_output','emg_data_readme.txt')
+channels_discovered_dict = dict(zip(range(len(channels_discovered)), channels_discovered))
+out_str = '\n\n' + f'Output channel order : {channels_discovered_dict}'
+with open(path_to_info,'a') as outfile:
+    outfile.write(out_str)
 
 final_gapes_list = []
 final_ltps_list = []
 final_sig_trials_list = []
 final_emg_BSA_list = []
 
-for num, this_dir in enumerate(channel_dirs):
+for num, this_dir in enumerate(channels_discovered):
     #os.chdir(this_dir)
     this_basename = channels_discovered[num]
 
