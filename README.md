@@ -10,12 +10,13 @@ website at https://sites.google.com/a/brandeis.edu/katzlab/
 
 ### Setup
 ```
-cd <path_to_blech_clust>/requirements                                           # Move into blech_clust folder with requirements files
-conda clean --all                                                               # Removes unused packages and caches
-conda create --name blech_clust python=3.6.13 --file conda_requirements.yml     # Create "blech_clust" environment with conda requirements
-conda activate blech_clust                                                      # Activate blech_clust environment
-mamba update conda -y                                                           # Update conda within environment (house-keeping step)
-pip install -r pip_requirements.txt                                             # Install pip requirements (not covered by conda)
+cd <path_to_blech_clust>/requirements               # Move into blech_clust folder with requirements files
+conda clean --all                                   # Removes unused packages and caches
+conda create --name blech_clust python=3.6.13       # Create "blech_clust" environment with conda requirements
+conda activate blech_clust                          # Activate blech_clust environment
+bash conda_requirements_base.sh                     # Install main packages using conda/mamba
+bash install_gnu_parallel.sh                        # Install GNU Parallel
+pip install -r pip_requirements.txt                 # Install pip requirements (not covered by conda)
 ```
 
 ### Convenience scripts
