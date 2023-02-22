@@ -86,7 +86,7 @@ else:
         regions = [x.lower() for x in re.findall('[A-Za-z]+',region_str)]
     else:
         exit()
-	
+
     # Find all ports used
     file_list = os.listdir(dir_path)
     try:
@@ -94,25 +94,25 @@ else:
         file_type = ['one file per signal type']
     except:
         file_type = ['one file per channel']
-	
-	
+
     if file_type == ['one file per signal type']:
         electrodes_list = ['amplifier.dat']
         dig_in_list = ['digitalin.dat']
     elif file_type == ['one file per channel']:
         electrodes_list = [name for name in file_list if name.startswith('amp-')]
         dig_in_list = [name for name in file_list if name.startswith('board-DI')]
-	
+    dig_in_list = sorted(dig_in_list)
+
     if file_type == ['one file per channel']:
         electrode_files = sorted(electrodes_list)
         ports = [x.split('-')[1] for x in electrode_files]
         electrode_num_list = [x.split('-')[2].split('.')[0] \
                         for x in electrode_files]
-		# Sort the ports in alphabetical order
+        # Sort the ports in alphabetical order
         ports.sort()
     elif file_type == ['one file per signal type']:
         print("\tSingle Amplifier File Detected")
-		#Import amplifier data and calculate the number of electrodes
+        #Import amplifier data and calculate the number of electrodes
         print("\t\tCalculating Number of Ports")
         num_recorded_samples = len(np.fromfile(dir_path + 'time.dat', dtype = np.dtype('float32')))
         amplifier_data = np.fromfile(dir_path + 'amplifier.dat', dtype = np.dtype('uint16'))
@@ -140,10 +140,7 @@ else:
     if use_csv_str in ['n','no']: 
         layout_frame = pd.DataFrame()
         layout_frame['filename'] = electrode_files
-        if not isinstance(ports, str):
-            layout_frame['port'] = ports[0]
-        else:
-            layout_frame['port'] = ports
+        layout_frame['port'] = ports[0]
         layout_frame['electrode_num'] = electrode_num_list
         layout_frame['electrode_ind'] = layout_frame.index
         layout_frame['CAR_group'] = pd.Series()
@@ -212,6 +209,7 @@ else:
             d_diff = np.diff(dig_inputs)
             start_ind = np.where(d_diff == 1)[0]
             dig_in_trials.append(int(len(start_ind)))
+        dig_in_print_str = "Dig-ins : \n" + ",\n".join(dig_in_list)
 
     elif file_type == ['one file per signal type']:
         d_inputs = np.fromfile(dir_path + dig_in_list[0], dtype=np.dtype('uint16'))
@@ -228,9 +226,10 @@ else:
         for n_i in range(num_dig_ins):
                 start_ind = np.where(d_diff == n_i + 1)[0]
                 dig_in_trials.append(int(len(start_ind)))
-	
-	#Ask for user input of which line index the dig in came from
-    print("A total of " + str(num_dig_ins) + " were found. Please provide the indices.")
+        dig_in_print_str = "A total of " + str(num_dig_ins)
+
+    #Ask for user input of which line index the dig in came from
+    print(dig_in_print_str + "\n were found. Please provide the indices.")
     taste_dig_in_str, continue_bool = entry_checker(\
             msg = ' Taste dig_ins used (IN ORDER, anything separated)  :: ',
             check_func = count_check,
@@ -285,10 +284,12 @@ else:
                 sum([1<=int(x)<=len(taste_digins) for x in nums]) == len(taste_digins)
 
     taste_fin = str(list(zip(taste_digins, list(zip(tastes,concs)))))
-    palatability_str, continue_bool = entry_checker(\
-            msg = f' {taste_fin} \n Enter palatability rankings used (anything separated), higher number = more palatable  :: ',
-            check_func = pal_check,
-            fail_response = 'Please enter numbers 1<=x<len(tastes)')
+    palatability_str, continue_bool = \
+            entry_checker(
+                msg = f' {taste_fin} \n Enter palatability rankings used '\
+                        '(anything separated), higher number = more palatable  :: ',
+                check_func = pal_check,
+                fail_response = 'Please enter numbers 1<=x<len(tastes)')
     if continue_bool:
         nums = re.findall('[1-9]+',palatability_str)
         pal_ranks = [int(x) for x in nums]
@@ -333,18 +334,23 @@ else:
 
     fin_dict = {**this_dict,
             'regions' : regions,
-            'ports' : ports,
-            'emg' : {\
+            'ports' : list(np.unique(ports)),
+            'dig_ins' : {
+                'filenames' : dig_in_list,
+                'count' : len(dig_in_trials),
+                'trial_counts' : dig_in_trials,
+                },
+            'emg' : {
                     'port': fin_emg_port, 
                     'electrodes' : orig_emg_electrodes},
             'electrode_layout' : fin_perm,
-            'taste_params' : {\
+            'taste_params' : {
                     'dig_ins' : taste_digins,
                     'trial_count' : dig_in_trials,
                     'tastes' : tastes,
                     'concs' : concs,
                     'pal_rankings' : pal_ranks},
-            'laser_params' : {\
+            'laser_params' : {
                     'dig_in' : laser_digin,
                     'onset' : onset_time,
                     'duration': duration},

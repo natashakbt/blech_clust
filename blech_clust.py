@@ -42,6 +42,9 @@ if len(json_path) == 0:
             '== Exiting ==')
     exit()
 
+with open(json_path[0], 'r') as params_file:
+    info_dict = json.load(params_file)
+
 # Get the names of all files in this directory
 file_list = os.listdir('./')
 
@@ -143,52 +146,49 @@ check_str = f'Amplifier files: {electrodes_list} \nSampling rate: {sampling_rate
            f'\nDigital input files: {dig_in_list} \n ---------- \n \n'
 print(check_str)
 
+ports = info_dict['ports']
+
 if file_type == ['one file per channel']:
-	# Get the amplifier ports used
-	ports = list(np.unique(np.array([f[4] for f in file_list if f[:4] == 'amp-'])))
-	# Sort the ports in alphabetical order
-	ports.sort()
-	
-	## Pull out the digital input channels used, and convert them to integers
-	#dig_in = list(set(f[11:13] for f in file_list if f[:9] == 'board-DIN'))
-	#for i in range(len(dig_in)):
-	#	dig_in[i] = int(dig_in[i][0])
-	#dig_in.sort()
-	
-	# Read dig-in data
-	# Pull out the digital input channels used, 
-	# and convert them to integers
-	dig_in_files = [x for x in file_list if "DI" in x]
-	dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
-	dig_in = sorted([int(x) for x in dig_in])
+    print("\tOne file per CHANNEL Detected")
+    ## Get the amplifier ports used
+    #ports = list(np.unique(np.array([f[4] for f in file_list if f[:4] == 'amp-'])))
+    ## Sort the ports in alphabetical order
+    #ports.sort()
+
+    # Read dig-in data
+    # Pull out the digital input channels used, 
+    # and convert them to integers
+    dig_in_files = [x for x in file_list if "DI" in x]
+    dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_files]
+    dig_in = sorted([int(x) for x in dig_in])
+
 elif file_type == ['one file per signal type']:
-	print("\tSingle Amplifier File Detected")
-	#Import amplifier data and calculate the number of electrodes
-	print("\t\tCalculating Number of Ports")
-	amplifier_data = np.fromfile(dir_name + '/' + electrodes_list[0], dtype = np.dtype('uint16'))
-	num_electrodes = int(len(amplifier_data)/num_recorded_samples)
-	ports = list(np.arange(num_electrodes))
-	del amplifier_data, num_electrodes
-	#Import digin data and calculate the number of digins
-	print("\t\tCalculating Number of Dig-Ins")
-	dig_in_data = np.fromfile(dir_name + '/' + dig_in_list[0], dtype=np.dtype('uint16'))
-	d_inputs_str = dig_in_data.astype('str')
-	del dig_in_data
-	d_in_str_int = d_inputs_str.astype('int64')
-	del d_inputs_str
-	d_diff = np.diff(d_in_str_int)
-	del d_in_str_int
-	dig_in = list(np.unique(np.abs(d_diff)) - 1)
-	dig_in.remove(-1)
-	del d_diff
+
+    print("\tOne file per SIGNAL Detected")
+    #Import amplifier data and calculate the number of electrodes
+    #print("\t\tCalculating Number of Ports")
+    #amplifier_data = np.fromfile(dir_name + '/' + electrodes_list[0], dtype = np.dtype('uint16'))
+    #num_electrodes = int(len(amplifier_data)/num_recorded_samples)
+    #ports = list(np.arange(num_electrodes))
+    #del amplifier_data, num_electrodes
+    #Import digin data and calculate the number of digins
+    #print("\t\tCalculating Number of Dig-Ins")
+    #dig_in_data = np.fromfile(dir_name + '/' + dig_in_list[0], dtype=np.dtype('uint16'))
+    #d_inputs_str = dig_in_data.astype('str')
+    #del dig_in_data
+    #d_in_str_int = d_inputs_str.astype('int64')
+    #del d_inputs_str
+    #d_diff = np.diff(d_in_str_int)
+    #del d_in_str_int
+    #dig_in = list(np.unique(np.abs(d_diff)) - 1)
+    #dig_in.remove(-1)
+    #del d_diff
+    dig_in = np.arange(info_dict['dig_ins']['count'])
 
 check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
             f'\n digital inputs on intan board: {dig_in}'
 
 print(check_str)
-
-with open(json_path[0], 'r') as params_file:
-    info_dict = json.load(params_file)
 
 all_car_group_vals = []
 for region_name, region_elecs in info_dict['electrode_layout'].items():
