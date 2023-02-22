@@ -141,12 +141,13 @@ if len(laser_nums) == 0:
     lasers = []
     laser_str = 'None'
 else:
-    lasers = [dig_in_pathname[i] for i in laser_nums]
+    lasers = [[i for i in dig_in_pathname if str(x) in i] for x in laser_nums]
+    lasers = [x for y in lasers for x in y]
     laser_str = "\n".join(lasers)
 
 taste_str = "\n".join(dig_in_channels)
 
-#print(f'Taste dig_ins ::: \n{taste_str}\n')
+print(f'Taste dig_ins ::: \n{taste_str}\n')
 print(f'Laser dig_in ::: \n{laser_str}\n')
 
 laser_nums = []
