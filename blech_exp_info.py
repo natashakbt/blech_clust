@@ -118,7 +118,7 @@ else:
         amplifier_data = np.fromfile(dir_path + 'amplifier.dat', dtype = np.dtype('uint16'))
         num_electrodes = int(len(amplifier_data)/num_recorded_samples)
         electrode_files = ['amplifier.dat' for i in range(num_electrodes)]
-        ports = ['A']
+        ports = ['A']*num_electrodes
         electrode_num_list = list(np.arange(num_electrodes))
         del amplifier_data, num_electrodes
 
@@ -140,7 +140,7 @@ else:
     if use_csv_str in ['n','no']: 
         layout_frame = pd.DataFrame()
         layout_frame['filename'] = electrode_files
-        layout_frame['port'] = ports[0]
+        layout_frame['port'] = ports
         layout_frame['electrode_num'] = electrode_num_list
         layout_frame['electrode_ind'] = layout_frame.index
         layout_frame['CAR_group'] = pd.Series()
@@ -209,7 +209,8 @@ else:
             d_diff = np.diff(dig_inputs)
             start_ind = np.where(d_diff == 1)[0]
             dig_in_trials.append(int(len(start_ind)))
-        dig_in_print_str = "Dig-ins : \n" + ",\n".join(dig_in_list)
+        indexed_digin_list = list(zip(np.arange(len(dig_in_list)),dig_in_list))
+        dig_in_print_str = "Dig-ins : \n" + ",\n".join([str(x) for x in indexed_digin_list])
 
     elif file_type == ['one file per signal type']:
         d_inputs = np.fromfile(dir_path + dig_in_list[0], dtype=np.dtype('uint16'))
@@ -237,6 +238,8 @@ else:
     if continue_bool:
         nums = re.findall('[0-9]+',taste_dig_in_str)
         taste_digins = [int(x) for x in nums]
+        taste_digin_filenames = [dig_in_list[i] for i in taste_digins]
+        print('Selected taste digins: \n' + "\n".join(taste_digin_filenames))
     else:
         exit()
     
@@ -299,7 +302,7 @@ else:
     ########################################
     # Ask for laser info
     laser_select_str, continue_bool = entry_checker(\
-            msg = 'Laser dig_in , <BLANK> for none::: ',
+            msg = 'Laser dig_in index, <BLANK> for none::: ',
             check_func = count_check,
             fail_response = 'Please enter a single, valid integer')
     if continue_bool:
@@ -307,6 +310,8 @@ else:
             laser_digin = []
         else:
             laser_digin = [int(laser_select_str)]
+            laser_digin_filenames = [dig_in_list[i] for i in laser_digin]
+            print('Selected laser digins: \n' + "\n".join(laser_digin_filenames))
     else:
         exit()
 
@@ -346,12 +351,14 @@ else:
             'electrode_layout' : fin_perm,
             'taste_params' : {
                     'dig_ins' : taste_digins,
+                    'filenames' : taste_digin_filenames,
                     'trial_count' : dig_in_trials,
                     'tastes' : tastes,
                     'concs' : concs,
                     'pal_rankings' : pal_ranks},
             'laser_params' : {
                     'dig_in' : laser_digin,
+                    'filenames' : laser_digin_filenames,
                     'onset' : onset_time,
                     'duration': duration},
             'notes' : notes}
