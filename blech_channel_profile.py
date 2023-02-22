@@ -40,7 +40,7 @@ try:
 	file_type = ['one file per signal type']
 except:
 	file_type = ['one file per channel']
-print("\tFile Type = " + file_type)
+print("\tFile Type = " + file_type[0])
 
 if file_type == ['one file per channel']:
 	amp_files = glob.glob(os.path.join(dir_path, "amp*dat"))

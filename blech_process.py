@@ -103,7 +103,7 @@ def gen_datashader_plot(
             x,
             downsample=False,
             threshold=threshold,
-            dir_name="datashader_temp_el" + str(electrode_num))
+            dir_name= "Plots/" + "datashader_temp_el" + str(electrode_num))
 
     ax.set_xlabel('Sample ({:d} samples per ms)'.
                   format(int(sampling_rate/1000)))

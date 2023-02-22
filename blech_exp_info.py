@@ -140,7 +140,10 @@ else:
     if use_csv_str in ['n','no']: 
         layout_frame = pd.DataFrame()
         layout_frame['filename'] = electrode_files
-        layout_frame['port'] = ports
+        if not isinstance(ports, str):
+            layout_frame['port'] = ports[0]
+        else:
+            layout_frame['port'] = ports
         layout_frame['electrode_num'] = electrode_num_list
         layout_frame['electrode_ind'] = layout_frame.index
         layout_frame['CAR_group'] = pd.Series()
@@ -200,16 +203,16 @@ else:
         nums = re.findall('[0-9]+',x)
         return sum([x.isdigit() for x in nums]) == len(nums)
 
-	#Calculate number of deliveries from recorded data
+    #Calculate number of deliveries from recorded data
     if file_type == ['one file per channel']:
         dig_in_trials = []
         num_dig_ins = len(dig_in_list)
         for i in range(num_dig_ins):
-			      dig_inputs = np.array(np.fromfile(dir_path + dig_in_list[i], dtype = np.dtype('uint16')))
-			      d_diff = np.diff(dig_inputs)
-			      start_ind = np.where(d_diff == 1)[0]
-			      dig_in_trials.append(int(len(start_ind)))
-		
+            dig_inputs = np.array(np.fromfile(dir_path + dig_in_list[i], dtype = np.dtype('uint16')))
+            d_diff = np.diff(dig_inputs)
+            start_ind = np.where(d_diff == 1)[0]
+            dig_in_trials.append(int(len(start_ind)))
+
     elif file_type == ['one file per signal type']:
         d_inputs = np.fromfile(dir_path + dig_in_list[0], dtype=np.dtype('uint16'))
         d_inputs_str = d_inputs.astype('str')
