@@ -79,9 +79,13 @@ for on_times in dig_on:
 
 # Extract taste dig-ins from experimental info file
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
-with open(json_path, 'r') as params_file:
-    info_dict = json.load(params_file)
+info_file_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
+params_file_path = glob.glob(os.path.join(dir_name, dir_basename + '.params'))[0]
+with open(info_file_path, 'r') as info_file_connect:
+    info_dict = json.load(info_file_connect)
+with open(params_file_path, 'r') as params_file_connect:
+    params_dict = json.load(params_file_connect)
+sampling_rate = params_dict['sampling_rate']
 
 dig_in_channel_nums = info_dict['taste_params']['dig_ins']
 
@@ -152,9 +156,9 @@ print(f'Laser dig_in ::: \n{laser_str}\n')
 
 laser_nums = []
 if lasers:
-	for i in range(len(dig_in_pathname)):
-		if dig_in_pathname[i] in lasers:
-			laser_nums.append(i)
+    for i in range(len(dig_in_pathname)):
+        if dig_in_pathname[i] in lasers:
+            laser_nums.append(i)
 
 # Write out durations to the params (json) file 
 #params_file = hdf5_name.split('.')[0] + ".params"
@@ -166,9 +170,9 @@ print(f'Using durations ::: {durations}')
 
 # Delete the spike_trains node in the hdf5 file if it exists, and then create it
 try:
-	hf5.remove_node('/spike_trains', recursive = True)
+    hf5.remove_node('/spike_trains', recursive = True)
 except:
-	pass
+    pass
 hf5.create_group('/', 'spike_trains')
 
 # Get list of units under the sorted_units group. 
@@ -180,8 +184,8 @@ hf5.create_group('/', 'spike_trains')
 units = hf5.list_nodes('/sorted_units')
 expt_end_time = 0
 for unit in units:
-	if unit.times[-1] > expt_end_time:
-		expt_end_time = unit.times[-1]
+    if unit.times[-1] > expt_end_time:
+        expt_end_time = unit.times[-1]
 
 # ____                              _             
 #|  _ \ _ __ ___   ___ ___  ___ ___(_)_ __   __ _ 
@@ -245,10 +249,9 @@ for i in range(len(dig_in_channel_inds)):
         # Else run through the lasers and check if the lasers 
         # went off within 5 secs of the stimulus delivery time
         for laser in range(len(laser_nums)):
-            #TODO: Replace 30000 with sampling rate for params file
             on_trial = np.where(\
                     np.abs(end_points[laser_nums[laser]] - \
-                    end_points[dig_in_channel_inds[i]][j]) <= 5*30000)[0]
+                    end_points[dig_in_channel_inds[i]][j]) <= 5*sampling_rate)[0]
             if len(on_trial) > 0:
                 # Mark this laser appropriately in the laser_single array
                 laser_single[j, laser] = 1.0
