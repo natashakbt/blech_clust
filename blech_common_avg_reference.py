@@ -18,7 +18,7 @@ if sys.argv[1] != '':
     if dir_name[-1] != '/':
         dir_name += '/'
 else:
-    dir_name = easygui.diropenbox('Please select data directory')
+    dir_name = easygui.diropenbox('Please select data directory') + '/'
 
 print(f'Processing : {dir_name}')
 
@@ -35,24 +35,11 @@ for files in file_list:
 # Open the hdf5 file
 hf5 = tables.open_file(hdf5_name, 'r+')
 
-# Get the names of all files in this directory
-file_list = os.listdir('./')
-
-# Get the Intan amplifier ports used in the recordings
-ports = list(set(f[4] for f in file_list if f[:3] == 'amp'))
-# Sort the ports in alphabetical order
-ports.sort()
-
-# Count the number of electrodes on one of the ports 
-# (assume all ports have equal number of electrodes)
-num_electrodes = [int(f[-7:-4]) for f in file_list if f[:3] == 'amp']
-num_electrodes = np.max(num_electrodes) + 1
-
 # Read CAR groups from info file
 # Every region is a separate group, multiple ports under single region is a separate group,
 # emg is a separate group
 dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
+json_path = glob.glob(os.path.join(dir_name + '/' + dir_basename + '.info'))[0]
 with open(json_path, 'r') as params_file:
     info_dict = json.load(params_file)
 
