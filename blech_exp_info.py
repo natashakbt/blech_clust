@@ -301,6 +301,7 @@ else:
 
     ########################################
     # Ask for laser info
+    # TODO: Allow for (onset, duration) tuples to be entered
     laser_select_str, continue_bool = entry_checker(\
             msg = 'Laser dig_in index, <BLANK> for none::: ',
             check_func = count_check,
@@ -337,6 +338,10 @@ else:
     ## Finalize dictionary
     ########################################
 
+    taste_digin_trials = [dig_in_trials[x] for x in taste_digins]
+    if laser_digin:
+        laser_digin_trials = [dig_in_trials[x] for x in laser_digin]
+
     fin_dict = {**this_dict,
             'regions' : regions,
             'ports' : list(np.unique(ports)),
@@ -352,13 +357,14 @@ else:
             'taste_params' : {
                     'dig_ins' : taste_digins,
                     'filenames' : taste_digin_filenames,
-                    'trial_count' : dig_in_trials,
+                    'trial_count' : taste_digin_trials,
                     'tastes' : tastes,
                     'concs' : concs,
                     'pal_rankings' : pal_ranks},
             'laser_params' : {
                     'dig_in' : laser_digin,
                     'filenames' : laser_digin_filenames,
+                    'trial_count' : laser_digin_trials,
                     'onset' : onset_time,
                     'duration': duration},
             'notes' : notes}
