@@ -74,19 +74,6 @@ if args.template:
 
 else:
 
-    def word_check(x):
-        words = re.findall('[A-Za-z]+',x)
-        return (sum([i.isalpha() for i in words]) == len(words)) and len(words) > 0
-
-    region_str, continue_bool = entry_checker(\
-            msg = ' Which regions were recorded from (anything separated)  :: ',
-            check_func = word_check,
-            fail_response = 'Please enter letters only')
-    if continue_bool:
-        regions = [x.lower() for x in re.findall('[A-Za-z]+',region_str)]
-    else:
-        exit()
-
     # Find all ports used
     file_list = os.listdir(dir_path)
     try:
@@ -151,10 +138,8 @@ else:
 
         layout_frame.to_csv(layout_file_path, index=False) 
 
-        acceptable_cars = regions.copy()
-        acceptable_cars.append('emg')
         prompt_str = 'Please fill in car groups / regions' + "\n" + \
-                f"Acceptable inputs are {acceptable_cars}" + "\n" +\
+                f"emg and none are case-specific" + "\n" +\
                 "Indicate different CARS from same region as GC1,GC2...etc"
         print(prompt_str)
 
@@ -178,8 +163,6 @@ else:
         layout_dict[key] = [layout_dict[key].to_list()]
 
     if any(['emg' in x for x in layout_dict.keys()]):
-        #orig_emg_electrodes = layout_dict.pop('emg').values()
-        #orig_emg_electrodes = layout_dict.pop('emg')[0]
         orig_emg_electrodes = [layout_dict[x][0] for x in layout_dict.keys() \
                 if 'emg' in x]
         orig_emg_electrodes = [x for y in orig_emg_electrodes for x in y]
@@ -343,7 +326,7 @@ else:
         laser_digin_trials = [dig_in_trials[x] for x in laser_digin]
 
     fin_dict = {**this_dict,
-            'regions' : regions,
+            'regions' : list(layout_dict.keys()),
             'ports' : list(np.unique(ports)),
             'dig_ins' : {
                 'filenames' : dig_in_list,
