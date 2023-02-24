@@ -9,44 +9,30 @@ import tables
 import numpy as np
 import easygui
 import os
+import sys
+from blech_utils import (
+        imp_metadata,
+        )
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
-dir_name = easygui.diropenbox()
+# Get name of directory with the data files
+metadata_handler = imp_metadata(sys.argv[1])
+dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
 
-# Get the names of all files in the current directory, and find the hdf5 (.h5) file
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-	if files[-2:] == 'h5':
-		hdf5_name = files
+# Open the hdf5 file
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
-# Open up the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
+# Get laser info from info_dict
+info_dict = metadata_handler.info_dict
+latencies = [0,info_dict['laser_params']['onset']]
+durations = [0,info_dict['laser_params']['duration']]
+
+print('Params from info file')
+print(f'Latencies : {latencies}')
+print(f'Durations : {durations}')
 
 trains_dig_in = hf5.list_nodes('/spike_trains')
-
-# Ask the user for the correct laser duration and convert to integers
-num_durations = easygui.multenterbox(msg = "How many laser durations were used in this experiment?", fields = ["Number of Laser durations"])
-num_durations = int(num_durations[0])
-
-durations = easygui.multenterbox(msg = "What are the laser durations used in this experiment (control duration [i.e., 0 ms] added automatically)?", fields = ["Duration{}".format(num + 1) for num in range(num_durations)])
-for i in range(len(durations)):
-    durations[i] = int(durations[i])
-durations.append(0)
-
- 
-
-# Ask for the correct laser onset latencies
-num_latencies = easygui.multenterbox(msg = "How many latencies were used in this experiment?", fields = ["Number of Laser onset latencies"])
-num_latencies = int(num_latencies[0])
-
-latencies = easygui.multenterbox(msg = "What are the latencies of laser onset used for this experiment?", fields = ["Latency{}".format(num + 1) for num in range(num_latencies)])
-for i in range(len(latencies)):
-    latencies[i] = int(latencies[i])
-latencies.append(0)
-
-    
 
 # Checking the laser-duration array to find sampling errors and correct them
 for dig_in in range(len(trains_dig_in)):

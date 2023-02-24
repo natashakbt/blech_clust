@@ -22,37 +22,24 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
 from sklearn.isotonic import IsotonicRegression
 from sklearn import preprocessing
+from utils.blech_utils import (
+        imp_metadata,
+        )
 
 print('Make sure you are in the **CORERCT ENVIRONMENT**')
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+metadata_handler = imp_metadata(sys.argv[1])
+dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
 
-# Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-	if files[-2:] == 'h5':
-		hdf5_name = files
-
 # Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
-json_name = glob.glob('./**.params')[0]
-with open(json_name,'r') as params_file_connect:
-    params_dict = json.load(params_file_connect)
-
-dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
-with open(json_path, 'r') as params_file:
-    info_dict = json.load(params_file)
+# Extract taste dig-ins from experimental info file
+info_dict = metadata_handler.info_dict
+params_dict = metadata_handler.params_dict
 
 # Get the digital inputs/tastes available, 
 # then ask the user to rank them in order of palatability
@@ -141,10 +128,8 @@ for i in range(0, time - params[0] + params[1], params[1]):
 
 # Create an ancillary_analysis group in the hdf5 file, 
 # and write these arrays to that group
-try:
-	hf5.remove_node('/ancillary_analysis', recursive = True)
-except:
-	pass
+if '/ancillary_analysis' in hf5:
+    hf5.remove_node('/ancillary_analysis', recursive = True)
 hf5.create_group('/', 'ancillary_analysis')
 hf5.create_array('/ancillary_analysis', 'palatability', palatability)
 hf5.create_array('/ancillary_analysis', 'identity', identity)
@@ -158,11 +143,12 @@ hf5.flush()
 unique_lasers = np.vstack({tuple(row) for row in laser[0, 0, :, :]})
 unique_lasers = unique_lasers[unique_lasers[:, 0].argsort(), :]
 unique_lasers = unique_lasers[unique_lasers[:, 1].argsort(), :]
+
 # Now get the sets of trials with these unique duration and lag combinations
 trials = []
 for i in range(len(unique_lasers)):
-	this_trials = [j for j in range(laser.shape[2]) if np.array_equal(laser[0, 0, j, :], unique_lasers[i, :])]
-	trials.append(this_trials)
+    this_trials = [j for j in range(laser.shape[2]) if np.array_equal(laser[0, 0, j, :], unique_lasers[i, :])]
+    trials.append(this_trials)
 trials = np.array(trials)
 
 # Save the trials and unique laser combos to the hdf5 file as well
