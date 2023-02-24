@@ -249,7 +249,10 @@ num_cpu = multiprocessing.cpu_count()
 electrode_bool = electrode_layout_frame.loc[
         electrode_layout_frame.electrode_ind.isin(all_electrodes)]
 not_none_bool = electrode_bool.loc[~electrode_bool.CAR_group.isin(["none","None",'na'])]
-bash_electrode_list = not_none_bool.electrode_ind.values
+not_emg_bool = not_none_bool.loc[
+        ~not_none_bool.CAR_group.str.contains('emg')
+        ]
+bash_electrode_list = not_emg_bool.electrode_ind.values
 job_count = np.min((len(bash_electrode_list), int(num_cpu-2)))
 # todo: Account for electrodes labelled none when writing parallel command
 runner_path = os.path.join(blech_clust_path,'blech_clust_jetstream_parallel1.sh') 
