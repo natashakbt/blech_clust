@@ -11,37 +11,24 @@ import sys
 from tqdm import tqdm
 import glob
 import json
+from utils.blech_utils import (
+        imp_metadata,
+        )
 
 # Get name of directory with the data files
-if sys.argv[1] != '':
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox('Please select data directory') + '/'
-
+metadata_handler = imp_metadata(sys.argv[1])
+dir_name = metadata_handler.dir_name
+os.chdir(dir_name)
 print(f'Processing : {dir_name}')
-
 os.chdir(dir_name)
 
-
-# Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-        if files[-2:] == 'h5':
-                hdf5_name = files
-
 # Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
 # Read CAR groups from info file
 # Every region is a separate group, multiple ports under single region is a separate group,
 # emg is a separate group
-dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name + dir_basename + '.info'))[0]
-with open(json_path, 'r') as params_file:
-    info_dict = json.load(params_file)
+info_dict = metadata_handler.info_dict
 
 # Since electrodes are already in monotonic numbers (A : 0-31, B: 32-63)
 # we can directly pull them
@@ -56,7 +43,7 @@ for region_name, region_elecs in info_dict['electrode_layout'].items():
 # Select car groups which are not emg
 all_car_group_vals, all_car_group_names = list(zip(*[
         [x,y] for x,y in zip(all_car_group_vals, all_car_group_names) \
-                if 'emg' not in y
+                if (('emg' not in y) and ('none'!=y))
         ]))
 num_groups = len(all_car_group_vals)
 
