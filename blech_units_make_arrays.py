@@ -153,10 +153,13 @@ def create_laser_params_for_digin(
     # (from end of taste delivery) of the laser trial 
     # (as a multiple of 10 - so 53 gets rounded off to 50)
     vector_int = np.vectorize(np.int)
-    laser_duration = \
+    wanted_laser_durations = \
             10*vector_int(wanted_laser_durations/(sampling_rate_ms*10))
-    laser_start = \
+    wanted_laser_starts = \
             10*vector_int(wanted_laser_starts/(sampling_rate_ms*10))
+
+    laser_duration[which_taste_trial] = wanted_laser_durations
+    laser_start[which_taste_trial] = wanted_laser_starts
 
     if f'/spike_trains/{dig_in_basename[i]}' not in hf5:
         hf5.create_group('/spike_trains', dig_in_basename[i])
