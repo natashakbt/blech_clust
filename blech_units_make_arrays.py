@@ -30,52 +30,6 @@ def convert_where_to_list(where_tuple):
                 )
     return out_list
 
-def check_digin_info_vs_hf5(
-        taste_digin_channels,
-        info_dict,
-        taste_digin_nums,
-        end_points,
-        ):
-    dig_in_num_temp = [int(re.findall('[0-9]+',x)[0]) for x in taste_digin_channels]
-    trial_count_info = info_dict['taste_params']['trial_count']
-    dig_in_check = sorted(taste_digin_nums) == sorted(dig_in_num_temp)
-    trial_num_check = sorted(trial_count_info) == sorted([len(x) for x in end_points])
-    dig_in_pathname_str = '\n'.join(taste_digin_channels)
-
-    print('\n')
-    print('From info file' + '\n' +\
-            '========================================')
-    print(f'Dig-ins : {taste_digin_nums}') 
-    print(f'Trial counts : {trial_count_info}') 
-
-    check_str = f'Taste dig_ins channels:\n{dig_in_pathname_str}''\n'\
-            f'No. of trials: {[len(ends) for ends in end_points]}''\n'
-
-    print('\n')
-    print('From DAT files' + '\n' +\
-            '========================================')
-    print(check_str)
-
-    if dig_in_check and trial_num_check:
-        print('=== ALL GOOD ===')
-    else:
-        print('=== ALL **NOT** GOOD === \n')
-        print('Dig-in data do not match with details in exp_info')
-        # Show the user the number of trials on each digital input channel, 
-        # and ask them to confirm to proceed
-        check_bool_str, continue_bool = entry_checker(\
-                msg = '\n :: Would you like to continue? (y/n) ::: ',
-                check_func = lambda x: x in ['y','n'],
-                fail_response = 'Please enter (y/n)')
-        if continue_bool:
-                if check_bool_str == 'y':
-                    check = True
-                else:
-                    check = False
-        else:
-            print(':: Exiting ::')
-            exit()
-
 def create_spike_trains_for_digin(
         taste_starts_cutoff,
         dig_in_ind,
@@ -152,7 +106,7 @@ def create_laser_params_for_digin(
     # get the duration and start time in ms 
     # (from end of taste delivery) of the laser trial 
     # (as a multiple of 10 - so 53 gets rounded off to 50)
-    vector_int = np.vectorize(np.int)
+    vector_int = np.vectorize(np.int32)
     wanted_laser_durations = \
             10*vector_int(wanted_laser_durations/(sampling_rate_ms*10))
     wanted_laser_starts = \
@@ -202,35 +156,21 @@ sampling_rate = params_dict['sampling_rate']
 sampling_rate_ms = sampling_rate/1000
 
 # Pull out taste dig-ins
-taste_digin_nums = info_dict['taste_params']['dig_ins']
-taste_digin_inds = [num for num,x in enumerate([int(x.split('_')[-1]) \
-        for x in dig_in_pathname])
-         if x in taste_digin_nums]
-taste_digin_channels = [dig_in_pathname[i] for i in taste_digin_inds]
-
-# Check dig-in numbers and trial counts against info file
-# Only if mismatch, check with user, otherwise print details and continue
-# NOTE : Digital input numbers are not indices but the actual digital inputs on the board
-check_digin_info_vs_hf5(
-        taste_digin_channels,
-        info_dict,
-        taste_digin_nums,
-        end_points,
-        )
+taste_digin_inds = info_dict['taste_params']['dig_ins']
+taste_digin_channels = [dig_in_basename[x] for x in taste_digin_inds]
+taste_str = "\n".join(taste_digin_channels)
 
 # Extract laser dig-in from params file
 laser_digin_inds = [info_dict['laser_params']['dig_in']][0]
 
 # Pull laser digin from hdf5 file
 if len(laser_digin_inds) == 0:
-    lasers = []
+    laser_digin_channels = []
     laser_str = 'None'
 else:
-    lasers = [[i for i in dig_in_pathname if str(x) in i] for x in laser_digin_inds]
-    lasers = [x for y in lasers for x in y]
-    laser_str = "\n".join(lasers)
+    laser_digin_channels = [dig_in_basename[x] for x in laser_digin_inds]
+    laser_str = "\n".join(laser_digin_channels)
 
-taste_str = "\n".join(taste_digin_channels)
 print(f'Taste dig_ins ::: \n{taste_str}\n')
 print(f'Laser dig_in ::: \n{laser_str}\n')
 
@@ -296,7 +236,7 @@ for i, this_dig_in in enumerate(taste_starts_cutoff):
 
 # Separate out laser loop
 for i, this_dig_in in enumerate(taste_starts_cutoff): 
-    print(f'Creating spike-trains for {dig_in_basename[i]}')
+    print(f'Creating laser info for {dig_in_basename[i]}')
     create_laser_params_for_digin(
             i,
             this_dig_in,
