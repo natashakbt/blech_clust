@@ -22,14 +22,6 @@ def get_dig_in_data(hf5):
     dig_in_data = np.array(dig_in_data)
     return dig_in_pathname, dig_in_basename, dig_in_data
 
-def convert_where_to_list(where_tuple):
-    out_list = []
-    for i in np.unique(where_tuple[0]):
-        out_list.append(
-                where_tuple[1][where_tuple[0]==i]
-                )
-    return out_list
-
 def create_spike_trains_for_digin(
         taste_starts_cutoff,
         dig_in_ind,
@@ -145,9 +137,10 @@ hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 # and pull the data into a numpy array
 dig_in_pathname, dig_in_basename, dig_in_data = get_dig_in_data(hf5)
 dig_in_diff = np.diff(dig_in_data,axis=-1)
+
 # Calculate start and end points of pulses
-start_points = convert_where_to_list(np.where(dig_in_diff == 1))
-end_points = convert_where_to_list(np.where(dig_in_diff == -1))
+start_points = [np.where(x==1)[0] for x in dig_in_diff]
+end_points = [np.where(x==-1)[0] for x in dig_in_diff]
 
 # Extract taste dig-ins from experimental info file
 info_dict = metadata_handler.info_dict
