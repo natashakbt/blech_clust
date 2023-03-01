@@ -9,6 +9,8 @@ import glob
 import itertools
 import pandas as pd
 from tqdm import tqdm
+# Necessary blech_clust modules
+sys.path.append('..')
 from utils.clustering import get_filtered_electrode
 from utils.blech_utils import (
         imp_metadata,

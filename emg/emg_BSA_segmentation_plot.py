@@ -8,6 +8,11 @@ import matplotlib.pyplot as plt
 import glob
 import json
 import pandas as pd
+# Necessary blech_clust modules
+sys.path.append('..')
+from utils.blech_utils import (
+        imp_metadata,
+        )
 
 def create_grid_plots(array, array_name, plot_type = 'line'):
 
@@ -109,24 +114,14 @@ def create_overlay(array, array_name):
 
 ############################################################
 
+# Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
-
+metadata_handler = imp_metadata(sys.argv[1])
+dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
 
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-    if files[-2:] == 'h5':
-        hdf5_name = files
-
 # Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r')
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
 all_nodes = list(hf5.get_node('/emg_BSA_results')._f_iter_nodes())
 channel_names = [x._v_name for x in all_nodes \
@@ -138,10 +133,12 @@ gapes=hf5.root.emg_BSA_results.gapes[:]
 ltps=hf5.root.emg_BSA_results.ltps[:]
 sig_trials=hf5.root.emg_BSA_results.sig_trials[:]
 emg_BSA_results=hf5.root.emg_BSA_results.emg_BSA_results_final[:]
+
 # Reading single values from the hdf5 file seems hard, 
 # needs the read() method to be called
-pre_stim=hf5.root.ancillary_analysis.pre_stim.read()
-pre_stim = int(pre_stim)
+#pre_stim=hf5.root.ancillary_analysis.pre_stim.read()
+#pre_stim = int(pre_stim)
+pre_stim = metadata_handler.params_dict["spike_array_durations"][0]
 # Also maintain a counter of the number of trials in the analysis
 
 # Close the hdf5 file
