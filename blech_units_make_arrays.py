@@ -6,6 +6,9 @@ import os
 import re
 import glob
 import pandas as pd
+from tqdm import tqdm
+from utils.clustering import get_filtered_electrode
+from blech_process import calc_recording_cutoff
 from utils.blech_utils import (
         entry_checker,
         imp_metadata,
@@ -188,9 +191,61 @@ if __name__ == '__main__':
     # and get an experiment end time 
     # (to account for cases where the headstage fell off mid-experiment)
 
-    # NOTE: This pulls out units in SORTED order
-    units = hf5.list_nodes('/sorted_units')
-    expt_end_time = np.max([x.times[-1] for x in units]) 
+    # TODO: Move this out of here...maybe make it a util
+    #============================================================#
+    # NOTE: Calculate headstage falling off same way for all not "none" channels 
+    # Pull out raw_electrode and raw_emg data
+    if '/raw' in hf5:
+        raw_electrodes = [x for x in hf5.get_node('/','raw')]
+    if '/raw_emg' in hf5:
+        raw_emg_electrodes = [x for x in hf5.get_node('/','raw_emg')]
+
+    all_electrodes = [raw_electrodes, raw_emg_electrodes] 
+    all_electrodes = [x for y in all_electrodes for x in y]
+    all_electrode_names = [x._v_pathname for x in all_electrodes]
+    electrode_names = list(zip(*[x.split('/')[1:] for x in all_electrode_names]))
+
+    print('Calculating cutoff times')
+    cutoff_data = []
+    for this_el in tqdm(all_electrodes): 
+        raw_el = this_el[:]
+        # High bandpass filter the raw electrode recordings
+        filt_el = get_filtered_electrode(
+            raw_el,
+            freq=[params_dict['bandpass_lower_cutoff'],
+                  params_dict['bandpass_upper_cutoff']],
+            sampling_rate=params_dict['sampling_rate'])
+
+        # Delete raw electrode recording from memory
+        del raw_el
+
+        this_out = calc_recording_cutoff(
+                        filt_el,
+                        params_dict['sampling_rate'],
+                        params_dict['voltage_cutoff'],
+                        params_dict['max_breach_rate'],
+                        params_dict['max_secs_above_cutoff'],
+                        params_dict['max_mean_breach_rate_persec']
+                        ) 
+        cutoff_data.append(this_out)
+
+
+    elec_cutoff_frame = pd.DataFrame(
+            data = cutoff_data,
+            columns = [
+                'breach_rate', 
+                'breaches_per_sec', 
+                'secs_above_cutoff', 
+                'mean_breach_rate_persec',
+                'recording_cutoff'
+                ],
+            )
+    elec_cutoff_frame['electrode_type'] = all_electrode_names[0]
+    elec_cutoff_frame['electrode_name'] = all_electrode_names[1]
+
+    expt_end_time = elec_cutoff_frame['recording_cutoff'].min()*sampling_rate
+    #expt_end_time = np.max([x.times[-1] for x in units]) 
+    #============================================================#
 
     # ____                              _             
     #|  _ \ _ __ ___   ___ ___  ___ ___(_)_ __   __ _ 
@@ -225,24 +280,35 @@ if __name__ == '__main__':
     durations = params_dict['spike_array_durations']
     print(f'Using durations ::: {durations}')
 
-    # Delete the spike_trains node in the hdf5 file if it exists, 
-    # and then create it
-    if '/spike_trains' in hf5:
-        hf5.remove_node('/spike_trains', recursive = True)
-    hf5.create_group('/', 'spike_trains')
+    # Only make spike-trains if sorted units present
+    if '/sorted_units' in hf5:
+        print('Sorted units found ==> Making spike trains')
+        units = hf5.list_nodes('/sorted_units')
 
-    # Pull out spike trains
-    for i, this_dig_in in enumerate(taste_starts_cutoff): 
-        print(f'Creating spike-trains for {dig_in_basename[i]}')
-        create_spike_trains_for_digin(
-                taste_starts_cutoff,
-                i,
-                this_dig_in,
-                durations,
-                sampling_rate_ms,
-                units,
-                hf5,
-                )
+        # Delete the spike_trains node in the hdf5 file if it exists, 
+        # and then create it
+        if '/spike_trains' in hf5:
+            hf5.remove_node('/spike_trains', recursive = True)
+        hf5.create_group('/', 'spike_trains')
+
+        # Pull out spike trains
+        for i, this_dig_in in enumerate(taste_starts_cutoff): 
+            print(f'Creating spike-trains for {dig_in_basename[i]}')
+            create_spike_trains_for_digin(
+                    taste_starts_cutoff,
+                    i,
+                    this_dig_in,
+                    durations,
+                    sampling_rate_ms,
+                    units,
+                    hf5,
+                    )
+    else:
+        print('No sorted units found...NOT MAKING SPIKE TRAINS')
+
+
+    if '/raw_emg' in hf5:
+        pass
 
     # Separate out laser loop
     for i, this_dig_in in enumerate(taste_starts_cutoff): 
@@ -259,4 +325,66 @@ if __name__ == '__main__':
                 hf5,
                 )
 
-    hf5.close()
+    if '/raw_emg' in hf5:
+        print('EMG Data found ==> Making EMG Trial Arrays')
+
+        # Grab the names of the arrays containing emg recordings
+        emg_nodes = hf5.list_nodes('/raw_emg')
+        emg_pathname = []
+        for node in emg_nodes:
+            emg_pathname.append(node._v_pathname)
+
+        # Create a numpy array to store emg data by trials
+        # Shape : Channels x Tastes x Trials x Time
+        # Use max number of trials to define array, this allows people with uneven
+        # numbers of trials to continue working
+        trial_counts = [len(x) for x in taste_starts_cutoff]
+        if len(np.unique(trial_counts)) > 1:
+            print(f'!! Uneven numbers of trials !! {trial_counts}')
+            print(f'Using {np.max(trial_counts)} as trial count')
+            print('== EMG ARRAY WILL HAVE EMPTY TRIALS ==')
+
+        # Shape : channels x dig_ins x max_trials x duration 
+        emg_data = np.ndarray((
+            len(emg_pathname), 
+            len(taste_starts_cutoff), 
+            np.max(trial_counts), 
+            durations[0]+durations[1]))
+
+        # And pull out emg data into this array
+        for i in range(len(emg_pathname)):
+            data = hf5.get_node(emg_pathname[i])[:]
+            for j, this_taste_digin in enumerate(taste_starts_cutoff):
+                for k, this_start in enumerate(this_taste_digin):
+                    trial_bounds = [
+                            int(this_start - durations[1]*sampling_rate_ms),
+                            int(this_start + durations[0]*sampling_rate_ms)
+                            ]
+                    raw_emg_data = data[trial_bounds[0]:trial_bounds[1]]
+                    raw_emg_data = 0.195*raw_emg_data
+                    # Downsample the raw data by averaging the 30 samples per millisecond, 
+                    # and assign to emg_data
+                    emg_data[i, j, k, :] = np.mean(raw_emg_data.reshape((-1, 30)), axis = 1)
+
+        # Write out booleans for non-zero trials
+        nonzero_trial = np.abs(emg_data.mean(axis=(0,3))) > 0
+
+        # Save output in emg dir
+        if not os.path.exists('emg_output'):
+            os.makedirs('emg_output')
+
+        # Save the emg_data
+        np.save('emg_output/emg_data.npy', emg_data)
+        np.save('emg_output/nonzero_trials.npy', nonzero_trial)
+
+        # Also write out README to explain CAR groups and order of emg_data for user
+        with open('emg_output/emg_data_readme.txt','w') as f:
+            f.write(f'Channels used : {emg_pathname}')
+            f.write('\n')
+            f.write('Numbers indicate "electrode_ind" in electrode_layout_frame')
+
+    else:
+        print('No EMG Data Found...NOT MAKING EMG ARRAYS')
+
+hf5.close()
+
