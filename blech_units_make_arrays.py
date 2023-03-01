@@ -29,6 +29,7 @@ def create_spike_trains_for_digin(
         durations,
         sampling_rate_ms,
         units,
+        hf5,
         ):
         spike_train = []
         for this_start in this_dig_in: 
@@ -67,7 +68,11 @@ def create_laser_params_for_digin(
         this_dig_in,
         start_points_cutoff,
         end_points_cutoff,
+        sampling_rate,
         sampling_rate_ms,
+        laser_digin_inds,
+        dig_in_basename,
+        hf5,
         ):
 
     selected_laser_digin = laser_digin_inds[0]
@@ -107,14 +112,23 @@ def create_laser_params_for_digin(
     laser_duration[which_taste_trial] = wanted_laser_durations
     laser_start[which_taste_trial] = wanted_laser_starts
 
-    if f'/spike_trains/{dig_in_basename[i]}' not in hf5:
+    if '/spike_trains' not in hf5:
+        hf5.create_group('/', 'spike_trains')
+
+    dig_in_path = f'/spike_trains/{dig_in_basename[i]}'
+    if dig_in_path not in hf5:
         hf5.create_group('/spike_trains', dig_in_basename[i])
+
     # Write the conditional stimulus duration array to the hdf5 file
+    if f'{dig_in_path}/laser_durations' in hf5:
+        hf5.remove_node(dig_in_path, 'laser_durations')
+    if f'{dig_in_path}/laser_onset_lag' in hf5:
+        hf5.remove_node(dig_in_path, 'laser_onset_lag')
     laser_durations = hf5.create_array(
-            f'/spike_trains/{dig_in_basename[i]}',
+            dig_in_path,
             'laser_durations', laser_duration)
     laser_onset_lag = hf5.create_array(
-            f'/spike_trains/{dig_in_basename[i]}',
+            dig_in_path,
             'laser_onset_lag', laser_start)
     hf5.flush() 
 
@@ -125,117 +139,124 @@ def create_laser_params_for_digin(
 #|_____\___/ \__,_|\__,_| |____/ \__,_|\__\__,_|
 #                                               
 
-# Ask for the directory where the hdf5 file sits, and change to that directory
-# Get name of directory with the data files
-metadata_handler = imp_metadata(sys.argv[1])
-os.chdir(metadata_handler.dir_name)
+if __name__ == '__main__':
 
-# Open the hdf5 file
-hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
+    # Ask for the directory where the hdf5 file sits, and change to that directory
+    # Get name of directory with the data files
+    metadata_handler = imp_metadata(sys.argv[1])
+    os.chdir(metadata_handler.dir_name)
 
-# Grab the names of the arrays containing digital inputs, 
-# and pull the data into a numpy array
-dig_in_pathname, dig_in_basename, dig_in_data = get_dig_in_data(hf5)
-dig_in_diff = np.diff(dig_in_data,axis=-1)
+    # Open the hdf5 file
+    hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
-# Calculate start and end points of pulses
-start_points = [np.where(x==1)[0] for x in dig_in_diff]
-end_points = [np.where(x==-1)[0] for x in dig_in_diff]
+    # Grab the names of the arrays containing digital inputs, 
+    # and pull the data into a numpy array
+    dig_in_pathname, dig_in_basename, dig_in_data = get_dig_in_data(hf5)
+    dig_in_diff = np.diff(dig_in_data,axis=-1)
+    # Calculate start and end points of pulses
+    start_points = [np.where(x==1)[0] for x in dig_in_diff]
+    end_points = [np.where(x==-1)[0] for x in dig_in_diff]
 
-# Extract taste dig-ins from experimental info file
-info_dict = metadata_handler.info_dict
-params_dict = metadata_handler.params_dict
-sampling_rate = params_dict['sampling_rate']
-sampling_rate_ms = sampling_rate/1000
+    # Extract taste dig-ins from experimental info file
+    info_dict = metadata_handler.info_dict
+    params_dict = metadata_handler.params_dict
+    sampling_rate = params_dict['sampling_rate']
+    sampling_rate_ms = sampling_rate/1000
 
-# Pull out taste dig-ins
-taste_digin_inds = info_dict['taste_params']['dig_ins']
-taste_digin_channels = [dig_in_basename[x] for x in taste_digin_inds]
-taste_str = "\n".join(taste_digin_channels)
+    # Pull out taste dig-ins
+    taste_digin_inds = info_dict['taste_params']['dig_ins']
+    taste_digin_channels = [dig_in_basename[x] for x in taste_digin_inds]
+    taste_str = "\n".join(taste_digin_channels)
 
-# Extract laser dig-in from params file
-laser_digin_inds = [info_dict['laser_params']['dig_in']][0]
+    # Extract laser dig-in from params file
+    laser_digin_inds = [info_dict['laser_params']['dig_in']][0]
 
-# Pull laser digin from hdf5 file
-if len(laser_digin_inds) == 0:
-    laser_digin_channels = []
-    laser_str = 'None'
-else:
-    laser_digin_channels = [dig_in_basename[x] for x in laser_digin_inds]
-    laser_str = "\n".join(laser_digin_channels)
+    # Pull laser digin from hdf5 file
+    if len(laser_digin_inds) == 0:
+        laser_digin_channels = []
+        laser_str = 'None'
+    else:
+        laser_digin_channels = [dig_in_basename[x] for x in laser_digin_inds]
+        laser_str = "\n".join(laser_digin_channels)
 
-print(f'Taste dig_ins ::: \n{taste_str}\n')
-print(f'Laser dig_in ::: \n{laser_str}\n')
+    print(f'Taste dig_ins ::: \n{taste_str}\n')
+    print(f'Laser dig_in ::: \n{laser_str}\n')
 
 
-# Get list of units under the sorted_units group. 
-# Find the latest/largest spike time amongst the units, 
-# and get an experiment end time 
-# (to account for cases where the headstage fell off mid-experiment)
+    # Get list of units under the sorted_units group. 
+    # Find the latest/largest spike time amongst the units, 
+    # and get an experiment end time 
+    # (to account for cases where the headstage fell off mid-experiment)
 
-# NOTE: This pulls out units in SORTED order
-units = hf5.list_nodes('/sorted_units')
-expt_end_time = np.max([x.times[-1] for x in units]) 
+    # NOTE: This pulls out units in SORTED order
+    units = hf5.list_nodes('/sorted_units')
+    expt_end_time = np.max([x.times[-1] for x in units]) 
 
-# ____                              _             
-#|  _ \ _ __ ___   ___ ___  ___ ___(_)_ __   __ _ 
-#| |_) | '__/ _ \ / __/ _ \/ __/ __| | '_ \ / _` |
-#|  __/| | | (_) | (_|  __/\__ \__ \ | | | | (_| |
-#|_|   |_|  \___/ \___\___||___/___/_|_| |_|\__, |
-#                                           |___/ 
+    # ____                              _             
+    #|  _ \ _ __ ___   ___ ___  ___ ___(_)_ __   __ _ 
+    #| |_) | '__/ _ \ / __/ _ \/ __/ __| | '_ \ / _` |
+    #|  __/| | | (_) | (_|  __/\__ \__ \ | | | | (_| |
+    #|_|   |_|  \___/ \___\___||___/___/_|_| |_|\__, |
+    #                                           |___/ 
 
-#TODO: Creating spike-trians + laser arrays can CERTAINLY be made cleaner
-# Go through the taste_digin_inds and make an array of spike trains 
-# of dimensions (# trials x # units x trial duration (ms)) - 
-# use START of digital input pulse as the time of taste delivery
-# Refer to https://github.com/narendramukherjee/blech_clust/pull/14
+    #TODO: Creating spike-trians + laser arrays can CERTAINLY be made cleaner
+    # Go through the taste_digin_inds and make an array of spike trains 
+    # of dimensions (# trials x # units x trial duration (ms)) - 
+    # use START of digital input pulse as the time of taste delivery
+    # Refer to https://github.com/narendramukherjee/blech_clust/pull/14
 
-# Check start points prior to loop and print results
-dig_in_trials = np.array([len(x) for x in start_points])
-start_points_cutoff = [x[x<expt_end_time] for x in start_points]
-end_points_cutoff = [x[x<expt_end_time] for x in end_points]
-trials_before_cutoff = np.array([len(x) for x in start_points_cutoff])
-cutoff_frame = pd.DataFrame(
-        data = dict(
-            dig_ins = dig_in_basename,
-            trials_before_cutoff = trials_before_cutoff,
-            trials_after_cutoff = dig_in_trials - trials_before_cutoff
+    # Check start points prior to loop and print results
+    dig_in_trials = np.array([len(x) for x in start_points])
+    start_points_cutoff = [x[x<expt_end_time] for x in start_points]
+    end_points_cutoff = [x[x<expt_end_time] for x in end_points]
+    trials_before_cutoff = np.array([len(x) for x in start_points_cutoff])
+    cutoff_frame = pd.DataFrame(
+            data = dict(
+                dig_ins = dig_in_basename,
+                trials_before_cutoff = trials_before_cutoff,
+                trials_after_cutoff = dig_in_trials - trials_before_cutoff
+                )
             )
-        )
-print(cutoff_frame)
+    print(cutoff_frame)
 
-taste_starts_cutoff = [start_points_cutoff[i] for i in taste_digin_inds]
+    taste_starts_cutoff = [start_points_cutoff[i] for i in taste_digin_inds]
 
-# Load durations from params file
-durations = params_dict['spike_array_durations']
-print(f'Using durations ::: {durations}')
+    # Load durations from params file
+    durations = params_dict['spike_array_durations']
+    print(f'Using durations ::: {durations}')
 
-# Delete the spike_trains node in the hdf5 file if it exists, and then create it
-if '/spike_trains' in hf5:
-    hf5.remove_node('/spike_trains', recursive = True)
-hf5.create_group('/', 'spike_trains')
+    # Delete the spike_trains node in the hdf5 file if it exists, 
+    # and then create it
+    if '/spike_trains' in hf5:
+        hf5.remove_node('/spike_trains', recursive = True)
+    hf5.create_group('/', 'spike_trains')
 
-# Pull out spike trains
-for i, this_dig_in in enumerate(taste_starts_cutoff): 
-    print(f'Creating spike-trains for {dig_in_basename[i]}')
-    create_spike_trains_for_digin(
-            taste_starts_cutoff,
-            i,
-            this_dig_in,
-            durations,
-            sampling_rate_ms,
-            units,
-            )
+    # Pull out spike trains
+    for i, this_dig_in in enumerate(taste_starts_cutoff): 
+        print(f'Creating spike-trains for {dig_in_basename[i]}')
+        create_spike_trains_for_digin(
+                taste_starts_cutoff,
+                i,
+                this_dig_in,
+                durations,
+                sampling_rate_ms,
+                units,
+                hf5,
+                )
 
-# Separate out laser loop
-for i, this_dig_in in enumerate(taste_starts_cutoff): 
-    print(f'Creating laser info for {dig_in_basename[i]}')
-    create_laser_params_for_digin(
-            i,
-            this_dig_in,
-            start_points_cutoff,
-            end_points_cutoff,
-            sampling_rate_ms,
-            )
+    # Separate out laser loop
+    for i, this_dig_in in enumerate(taste_starts_cutoff): 
+        print(f'Creating laser info for {dig_in_basename[i]}')
+        create_laser_params_for_digin(
+                i,
+                this_dig_in,
+                start_points_cutoff,
+                end_points_cutoff,
+                sampling_rate,
+                sampling_rate_ms,
+                laser_digin_inds,
+                dig_in_basename,
+                hf5,
+                )
 
-hf5.close()
+    hf5.close()
