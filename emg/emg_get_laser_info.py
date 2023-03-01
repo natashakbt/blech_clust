@@ -9,15 +9,14 @@ import glob
 import itertools
 import pandas as pd
 from tqdm import tqdm
-from utils.clustering import *
+from utils.clustering import get_filtered_electrode
 from utils.blech_utils import (
         imp_metadata,
         )
 from blech_process import calc_recording_cutoff
 
-from blech_units_make_arrays import (
+from blech_make_arrays import (
         get_dig_in_data,
-        convert_where_to_list,
         create_laser_params_for_digin
         )
 
@@ -41,8 +40,8 @@ sampling_rate_ms = sampling_rate/1000
 dig_in_pathname, dig_in_basename, dig_in_data = get_dig_in_data(hf5)
 dig_in_diff = np.diff(dig_in_data,axis=-1)
 # Calculate start and end points of pulses
-start_points = convert_where_to_list(np.where(dig_in_diff == 1))
-end_points = convert_where_to_list(np.where(dig_in_diff == -1))
+start_points = [np.where(x==1)[0] for x in dig_in_diff]
+end_points = [np.where(x==-1)[0] for x in dig_in_diff]
 
 # Pull out taste dig-ins
 taste_digin_inds = info_dict['taste_params']['dig_ins']
@@ -63,88 +62,12 @@ else:
 print(f'Taste dig_ins ::: \n{taste_str}\n')
 print(f'Laser dig_in ::: \n{laser_str}\n')
 
-# NOTE: Calculate headstage falling off same way for all not "none" channels 
-# Pull out raw_electrode and raw_emg data
-if '/raw' in hf5:
-    raw_electrodes = [x for x in hf5.get_node('/','raw')]
-if '/raw_emg' in hf5:
-    raw_emg_electrodes = [x for x in hf5.get_node('/','raw_emg')]
-
-all_electrodes = [raw_electrodes, raw_emg_electrodes] 
-all_electrodes = [x for y in all_electrodes for x in y]
-all_electrode_names = [x._v_pathname for x in all_electrodes]
-electrode_names = list(zip(*[x.split('/')[1:] for x in all_electrode_names]))
-
-cutoff_data = []
-for this_el in tqdm(all_electrodes): 
-    raw_el = this_el[:]
-    # High bandpass filter the raw electrode recordings
-    filt_el = get_filtered_electrode(
-        raw_el,
-        freq=[params_dict['bandpass_lower_cutoff'],
-              params_dict['bandpass_upper_cutoff']],
-        sampling_rate=params_dict['sampling_rate'])
-
-    # Delete raw electrode recording from memory
-    del raw_el
-
-    this_out = calc_recording_cutoff(
-                    filt_el,
-                    params_dict['sampling_rate'],
-                    params_dict['voltage_cutoff'],
-                    params_dict['max_breach_rate'],
-                    params_dict['max_secs_above_cutoff'],
-                    params_dict['max_mean_breach_rate_persec']
-                    ) 
-    cutoff_data.append(this_out)
-
-
-cutoff_frame = pd.DataFrame(
-        data = cutoff_data,
-        columns = [
-            'breach_rate', 
-            'breaches_per_sec', 
-            'secs_above_cutoff', 
-            'mean_breach_rate_persec',
-            'recording_cutoff'
-            ],
-        )
-cutoff_frame['electrode_type'] = all_electrode_names[0]
-cutoff_frame['electrode_name'] = all_electrode_names[1]
-
-expt_end_time = cutoff_frame['recording_cutoff'].min()*sampling_rate
-
-# Check start points prior to loop and print results
-dig_in_trials = np.array([len(x) for x in start_points])
-start_points_cutoff = [x[x<expt_end_time] for x in start_points]
-end_points_cutoff = [x[x<expt_end_time] for x in end_points]
-trials_before_cutoff = np.array([len(x) for x in start_points_cutoff])
-cutoff_frame = pd.DataFrame(
-        data = dict(
-            dig_ins = dig_in_basename,
-            trials_before_cutoff = trials_before_cutoff,
-            trials_after_cutoff = dig_in_trials - trials_before_cutoff
-            )
-        )
-print()
-print(cutoff_frame)
-
-taste_starts_cutoff = [start_points_cutoff[i] for i in taste_digin_inds]
-
-print()
-for i, this_dig_in in enumerate(taste_starts_cutoff): 
-    print(f'Creating laser info for {dig_in_basename[i]}')
-    create_laser_params_for_digin(
-            i,
-            this_dig_in,
-            start_points_cutoff,
-            end_points_cutoff,
-            sampling_rate,
-            sampling_rate_ms,
-            laser_digin_inds,
-            dig_in_basename,
-            hf5,
-            )
+#============================================================#
+hf5.close()
+elec_cutoff_frame = pd.read_hdf(metadata_handler.hdf5_name, '/cutoff_frame') 
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
+expt_end_time = elec_cutoff_frame['recording_cutoff'].min()*sampling_rate
+#============================================================#
 
 #============================================================
 # Correct for laser sampling errors before moving on to next step
