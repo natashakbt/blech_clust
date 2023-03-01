@@ -243,6 +243,14 @@ if __name__ == '__main__':
     elec_cutoff_frame['electrode_type'] = all_electrode_names[0]
     elec_cutoff_frame['electrode_name'] = all_electrode_names[1]
 
+    # Write out to HDF5
+    hf5.close()
+    elec_cutoff_frame.to_hdf(
+            metadata_handler.hdf5_name,
+            '/cutoff_frame'
+            )
+    hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
+
     expt_end_time = elec_cutoff_frame['recording_cutoff'].min()*sampling_rate
     #expt_end_time = np.max([x.times[-1] for x in units]) 
     #============================================================#
@@ -386,5 +394,5 @@ if __name__ == '__main__':
     else:
         print('No EMG Data Found...NOT MAKING EMG ARRAYS')
 
-hf5.close()
+    hf5.close()
 
