@@ -78,42 +78,46 @@ def create_laser_params_for_digin(
         hf5,
         ):
 
-    selected_laser_digin = laser_digin_inds[0]
-    print(f'Processing laser from {dig_in_basename[selected_laser_digin]}')
-
     # Even if laser is not present, create arrays for laser parameters
     laser_duration = np.zeros(len(this_dig_in))
     laser_start = np.zeros(len(this_dig_in))
 
-    # Else run through the lasers and check if the lasers 
-    # went off within 5 secs of the stimulus delivery time
-    time_diff = \
-            this_dig_in[:,np.newaxis] - \
-            start_points_cutoff[selected_laser_digin][:,np.newaxis].T
-    time_diff = np.abs(time_diff)
-    laser_trial_bool = time_diff <= 5*sampling_rate
-    which_taste_trial = np.sum(laser_trial_bool, axis = 1) > 0
-    which_laser_trial = np.sum(laser_trial_bool, axis = 0) > 0
+    if len(laser_digin_inds):
+        selected_laser_digin = laser_digin_inds[0]
+        print(f'Processing laser from {dig_in_basename[selected_laser_digin]}')
 
-    all_laser_durations = \
-            end_points_cutoff[selected_laser_digin] - \
-            start_points_cutoff[selected_laser_digin]
-    wanted_laser_durations = all_laser_durations[which_laser_trial]
-    wanted_laser_starts = \
-            start_points_cutoff[selected_laser_digin][which_laser_trial] - \
-            this_dig_in[which_taste_trial]
-    # If the lasers did go off around stimulus delivery, 
-    # get the duration and start time in ms 
-    # (from end of taste delivery) of the laser trial 
-    # (as a multiple of 10 - so 53 gets rounded off to 50)
-    vector_int = np.vectorize(np.int32)
-    wanted_laser_durations = \
-            10*vector_int(wanted_laser_durations/(sampling_rate_ms*10))
-    wanted_laser_starts = \
-            10*vector_int(wanted_laser_starts/(sampling_rate_ms*10))
+        # Else run through the lasers and check if the lasers 
+        # went off within 5 secs of the stimulus delivery time
+        time_diff = \
+                this_dig_in[:,np.newaxis] - \
+                start_points_cutoff[selected_laser_digin][:,np.newaxis].T
+        time_diff = np.abs(time_diff)
+        laser_trial_bool = time_diff <= 5*sampling_rate
+        which_taste_trial = np.sum(laser_trial_bool, axis = 1) > 0
+        which_laser_trial = np.sum(laser_trial_bool, axis = 0) > 0
 
-    laser_duration[which_taste_trial] = wanted_laser_durations
-    laser_start[which_taste_trial] = wanted_laser_starts
+        all_laser_durations = \
+                end_points_cutoff[selected_laser_digin] - \
+                start_points_cutoff[selected_laser_digin]
+        wanted_laser_durations = all_laser_durations[which_laser_trial]
+        wanted_laser_starts = \
+                start_points_cutoff[selected_laser_digin][which_laser_trial] - \
+                this_dig_in[which_taste_trial]
+        # If the lasers did go off around stimulus delivery, 
+        # get the duration and start time in ms 
+        # (from end of taste delivery) of the laser trial 
+        # (as a multiple of 10 - so 53 gets rounded off to 50)
+        vector_int = np.vectorize(np.int32)
+        wanted_laser_durations = \
+                10*vector_int(wanted_laser_durations/(sampling_rate_ms*10))
+        wanted_laser_starts = \
+                10*vector_int(wanted_laser_starts/(sampling_rate_ms*10))
+
+        laser_duration[which_taste_trial] = wanted_laser_durations
+        laser_start[which_taste_trial] = wanted_laser_starts
+
+    else:
+        print('No lasers specified')
 
     if '/spike_trains' not in hf5:
         hf5.create_group('/', 'spike_trains')
@@ -313,10 +317,6 @@ if __name__ == '__main__':
                     )
     else:
         print('No sorted units found...NOT MAKING SPIKE TRAINS')
-
-
-    if '/raw_emg' in hf5:
-        pass
 
     # Separate out laser loop
     for i, this_dig_in in enumerate(taste_starts_cutoff): 
