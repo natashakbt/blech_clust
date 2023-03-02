@@ -58,6 +58,7 @@ if len(np.unique(trials)) > 1:
 # In case there is more than one pair/location or differencing did not happen
 ############################################################
 output_list = glob.glob(os.path.join(dir_name,'emg_output/*'))
+output_list = [x for x in output_list if 'emg' in os.path.basename(x)]
 channel_dirs = sorted([x for x in output_list if os.path.isdir(x)])
 channels_discovered = [os.path.basename(x) for x in channel_dirs]
 print(f'Creating plots for : {channels_discovered}\n')
