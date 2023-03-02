@@ -80,7 +80,11 @@ expt_end_time = elec_cutoff_frame['recording_cutoff'].min()*sampling_rate
 info_laser_params = info_dict['laser_params']
 info_laser_onset = info_laser_params['onset'] 
 info_laser_duration = info_laser_params['duration']
-info_laser_data = [(0,0), (info_laser_duration, info_laser_onset)]
+
+if len(laser_digin_inds):
+    info_laser_data = [(0,0), (info_laser_duration, info_laser_onset)]
+else:
+    info_laser_data = [(0,0)]
 info_laser_data = [np.array(x) for x in info_laser_data]
 
 dig_in_list = hf5.get_node('/','spike_trains')

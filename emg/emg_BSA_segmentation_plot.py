@@ -81,12 +81,12 @@ def create_overlay(array, array_name):
                 figsize = (4*len(unique_lasers), 4*len(channel_names))) 
 
     # Make sure axes are 2D
-    if len(unique_lasers) == 1:
+    if len(unique_lasers)*len(channel_names) == 1:
+        ax = np.expand_dims(ax,axis=(0,1)) 
+    elif len(unique_lasers) == 1:
         ax = np.array([ax]).T
     elif len(channel_names) == 1:
         ax = np.array([ax])
-    elif len(unique_lasers)*len(channel_names) == 1:
-        ax = np.expand_dims(ax,axis=0) 
 
     for chan_num,laser_num in inds:
         ax_title = channel_names[chan_num] + ' : ' + array_name
