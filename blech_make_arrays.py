@@ -365,14 +365,17 @@ if __name__ == '__main__':
             for j, this_taste_digin in enumerate(taste_starts_cutoff):
                 for k, this_start in enumerate(this_taste_digin):
                     trial_bounds = [
-                            int(this_start - durations[1]*sampling_rate_ms),
-                            int(this_start + durations[0]*sampling_rate_ms)
+                            int(this_start - durations[0]*sampling_rate_ms),
+                            int(this_start + durations[1]*sampling_rate_ms)
                             ]
                     raw_emg_data = data[trial_bounds[0]:trial_bounds[1]]
                     raw_emg_data = 0.195*raw_emg_data
-                    # Downsample the raw data by averaging the 30 samples per millisecond, 
-                    # and assign to emg_data
-                    emg_data[i, j, k, :] = np.mean(raw_emg_data.reshape((-1, 30)), axis = 1)
+                    # Downsample the raw data by averaging the 30 samples 
+                    # per millisecond, and assign to emg_data
+                    emg_data[i, j, k, :] = \
+                            np.mean(
+                                raw_emg_data.reshape((-1, int(sampling_rate_ms))), 
+                                axis = 1)
 
         # Write out booleans for non-zero trials
         nonzero_trial = np.abs(emg_data.mean(axis=(0,3))) > 0
