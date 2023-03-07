@@ -16,7 +16,7 @@ conda create --name blech_clust python=3.6.13       # Create "blech_clust" envir
 conda activate blech_clust                          # Activate blech_clust environment
 bash conda_requirements_base.sh                     # Install main packages using conda/mamba
 bash install_gnu_parallel.sh                        # Install GNU Parallel
-pip install -r pip_requirements.txt                 # Install pip requirements (not covered by conda)
+pip install -r pip_requirements_base.txt            # Install pip requirements (not covered by conda)
 ```
 
 ### Convenience scripts
