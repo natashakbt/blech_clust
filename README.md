@@ -56,6 +56,9 @@ pip install -r pip_requirements_base.txt            # Install pip requirements (
 14. python blech_overlay_psth.py  
     - Plot overlayed PSTHs for units with respective waveforms  
 
+### Operations Workflow Visual 
+![blech_clust_outline - Flowchart](https://user-images.githubusercontent.com/12436309/223515611-c4756424-2370-4bf2-8e3f-092e5b91b48e.png)
+
 ### Example workflow
 ```
 DIR=/path/to/raw/data/files  
