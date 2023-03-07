@@ -292,6 +292,7 @@ else:
     if continue_bool:
         if len(laser_select_str) == 0:
             laser_digin = []
+            laser_digin_filenames = []
         else:
             laser_digin = [int(laser_select_str)]
             laser_digin_filenames = [dig_in_list[i] for i in laser_digin]
@@ -324,6 +325,8 @@ else:
     taste_digin_trials = [dig_in_trials[x] for x in taste_digins]
     if laser_digin:
         laser_digin_trials = [dig_in_trials[x] for x in laser_digin]
+    else:
+        laser_digin_trials = []
 
     fin_dict = {**this_dict,
             'regions' : list(layout_dict.keys()),

@@ -6,25 +6,17 @@ import matplotlib.pyplot as plt
 import glob
 import sys
 
+sys.path.append('..')
+from utils.blech_utils import imp_metadata
+
 # Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
-
+metadata_handler = imp_metadata(sys.argv)
+dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
-
-# Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-	if files[-2:] == 'h5':
-		hdf5_name = files
+print(f'Processing : {dir_name}')
 
 # Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
 # Grab the nodes for the available tastes
 # Take trial counts from emg arrays
@@ -32,9 +24,6 @@ hf5 = tables.open_file(hdf5_name, 'r+')
 emg_data = np.load('emg_output/emg_data.npy')
 num_trials = emg_data.shape[2]
 num_tastes = emg_data.shape[1]
-#trains_dig_in = hf5.list_nodes('/spike_trains')
-#num_trials = trains_dig_in[0].spike_array.shape[0]
-#num_tastes = len(trains_dig_in)
 
 # Load the unique laser duration/lag combos and the trials 
 # that correspond to them from the ancillary analysis node
@@ -73,11 +62,6 @@ for num, this_dir in enumerate(channels_discovered):
             hf5.get_node('/emg_BSA_results',this_basename)._f_iter_nodes()\
             if 'taste' in x.name]
     emg_BSA_results = np.vstack(emg_BSA_results)
-
-    # Now run through the consolidated array of emg_BSA_results and 
-    # check for activity in the gape/LTP range
-    #gapes = np.zeros((emg_BSA_results.shape[0], emg_BSA_results.shape[1]))
-    #ltps = np.zeros((emg_BSA_results.shape[0], emg_BSA_results.shape[1]))
 
     ## Find the frequency with the maximum EMG power at each time point on each trial
     #max_freq = np.argmax(emg_BSA_results[:, :, :], axis = 2)

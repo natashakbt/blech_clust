@@ -116,8 +116,10 @@ def create_overlay(array, array_name):
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
-metadata_handler = imp_metadata(sys.argv[1])
+metadata_handler = imp_metadata(sys.argv)
 dir_name = metadata_handler.dir_name
+info_dict = metadata_handler.info_dict
+params_dict = metadata_handler.params_dict
 os.chdir(dir_name)
 
 # Open the hdf5 file
@@ -151,15 +153,6 @@ plot_dir = os.path.join(
 if not os.path.exists(plot_dir):
     os.makedirs(plot_dir)
 
-dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))
-with open(json_path[0], 'r') as params_file:
-    info_dict = json.load(params_file)
-
-params_path = glob.glob(os.path.join(dir_name, dir_basename + '.params'))
-with open(params_path[0], 'r') as params_file:
-    params_dict = json.load(params_file)
-                
 time_limits = [int(x) for x in params_dict['psth_params']['durations']]
 # TODO: Fix PSTH start time to be negative if pre-stim
 # Due to idiosyncracy in convention, the pre-stim time needs to be reversed

@@ -24,7 +24,7 @@ from blech_make_arrays import (
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
-metadata_handler = imp_metadata(sys.argv[1])
+metadata_handler = imp_metadata(sys.argv)
 dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
 

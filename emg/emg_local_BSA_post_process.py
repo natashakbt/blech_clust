@@ -13,38 +13,27 @@ import glob
 import json
 import sys
 
-# Ask the user to navigate to the directory that hosts the emg_data, 
-# and change to it
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+sys.path.append('..')
+from utils.blech_utils import imp_metadata
 
+# Get name of directory with the data files
+metadata_handler = imp_metadata(sys.argv)
+dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
-
-# Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-	if files[-2:] == 'h5':
-		hdf5_name = files
+print(f'Processing : {dir_name}')
 
 # Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
+hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
 # Delete the raw_emg node, if it exists in the hdf5 file, 
 # to cut down on file size
 try:
-	hf5.remove_node('/raw_emg', recursive = 1)
+    hf5.remove_node('/raw_emg', recursive = 1)
 except:
-	print("Raw EMG recordings have already been removed, so moving on ..")
+    print("Raw EMG recordings have already been removed, so moving on ..")
 
 # Extract info experimental info file
-json_path = glob.glob(os.path.join(dir_name, '*.info'))[0]
-with open(json_path, 'r') as params_file:
-    info_dict = json.load(params_file)
+info_dict = metadata_handler.info_dict
 taste_names = info_dict['taste_params']['tastes']
 trials = [int(x) for x in info_dict['taste_params']['trial_count']]
 
@@ -132,15 +121,6 @@ for num, this_dir in enumerate(channel_dirs):
         # Since BSA is an expensive process, don't delete anything
         # In case things need to be reanalyzed
 
-        ## Delete files once omega has been safely written
-        #os.system('rm *omega.npy')
-
-        ## Then delete all p files
-        #os.system('rm *p.npy')
-
-        ## And delete the emg_BSA_results directory
-        #os.chdir('..')
-        #os.system('rm -r emg_BSA_results')
     else:
         print(f'No data found for channel {this_basename}')
         print('Computer will self-destruct in T minus 10 seconds')

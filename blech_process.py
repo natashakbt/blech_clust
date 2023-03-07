@@ -88,7 +88,7 @@ def calc_recording_cutoff(
         recording_cutoff = np.where(breaches_per_sec >
                                     max_mean_breach_rate_persec)[0][0]
 
-    return (breach_rate, breaches_per_sec, secs_above_cutoff, 
+    return (test_el, breach_rate, breaches_per_sec, secs_above_cutoff, 
         mean_breach_rate_persec, recording_cutoff)
 
 def gen_window_plots(
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     f.close()
     dir_name = dir_name[0][:-1]
 
-    metadata_handler = imp_metadata(dir_name)
+    metadata_handler = imp_metadata([[],dir_name])
     os.chdir(metadata_handler.dir_name)
 
     electrode_num = int(sys.argv[1])
@@ -226,7 +226,7 @@ if __name__ == '__main__':
         globals()[key] = value
 
     # Open up hdf5 file, and load this electrode number
-    hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
+    hf5 = tables.open_file(metadata_handler.hdf5_name, 'r')
     el_path = f'/raw/electrode{electrode_num:02}'
     if el_path in hf5:
         raw_el = hf5.get_node(el_path)[:]
@@ -260,6 +260,7 @@ if __name__ == '__main__':
     ############################################################
     # Calculate the 3 voltage parameters
     (
+            test_el,
             breach_rate, 
             breaches_per_sec, 
             secs_above_cutoff, 
@@ -270,7 +271,6 @@ if __name__ == '__main__':
                     sampling_rate,
                     voltage_cutoff,
                     max_breach_rate,
-                    secs_above_cutoff,
                     max_secs_above_cutoff,
                     max_mean_breach_rate_persec
                     ) 

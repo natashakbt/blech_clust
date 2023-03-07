@@ -33,7 +33,7 @@ class imp_metadata():
 
     def get_dir_name(self, args):
         if len(args) > 1:
-            dir_name = os.path.abspath(args)
+            dir_name = os.path.abspath(args[1])
             if dir_name[-1] != '/':
                 dir_name += '/'
         else:
@@ -44,22 +44,36 @@ class imp_metadata():
         self.file_list = os.listdir(self.dir_name)
         
     def get_hdf5_name(self,):
-        hdf5_name = ''
-        for files in self.file_list:
-            if files[-2:] == 'h5':
-                hdf5_name = files
-        self.hdf5_name = hdf5_name
+        file_list = glob.glob(os.path.join(self.dir_name,'**.h5'))
+        if len(file_list) > 0:
+            self.hdf5_name = file_list[0]
+        else:
+            print('No HDF5 file found')
 
     def get_params_path(self,):
-        self.params_file_path = glob.glob(os.path.join(self.dir_name,'**.params'))[0]
+        file_list = glob.glob(os.path.join(self.dir_name,'**.params'))
+        if len(file_list) > 0:
+            self.params_file_path = file_list[0]
+        else:
+            print('No PARAMS file found')
 
     def load_params(self,):
-        with open(self.params_file_path, 'r') as params_file_connect:
-            self.params_dict = json.load(params_file_connect)
+        if 'params_file_path' in dir(self):
+            with open(self.params_file_path, 'r') as params_file_connect:
+                self.params_dict = json.load(params_file_connect)
+        else:
+            print("can't load params file...it doens't exist")
 
     def get_info_path(self,):
-        self.info_file_path = glob.glob(os.path.join(self.dir_name, '**.info'))[0]
+        file_list = glob.glob(os.path.join(self.dir_name,'**.info'))
+        if len(file_list) > 0:
+            self.info_file_path = file_list[0]
+        else:
+            print('No INFO file found')
 
     def load_info(self,):
-        with open(self.info_file_path, 'r') as info_file_connect:
-            self.info_dict = json.load(info_file_connect)
+        if 'info_file_path' in dir(self):
+            with open(self.info_file_path, 'r') as info_file_connect:
+                self.info_dict = json.load(info_file_connect)
+        else:
+            print("can't load info file...it doens't exist")
