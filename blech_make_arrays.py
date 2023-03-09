@@ -238,7 +238,8 @@ if __name__ == '__main__':
                             params_dict['max_secs_above_cutoff'],
                             params_dict['max_mean_breach_rate_persec']
                             ) 
-            cutoff_data.append(this_out)
+            # First output of recording cutoff is processed filtered electrode 
+            cutoff_data.append(this_out[1:])
 
 
         elec_cutoff_frame = pd.DataFrame(
