@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ssqueezepy import cwt
 
+import numpy as np
+from ssqueezepy import cwt
+from ssqueezepy.visuals import plot, imshow
+import pywt
+
 t = np.linspace(-1, 1, 200, endpoint=False)
 a = np.cos(2 * np.pi * 3 * t)
 b = signal.gausspulse(t - 0.4, fc=10)*5
@@ -14,29 +19,29 @@ Wx_k, scales = cwt(sig, 'morlet')
 cwtmatr = Wx_k 
 
 freqs = pywt.scale2frequency('morl', scales) / np.mean(np.diff(t))
+max_freq = 6
+inds = freqs<max_freq
 
-fig,ax = plt.subplots(3,1)
-ax[0].plot(a)
-ax[0].plot(b)
-ax[0].plot(c)
-ax[1].plot(sig)
+fig,ax = plt.subplots(3,1, sharex=True)
+ax[0].plot(t,a)
+ax[0].plot(t,b)
+ax[0].plot(t,c)
+ax[1].plot(t,sig)
 #ax[2].imshow(np.abs(cwtmatr), cmap='jet', aspect='auto')
-ax[2].pcolormesh(t, freqs, np.abs(cwtmatr), cmap='jet')
+ax[2].pcolormesh(t, freqs[inds], np.abs(cwtmatr)[inds], cmap='jet')
+ax[2].set_ylabel('Freq (Hz)')
 #fig.colorbar(im, ax=ax[2])
 plt.show()
 
-imshow(cwtmatr, yticks=scales, abs=1,
-       title="abs(CWT) | Morlet wavelet",
-       ylabel="scales", xlabel="samples")
+#plt.imshow(cwtmatr, yticks=scales, abs=1,
+#       title="abs(CWT) | Morlet wavelet",
+#       ylabel="scales", xlabel="samples")
 
 # https://dsp.stackexchange.com/questions/74032/scalograms-in-python
 
 ##############################################################
 ##############################################################
 
-import numpy as np
-from ssqueezepy import cwt
-from ssqueezepy.visuals import plot, imshow
 
 #%%# Helper fn + params #####################################################
 def exp_am(t, offset):
@@ -64,13 +69,37 @@ import pywt
 import numpy as np
 import matplotlib.pyplot as plt
 
-x = np.arange(512)
-y = np.sin(2*np.pi*x/32)
-coef, freqs=pywt.cwt(y,np.arange(1,129),'gaus1')
-fig,ax = plt.subplots(2,1)
-ax[0].plot(x,y)
-ax[1].matshow(coef) 
+##############################
+
+fs = 100
+t = np.arange(0,10,step = 1/fs)
+y = np.sin(2*np.pi*t*7)
+coef, freqs=pywt.cwt(y,np.arange(1,129),'cmor1.5-1.0')
+freqs = freqs*fs
+fig,ax = plt.subplots(2,1, sharex=True)
+ax[0].plot(t,y)
+#ax[1].matshow(np.abs(coef))
+ax[1].pcolormesh(t, freqs, np.abs(coef), cmap='jet')
 plt.show() 
+
+##############################
+fs = 100
+t = np.arange(0,10,step = 1/fs)
+a = np.cos(2 * np.pi * 3 * t)
+b = signal.gausspulse(t - 4, fc=10)*5
+c = signal.gausspulse(t - 8, fc=7)*5
+y  = a + b + c 
+
+coef, freqs=pywt.cwt(y,np.arange(1,100),'cmor20.0-1.0')
+freqs = freqs*fs
+max_freq = 20
+inds = freqs<max_freq
+fig,ax = plt.subplots(2,1, sharex=True)
+ax[0].plot(t,y)
+#ax[1].matshow(np.abs(coef))
+ax[1].pcolormesh(t, freqs[inds], np.abs(coef)[inds], cmap='jet')
+plt.show() 
+
 #----------
 
 import pywt
@@ -87,3 +116,60 @@ ax[0].plot(t,sig)
 ax[1].imshow(cwtmatr, extent=[-1, 1, 1, 31], cmap='PRGn', aspect='auto',
            vmax=abs(cwtmatr).max(), vmin=-abs(cwtmatr).max())  
 plt.show() 
+
+############################################################
+# Scipy test
+############################################################
+import numpy as np
+from scipy import signal
+import matplotlib.pyplot as plt
+
+t = np.linspace(-1, 1, 200, endpoint=False)
+sig  = np.cos(2 * np.pi * 7 * t) + signal.gausspulse(t - 0.4, fc=2)
+widths = np.arange(1, 31)
+#cwtmatr = signal.cwt(sig, signal.ricker, widths)
+cwtmatr = signal.cwt(sig, signal.morlet2, widths)
+
+cwtmatr_yflip = np.flipud(cwtmatr)
+
+fig,ax = plt.subplots(2,1)
+ax[0].plot(sig)
+ax[1].imshow(np.abs(cwtmatr_yflip), extent=[-1, 1, 1, 31], cmap='PRGn', aspect='auto',
+           vmax=abs(cwtmatr).max(), vmin=-abs(cwtmatr).max())
+plt.show()
+
+############################################################
+# Scipy test 2
+############################################################
+t = np.linspace(-1, 1, 200, endpoint=False)
+a = np.cos(2 * np.pi * 3 * t)
+b = signal.gausspulse(t - 0.4, fc=10)*5
+c = signal.gausspulse(t + 0.4, fc=7)*5
+sig  = a + b + c 
+
+widths = np.arange(1, 31)
+cwtmatr = signal.cwt(sig, signal.morlet2, widths)
+cwtmatr_yflip = np.flipud(cwtmatr)
+
+abs_cwt = np.abs(cwtmatr_yflip)
+fig,ax = plt.subplots(2,1)
+ax[0].plot(sig)
+ax[1].imshow(abs_cwt, extent=[-1, 1, 1, 31], cmap='jet', aspect='auto',
+           vmax=abs(cwtmatr).max(), vmin=abs(cwtmatr).min())
+plt.show()
+
+############################################################
+# Scipy test 2
+############################################################
+t = np.linspace(0,10,1000) 
+sig  = signal.chirp(t, f0=0, t1=10, f1=10, method = 'linear') 
+
+widths = np.arange(1,31)
+cwtmatr = signal.cwt(sig, signal.morlet2, widths)
+cwtmatr_yflip = np.flipud(cwtmatr)
+abs_cwt = np.abs(cwtmatr_yflip)
+fig,ax = plt.subplots(2,1)
+ax[0].plot(sig)
+ax[1].imshow(abs_cwt, extent=[-1, 1, 1, 31], cmap='jet', aspect='auto',
+           vmax=abs(cwtmatr).max(), vmin=abs(cwtmatr).min())
+plt.show()

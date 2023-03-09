@@ -20,6 +20,7 @@ import tables
 from glob import glob
 
 from ssqueezepy import cwt
+import pywt
 
 # Define function to parse out only wanted frequencies in STFT
 def calc_stft(trial, max_freq,time_range_tuple,\
@@ -43,6 +44,24 @@ def calc_stft(trial, max_freq,time_range_tuple,\
     fin_t = t[np.where((t>=time_range_tuple[0])*(t<time_range_tuple[1]))]
     return  fin_freq, fin_t, this_stft
 
+def calc_cwt(trial, max_freq, time_range_tuple, Fs)
+    """
+    trial : 1D array
+    max_freq : where to lob off the transform
+    time_range_tuple : (start,end) in seconds, time_lims of spectrogram
+                            from start of trial snippet`
+    """
+    #f,t,this_stft = pywt.cwt(
+    #            trial,
+    #            np.arange(1,100)
+    coef, f=pywt.cwt(trial,np.arange(1,100),'cmor20.0-1.0')
+    f = f*fs
+    this_stft =  this_stft[np.where(f<max_freq)[0]]
+    this_stft = this_stft[:,np.where((t>=time_range_tuple[0])*\
+                                            (t<time_range_tuple[1]))[0]]
+    fin_freq = f[f<max_freq]
+    fin_t = t[np.where((t>=time_range_tuple[0])*(t<time_range_tuple[1]))]
+    return  fin_freq, fin_t, this_stft
 
 # Ask for the directory where the data (emg_data.npy) sits
 dir_name = '/media/bigdata/firing_space_plot/NM_gape_analysis/raw_data/NM51_2500ms_161030_130155/emg_0'
