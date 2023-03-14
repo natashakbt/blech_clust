@@ -12,37 +12,23 @@ import json
 import glob
 import pandas as pd
 
-# Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+sys.path.append('..')
+from utils.blech_utils import imp_metadata
 
+# Get name of directory with the data files
+metadata_handler = imp_metadata(sys.argv)
+dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
+print(f'Processing : {dir_name}')
 
 # Load the data
 # shape : channels x tastes x trials x time
 emg_data = np.load('emg_output/emg_data.npy')
 
-# Extract info experimental info file
-dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))[0]
-with open(json_path, 'r') as params_file:
-    info_dict = json.load(params_file)
-
-## Ask the user for stimulus delivery time in each trial, and convert to an integer
-## todo : Can be pulled from info file
-#pre_stim = easygui.multenterbox(
-#        msg = 'Enter the pre-stimulus time included in each trial', 
-#        fields = ['Pre-stimulus time (ms)']) 
-#pre_stim = int(pre_stim[0])
+info_dict = metadata_handler.info_dict
+params_dict = metadata_handler.params_dict
 
 # Pull pre_stim duration from params file
-params_file_name = glob.glob('./**.params')[0]
-with open(params_file_name,'r') as params_file_connect:
-    params_dict = json.load(params_file_connect)
 durations = params_dict['spike_array_durations']
 pre_stim = int(durations[0])
 print(f'Using pre-stim duration : {pre_stim}' + '\n')
@@ -53,27 +39,19 @@ c, d = butter(2, 2.0*15.0/1000.0, 'lowpass')
 
 ## todo: This can be pulled from info file
 ## check how many EMG channels used in this experiment
-#check = easygui.ynbox(
-#        msg = 'Did you have more than one EMG channel?', 
-#        title = 'Check YES if you did')
 layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
 electrode_layout_frame = pd.read_csv(layout_path) 
 
 # Allow for multiple emg CAR groups
-#wanted_electrodes = info_dict['emg']['electrodes']
-#select_bool = [x in wanted_electrodes for x in electrode_layout_frame.electrode_num] 
 wanted_rows = pd.DataFrame(
         [x for num,x in electrode_layout_frame.iterrows() \
                 if 'emg' in x.CAR_group])
 wanted_rows = wanted_rows.sort_values('electrode_ind')
 wanted_rows.reset_index(inplace=True, drop=True)
 
-#wanted_rows = electrode_layout_frame.loc[select_bool] 
-#wanted_rows = electrode_layout_frame.loc[] 
 print('Using electrodes :')
 print(wanted_rows)
 print()
-#check = len(info_dict['emg']['electrodes']) > 1
 
 # TODO: Ask about differencing pairs
 # Difference by CAR emg labels
@@ -104,20 +82,6 @@ for x in emg_data_grouped:
     else:
         emg_diff_data.append(np.squeeze(x))
 
-#if len(emg_data) > 2:
-#    print('More than 2 emg channels...currently not working\n')
-#    emg_list = np.split(emg_data,2,axis=0)
-#    emg_diff_data = np.squeeze(np.stack([np.diff(x,axis=0) for x in emg_list]))
-#elif len(emg_data) == 1:
-#    print('Only 1 emg channel...no differencing\n')
-#    # If only single channel
-#    emg_diff_data = emg_data[np.newaxis]
-#else:
-#    # If only one pair of channels
-#    # Keep as 4D array so shape is consistent
-#    print('2 emg emg_channels...differencing\n')
-#    emg_diff_data = np.diff(emg_data, axis=0) 
-
 # Iterate over trials and apply frequency filter
 iters = list(np.ndindex(emg_diff_data[0].shape[:-1])) 
 emg_filt_list = []
@@ -131,15 +95,6 @@ for x in emg_diff_data:
         emg_env[this_iter[0], this_iter[1]] = filtfilt(c, d, np.abs(temp_filt))
     emg_filt_list.append(emg_filt)
     emg_env_list.append(emg_env)
-
-#for i in range(emg_diff_data.shape[1]):
-#    for j in range(emg_diff_data.shape[2]):
-#        if check:
-#            emg_filt[i, j, :] = \
-#                    filtfilt(m, n, emg_diff_data[0, i, j, :] - emg_diff_data[1, i, j, :])
-#        else:
-#            emg_filt[i, j, :] = filtfilt(m, n, emg_diff_data[0, i, j, :])
-#        env[i, j, :] = filtfilt(c, d, np.abs(emg_filt[i, j, :]))    
 
 sig_trials_list = []
 for i in range(len(emg_diff_data)):
@@ -163,14 +118,6 @@ for i in range(len(emg_diff_data)):
     # Logical AND
     sig_trials = mean_bool * std_bool
     sig_trials_list.append(sig_trials)
-
-#m = np.mean(np.abs(emg_filt[:, :, :pre_stim]))
-#s = np.std(np.abs(emg_filt[:, :, :pre_stim]))
-#for i in range(emg_diff_data.shape[1]):
-#    for j in range(emg_diff_data.shape[2]):
-#        if np.mean(np.abs(emg_filt[i, j, pre_stim:])) > m \
-#                and np.max(np.abs(emg_filt[i, j, pre_stim:])) > m + 4.0*s:
-#            sig_trials[i, j] = 1
 
 # NOTE: Currently DIFFERENT sig_trials for each channel 
 # Save the highpass filtered signal, 

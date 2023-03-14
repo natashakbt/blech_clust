@@ -12,41 +12,21 @@ import shutil
 
 # Necessary blech_clust modules
 from utils import read_file
-from utils.blech_utils import entry_checker
+from utils.blech_utils import entry_checker, imp_metadata
 
 # Get blech_clust path
 blech_clust_path = ('/').join(os.path.abspath(__file__).split('/')[0:-1])
 
 ############################################################
 
-# Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory') + '/'
-
+metadata_handler = imp_metadata(sys.argv)
+dir_name = metadata_handler.dir_name
 print(f'Processing : {dir_name}')
-
-# Change to that directory
 os.chdir(dir_name)
 
-# Check that experimental_info json file is present
-# If not present, refuse to cooperate
-dir_basename = os.path.basename(dir_name[:-1])
-json_path = glob.glob(os.path.join(dir_name, dir_basename + '.info'))
-if len(json_path) == 0:
-    raise Exception('Must have experimental info json before proceeding \n'\
-            'Run blech_exp_info.py first \n'\
-            '== Exiting ==')
-    exit()
+info_dict = metadata_handler.info_dict
+file_list = metadata_handler.file_list
 
-with open(json_path[0], 'r') as params_file:
-    info_dict = json.load(params_file)
-
-# Get the names of all files in this directory
-file_list = os.listdir('./')
 
 # Get the type of data files (.rhd or .dat)
 #HANNAH CHANGE: ADDED TEST OF ONE FILE PER SIGNAL TYPE
@@ -76,10 +56,6 @@ for this_group in group_list:
     if '/'+this_group in hf5:
         hf5.remove_node('/', this_group, recursive=True)
     hf5.create_group('/',this_group)
-#hf5.create_group('/', 'raw')
-#hf5.create_group('/', 'raw_emg')
-#hf5.create_group('/', 'digital_in')
-#hf5.create_group('/', 'digital_out')
 hf5.close()
 print('Created nodes in HF5')
 
@@ -114,16 +90,9 @@ if continue_bool:
             if os.path.exists(x):
                 shutil.rmtree(x)
             os.makedirs(x)
-    else:
-        quit()
 else:
     quit()
 
-#os.mkdir('spike_waveforms')
-#os.mkdir('spike_times')
-#os.mkdir('clustering_results')
-#os.mkdir('Plots')
-#os.mkdir('memory_monitor_clustering')
 print('Created dirs in data folder')
 
 #Get lists of amplifier and digital input files
@@ -150,10 +119,6 @@ ports = info_dict['ports']
 
 if file_type == ['one file per channel']:
     print("\tOne file per CHANNEL Detected")
-    ## Get the amplifier ports used
-    #ports = list(np.unique(np.array([f[4] for f in file_list if f[:4] == 'amp-'])))
-    ## Sort the ports in alphabetical order
-    #ports.sort()
 
     # Read dig-in data
     # Pull out the digital input channels used, 
@@ -164,24 +129,6 @@ if file_type == ['one file per channel']:
 elif file_type == ['one file per signal type']:
 
     print("\tOne file per SIGNAL Detected")
-    #Import amplifier data and calculate the number of electrodes
-    #print("\t\tCalculating Number of Ports")
-    #amplifier_data = np.fromfile(dir_name + '/' + electrodes_list[0], dtype = np.dtype('uint16'))
-    #num_electrodes = int(len(amplifier_data)/num_recorded_samples)
-    #ports = list(np.arange(num_electrodes))
-    #del amplifier_data, num_electrodes
-    #Import digin data and calculate the number of digins
-    #print("\t\tCalculating Number of Dig-Ins")
-    #dig_in_data = np.fromfile(dir_name + '/' + dig_in_list[0], dtype=np.dtype('uint16'))
-    #d_inputs_str = dig_in_data.astype('str')
-    #del dig_in_data
-    #d_in_str_int = d_inputs_str.astype('int64')
-    #del d_inputs_str
-    #d_diff = np.diff(d_in_str_int)
-    #del d_in_str_int
-    #dig_in = list(np.unique(np.abs(d_diff)) - 1)
-    #dig_in.remove(-1)
-    #del d_diff
     dig_in = np.arange(info_dict['dig_ins']['count'])
 
 check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
@@ -206,9 +153,6 @@ emg_channels = sorted(emg_info['electrodes'])
 layout_path = glob.glob(os.path.join(dir_name,"*layout.csv"))[0]
 electrode_layout_frame = pd.read_csv(layout_path) 
 
-# Create arrays for each electrode
-#read_file.create_hdf_arrays(hdf5_name, all_electrodes, 
-#                            dig_in, emg_port, emg_channels)
 
 # Read data files, and append to electrode arrays
 if file_type == ['one file per channel']:

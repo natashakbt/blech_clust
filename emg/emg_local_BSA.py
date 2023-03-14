@@ -11,14 +11,14 @@ import sys
 import shutil
 from glob import glob
 
-# Change to the directory that has the emg data files (env.npy and sig_trials.npy). Make a directory for storing the BSA results
+sys.path.append('..')
+from utils.blech_utils import imp_metadata
+
 # Get name of directory with the data files
-if len(sys.argv) > 1:
-    data_dir = os.path.abspath(sys.argv[1])
-    if data_dir[-1] != '/':
-        data_dir += '/'
-else:
-    data_dir = easygui.diropenbox(msg = 'Please select data directory')
+metadata_handler = imp_metadata(sys.argv)
+data_dir = metadata_handler.dir_name
+os.chdir(data_dir)
+print(f'Processing : {data_dir}')
 
 emg_output_dir = os.path.join(data_dir, 'emg_output')
 # Get dirs for each emg CAR

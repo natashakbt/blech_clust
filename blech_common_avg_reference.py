@@ -11,16 +11,13 @@ import sys
 from tqdm import tqdm
 import glob
 import json
-from utils.blech_utils import (
-        imp_metadata,
-        )
+from utils.blech_utils import imp_metadata
 
 # Get name of directory with the data files
-metadata_handler = imp_metadata(sys.argv[1])
+metadata_handler = imp_metadata(sys.argv)
 dir_name = metadata_handler.dir_name
 os.chdir(dir_name)
 print(f'Processing : {dir_name}')
-os.chdir(dir_name)
 
 # Open the hdf5 file
 hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')

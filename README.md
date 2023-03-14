@@ -16,7 +16,7 @@ conda create --name blech_clust python=3.6.13       # Create "blech_clust" envir
 conda activate blech_clust                          # Activate blech_clust environment
 bash conda_requirements_base.sh                     # Install main packages using conda/mamba
 bash install_gnu_parallel.sh                        # Install GNU Parallel
-pip install -r pip_requirements.txt                 # Install pip requirements (not covered by conda)
+pip install -r pip_requirements_base.txt            # Install pip requirements (not covered by conda)
 ```
 
 ### Convenience scripts
@@ -55,6 +55,9 @@ pip install -r pip_requirements.txt                 # Install pip requirements (
         - Palatability correlation coefficient  
 14. python blech_overlay_psth.py  
     - Plot overlayed PSTHs for units with respective waveforms  
+
+### Operations Workflow Visual 
+![blech_clust_outline - Flowchart](https://user-images.githubusercontent.com/12436309/223515611-c4756424-2370-4bf2-8e3f-092e5b91b48e.png)
 
 ### Example workflow
 ```

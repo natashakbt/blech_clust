@@ -14,7 +14,7 @@ import ast
 
 # Import 3rd party code
 from utils import blech_waveforms_datashader
-from utils.blech_utils import entry_checker
+from utils.blech_utils import entry_checker, imp_metadata
 
 # Set seed to allow inter-run reliability
 # Also allows reusing the same sorting sheets across runs
@@ -48,14 +48,16 @@ if args.sort_file is not None:
     sort_table.reset_index(inplace=True)
 
 if args.dir_name is not None: 
-    dir_name = os.path.abspath(args.dir_name)
-    if dir_name[-1] != '/':
-        dir_name += '/'
+    metadata_handler = imp_metadata([[],args.dir_name])
 else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
-
+    metadata_handler = imp_metadata([])
+dir_name = metadata_handler.dir_name
 #dir_name = easygui.diropenbox()
 os.chdir(dir_name)
+file_list = metadata_handler.file_list
+hdf5_name = metadata_handler.hdf5_name
+# Open the hdf5 file
+hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Clean up the memory monitor files, pass if clean up has been done already
 if not os.path.exists('./memory_monitor_clustering/memory_usage.txt'):
@@ -70,15 +72,6 @@ if not os.path.exists('./memory_monitor_clustering/memory_usage.txt'):
             pass    
     f.close()
 
-# Look for the hdf5 file in the directory
-file_list = os.listdir('./')
-hdf5_name = ''
-for files in file_list:
-        if files[-2:] == 'h5':
-                hdf5_name = files
-
-# Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
 
 # Delete the raw node, if it exists in the hdf5 file, to cut down on file size
 try:
