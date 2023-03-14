@@ -64,7 +64,9 @@ for this_ind in inds:
     ax[this_ind].set_title(f'Laser : {unique_lasers[this_ind[1]]}')
 ax[inds[-1]].legend()
 fig.suptitle(f'Mean Smooth Gapes (smoothing = {kern_len}ms)')
-fig.savefig(os.path.join(fin_plot_dir, 'mean_gapes_smooth.png'))
+fig.savefig(
+        os.path.join(fin_plot_dir, 'mean_gapes_smooth.png'),
+        dpi = 300)
 plt.close(fig)
 #plt.show()
 

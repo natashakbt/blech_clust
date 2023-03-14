@@ -236,7 +236,9 @@ for num, dir_name in enumerate(dir_list):
                 os.makedirs(fin_plot_dir)
             for num, this_out in enumerate(outs):
                 savename = f'laser_{unique_lasers[i]}_taste{j}_fig{num}.png'
-                this_out[0].savefig(os.path.join(fin_plot_dir, savename))
+                this_out[0].savefig(
+                        os.path.join(fin_plot_dir, savename),
+                        dpi = 300)
                 plt.close(this_out[0])
             #plt.show()
 
