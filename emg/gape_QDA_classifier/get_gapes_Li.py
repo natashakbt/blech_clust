@@ -28,6 +28,9 @@ info_dict = metadata_handler.info_dict
 params_dict = metadata_handler.params_dict
 pre_stim, post_stim = params_dict['spike_array_durations']
 
+psth_durs = params_dict['psth_params']['durations']
+psth_inds = [int(x + pre_stim) for x in psth_durs]
+
 ############################################################
 # Load and Process Data
 ############################################################
@@ -217,15 +220,24 @@ for num, dir_name in enumerate(dir_list):
                         first_gape[i, j, k] = np.where(
                             gapes_Li[i, j, k, :] > 0.0)[0][0]
 
-                plot_dat = env_final[i, j, k, :]
-                ax[k].plot(plot_dat, linewidth = 1)
+                plot_dat = env_final[i, j, k, psth_inds[0]:psth_inds[1]]
+                plot_gapes = gapes_Li[i,j,k, psth_inds[0]:psth_inds[1]]
+                t = np.arange(*psth_durs)
+                ax[k].plot(t,plot_dat, linewidth = 1)
                 #ax[k].vlines(peak_ind, plot_dat.min(), plot_dat.max(), 
                 #             color = 'k', alpha = 0.5) 
-                for this_peak, this_dur in zip(peak_ind, durations):
-                    ax[k].axvspan(this_peak - this_dur/2,
-                             this_peak + this_dur/2,
-                             alpha = 0.5, color = 'yellow')
-                ax[k].plot(gapes_Li[i,j,k] * -env_final.max(axis=None) * 0.2)
+                #plot_peak_inds = peak_ind - pre_stim
+                #wanted_inds = np.logical_and(
+                #        plot_peak_inds > psth_inds[0],
+                #        plot_peak_inds < psth_inds[1]
+                #        )
+                #plot_peak_inds = plot_peak_inds[wanted_inds]
+                #durations = durations[wanted_inds]
+                #for this_peak, this_dur in zip(plot_peak_inds, durations):
+                #    ax[k].axvspan(this_peak - this_dur/2,
+                #             this_peak + this_dur/2,
+                #             alpha = 0.5, color = 'yellow')
+                ax[k].plot(t, plot_gapes * -env_final.max(axis=None) * 0.2)
                 ax[k].set_ylim([-env_final.max(axis=None) * 0.2,
                                 env_final.max(axis=None)])
                 ax[k].set_ylabel(f'Trial {k}')

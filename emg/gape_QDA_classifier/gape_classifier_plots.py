@@ -16,6 +16,7 @@ metadata_handler = imp_metadata(sys.argv)
 data_dir = metadata_handler.dir_name
 os.chdir(data_dir)
 
+
 # Open the hdf5 file
 hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
 
@@ -24,6 +25,10 @@ info_dict = metadata_handler.info_dict
 params_dict = metadata_handler.params_dict
 pre_stim, post_stim = params_dict['spike_array_durations']
 taste_names = info_dict['taste_params']['tastes']
+
+stim_t = params_dict['spike_array_durations'][0]
+psth_durs = params_dict['psth_params']['durations']
+psth_inds = [int(x + stim_t) for x in psth_durs]
 
 unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
 
@@ -34,6 +39,7 @@ emg_channel_basenames = [os.path.basename(x) for x in emg_channel_names]
 gape_list = [x.gapes_Li[:] for x in emg_channels]
 
 mean_gapes = np.stack([x.mean(axis=2) for x in gape_list])
+mean_gapes = mean_gapes[...,psth_inds[0]:psth_inds[1]]
 kern_len = 300
 kern = np.ones(kern_len)/kern_len
 smooth_mean_gapes = np.empty(mean_gapes.shape)
@@ -51,15 +57,13 @@ if not os.path.exists(fin_plot_dir):
 
 fig,ax = plt.subplots(*mean_gapes.shape[:2], 
                       sharex=True, sharey=True)
-if len(emg_channel_names) == 1:
-    ax = ax[np.newaxis,:]
-elif len(unique_lasers) == 1:
-    ax = ax[:,np.newaxis]
+t = np.arange(*psth_durs)
+ax = np.atleast_2d(ax)
 inds = list(np.ndindex(ax.shape))
 for this_ind in inds:
     this_dat = smooth_mean_gapes[this_ind]
     for this_name, this_taste in zip(taste_names, this_dat): 
-        ax[this_ind].plot(this_taste, label = this_name)
+        ax[this_ind].plot(t, this_taste, label = this_name)
     ax[this_ind].set_ylabel(emg_channel_basenames[this_ind[0]])
     ax[this_ind].set_title(f'Laser : {unique_lasers[this_ind[1]]}')
 ax[inds[-1]].legend()
