@@ -22,13 +22,17 @@ Steps:
 """
 
 ############################################################
-#|_ _|_ __ ___  _ __   ___  _ __| |_ ___  
-# | || '_ ` _ \| '_ \ / _ \| '__| __/ __| 
-# | || | | | | | |_) | (_) | |  | |_\__ \ 
-#|___|_| |_| |_| .__/ \___/|_|   \__|___/ 
-#              |_|                        
+# Imports
 ############################################################
 
+from utils.blech_utils import (
+    imp_metadata,
+)
+import utils.clustering as clust
+from utils import memory_monitor as mm
+from utils import blech_waveforms_datashader
+import subprocess
+from joblib import load
 from sklearn.mixture import GaussianMixture as gmm
 from sklearn.preprocessing import StandardScaler as scaler
 from sklearn.decomposition import PCA
@@ -42,24 +46,17 @@ import os
 import shutil
 import matplotlib
 matplotlib.use('Agg')
-from joblib import load
-import subprocess
 
-## Import 3rd party code
-from utils import blech_waveforms_datashader
-from utils import memory_monitor as mm
-from utils.clustering import *
-from utils.blech_utils import (
-        imp_metadata,
-        )
+# Import 3rd party code
 
 # Set seed to allow inter-run reliability
 # Also allows reusing the same sorting sheets across runs
 np.random.seed(0)
 
 ############################################################
-## Load classifier params
-classifier_params = json.load(open('params/waveform_classifier_params.yaml','r'))
+# Load classifier params
+classifier_params = json.load(
+    open('params/waveform_classifier_params.yaml', 'r'))
 
 ############################################################
 # Setting up model
@@ -68,13 +65,13 @@ if classifier_params['use_classifier']:
     home_dir = os.environ.get("HOME")
     model_dir = f'{home_dir}/Desktop/neuRecommend/model'
     # Run download model script to make sure latest model is being used
-    process = subprocess.Popen(f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
+    process = subprocess.Popen(
+        f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
     # Forces process to complete before proceeding
     stdout, stderr = process.communicate()
     # If model_dir still doesn't exist, then throw an error
     if not os.path.exists(model_dir):
         raise Exception("Couldn't download model")
-        
 
     pred_pipeline_path = f'{model_dir}/xgboost_full_pipeline.dump'
     feature_pipeline_path = f'{model_dir}/feature_engineering_pipeline.dump'
@@ -83,29 +80,28 @@ if classifier_params['use_classifier']:
     from feature_engineering_pipeline import *
 
     clf_threshold_path = f'{model_dir}/proba_threshold.json'
-    with open(clf_threshold_path,'r') as this_file:
+    with open(clf_threshold_path, 'r') as this_file:
         out_dict = json.load(this_file)
     clf_threshold = out_dict['threshold']
 
 ############################################################
-#|  ___|   _ _ __   ___ ___ 
-#| |_ | | | | '_ \ / __/ __|
-#|  _|| |_| | | | | (__\__ \
-#|_|   \__,_|_| |_|\___|___/
+# Define Functions
 ############################################################
+
 
 def ifisdir_rmdir(dir_name):
     if os.path.isdir(dir_name):
         shutil.rmtree(dir_name)
 
+
 def calc_recording_cutoff(
-                filt_el,
-                sampling_rate,
-                voltage_cutoff,
-                max_breach_rate,
-                max_secs_above_cutoff,
-                max_mean_breach_rate_persec
-                ):
+    filt_el,
+    sampling_rate,
+    voltage_cutoff,
+    max_breach_rate,
+    max_secs_above_cutoff,
+    max_mean_breach_rate_persec
+):
 
     breach_rate = float(len(np.where(filt_el > voltage_cutoff)[0])
                         * int(sampling_rate))/len(filt_el)
@@ -134,18 +130,19 @@ def calc_recording_cutoff(
         recording_cutoff = np.where(breaches_per_sec >
                                     max_mean_breach_rate_persec)[0][0]
 
-    return (test_el, breach_rate, breaches_per_sec, secs_above_cutoff, 
-        mean_breach_rate_persec, recording_cutoff)
+    return (test_el, breach_rate, breaches_per_sec, secs_above_cutoff,
+            mean_breach_rate_persec, recording_cutoff)
+
 
 def gen_window_plots(
-        filt_el,
-        window_len,
-        window_count,
-        sampling_rate,
-        spike_times,
-        mean_val,
-        threshold,
-                ):
+    filt_el,
+    window_len,
+    window_count,
+    sampling_rate,
+    spike_times,
+    mean_val,
+    threshold,
+):
     windows_in_data = len(filt_el) // (window_len * sampling_rate)
     window_markers = np.linspace(0,
                                  int(windows_in_data*(window_len * sampling_rate)),
@@ -175,6 +172,7 @@ def gen_window_plots(
                           mean_val + 1.5*threshold))
     return fig
 
+
 def gen_datashader_plot(
         slices_dejittered,
         cluster_points,
@@ -183,14 +181,14 @@ def gen_datashader_plot(
         electrode_num,
         sampling_rate,
         cluster,
-        ):
+):
     fig, ax = \
         blech_waveforms_datashader.waveforms_datashader(
             slices_dejittered[cluster_points, :],
             x,
             downsample=False,
             threshold=threshold,
-            dir_name= "Plots/" + "datashader_temp_el" + str(electrode_num))
+            dir_name="Plots/" + "datashader_temp_el" + str(electrode_num))
 
     ax.set_xlabel('Sample ({:d} samples per ms)'.
                   format(int(sampling_rate/1000)))
@@ -198,10 +196,11 @@ def gen_datashader_plot(
     ax.set_title('Cluster%i' % cluster)
     return fig, ax
 
+
 def gen_isi_hist(
         times_dejittered,
         cluster_points,
-        ):
+):
     fig = plt.figure()
     cluster_times = times_dejittered[cluster_points]
     ISIs = np.ediff1d(np.sort(cluster_times))
@@ -228,11 +227,12 @@ def gen_isi_hist(
                  len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
     return fig
 
+
 def remove_too_large_waveforms(
         cluster_points,
         amplitudes,
         wf_amplitude_sd_cutoff
-        ):
+):
     this_cluster = predictions[cluster_points]
     cluster_amplitudes = amplitudes[cluster_points]
     cluster_amplitude_mean = np.mean(cluster_amplitudes)
@@ -249,18 +249,19 @@ def remove_too_large_waveforms(
 # |_____\___/ \__,_|\__,_|
 ############################################################
 
+
 if __name__ == '__main__':
     # Read blech.dir, and cd to that directory
     home_dir = os.getenv('HOME')
-    blech_clust_dir = os.path.join(home_dir,'Desktop','blech_clust')
-    f = open(os.path.join(blech_clust_dir,'blech.dir'), 'r')
+    blech_clust_dir = os.path.join(home_dir, 'Desktop', 'blech_clust')
+    f = open(os.path.join(blech_clust_dir, 'blech.dir'), 'r')
     dir_name = []
     for line in f.readlines():
         dir_name.append(line)
     f.close()
     dir_name = dir_name[0][:-1]
 
-    metadata_handler = imp_metadata([[],dir_name])
+    metadata_handler = imp_metadata([[], dir_name])
     os.chdir(metadata_handler.dir_name)
 
     electrode_num = int(sys.argv[1])
@@ -278,7 +279,6 @@ if __name__ == '__main__':
         raw_el = hf5.get_node(el_path)[:]
     else:
         raise Exception(f'{el_path} not in HDF5')
-    #exec(f"raw_el = hf5.root.raw.electrode{electrode_num:02}[:]")
     hf5.close()
 
     # Check if the directories for this electrode number exist -
@@ -294,7 +294,7 @@ if __name__ == '__main__':
 
     ############################################################
     # High bandpass filter the raw electrode recordings
-    filt_el = get_filtered_electrode(
+    filt_el = clust.get_filtered_electrode(
         raw_el,
         freq=[bandpass_lower_cutoff,
               bandpass_upper_cutoff],
@@ -306,20 +306,20 @@ if __name__ == '__main__':
     ############################################################
     # Calculate the 3 voltage parameters
     (
-            test_el,
-            breach_rate, 
-            breaches_per_sec, 
-            secs_above_cutoff, 
-            mean_breach_rate_persec,
-            recording_cutoff
-            ) = calc_recording_cutoff(
-                    filt_el,
-                    sampling_rate,
-                    voltage_cutoff,
-                    max_breach_rate,
-                    max_secs_above_cutoff,
-                    max_mean_breach_rate_persec
-                    ) 
+        test_el,
+        breach_rate,
+        breaches_per_sec,
+        secs_above_cutoff,
+        mean_breach_rate_persec,
+        recording_cutoff
+    ) = calc_recording_cutoff(
+        filt_el,
+        sampling_rate,
+        voltage_cutoff,
+        max_breach_rate,
+        max_secs_above_cutoff,
+        max_mean_breach_rate_persec
+    )
 
     # Dump a plot showing where the recording was cut off at
     fig = plt.figure()
@@ -330,26 +330,23 @@ if __name__ == '__main__':
     plt.xlabel('Recording time (secs)')
     plt.ylabel('Average voltage recorded per sec (microvolts)')
     plt.title('Recording cutoff time (indicated by the black horizontal line)')
-    fig.savefig(f'./Plots/{electrode_num:02}/cutoff_time.png', bbox_inches='tight')
+    fig.savefig(
+        f'./Plots/{electrode_num:02}/cutoff_time.png', bbox_inches='tight')
     plt.close("all")
 
     #############################################################
-    # | __ )  ___  __ _(_)_ __    _ __  _ __ ___   ___ ___  ___ ___
-    # |  _ \ / _ \/ _` | | '_ \  | '_ \| '__/ _ \ / __/ _ \/ __/ __|
-    # | |_) |  __/ (_| | | | | | | |_) | | | (_) | (_|  __/\__ \__ \
-    # |____/ \___|\__, |_|_| |_| | .__/|_|  \___/ \___\___||___/___/
-    #            |___/          |_|
+    # Begin Processing
     #############################################################
 
     # Then cut the recording accordingly
     filt_el = filt_el[:recording_cutoff*int(sampling_rate)]
 
     slices, spike_times, polarity, mean_val, threshold = \
-        extract_waveforms_abu(filt_el,
-                              spike_snapshot=[spike_snapshot_before,
-                                              spike_snapshot_after],
-                              sampling_rate=sampling_rate,
-                              threshold_mult = waveform_threshold)
+        clust.extract_waveforms_abu(filt_el,
+                                    spike_snapshot=[spike_snapshot_before,
+                                                    spike_snapshot_after],
+                                    sampling_rate=sampling_rate,
+                                    threshold_mult=waveform_threshold)
 
     ############################################################
     # Extract windows from filt_el and plot with threshold overlayed
@@ -375,11 +372,103 @@ if __name__ == '__main__':
     # Dejitter these spike waveforms, and get their maximum amplitudes
     # Slices are returned sorted by amplitude polaity
     slices_dejittered, times_dejittered = \
-        dejitter_abu3(slices,
+        clust.dejitter_abu3(slices,
                       spike_times,
                       polarity=polarity,
-                      spike_snapshot=[spike_snapshot_before, spike_snapshot_after],
+                      spike_snapshot=[spike_snapshot_before,
+                                      spike_snapshot_after],
                       sampling_rate=sampling_rate)
+
+    ############################################################
+    # Load full pipeline and perform prediction on slices_dejittered
+
+    if classifier_params['use_classifier']:
+        feature_pipeline = load(feature_pipeline_path)
+        pred_pipeline = load(pred_pipeline_path)
+
+        clf_prob = pred_pipeline.predict_proba(slices_dejittered)[:, 1]
+        clf_pred = clf_prob >= clf_threshold
+
+        fig = plt.figure(figsize=(10, 5))
+        ax0 = fig.add_subplot(1, 2, 1)
+        ax1 = fig.add_subplot(2, 2, 2)
+        ax2 = fig.add_subplot(2, 2, 4)
+        spike_dat = slices_dejittered[clf_pred == 1]
+        pos_spike_times = times_dejittered[clf_pred == 1]
+        spike_prob = clf_prob[clf_pred == 1]
+        x = np.arange(spike_dat.shape[1])
+        ax0.plot(x, spike_dat[::10].T, c='k', alpha=0.05)
+        ax1.scatter(pos_spike_times, spike_prob, s=1)
+        ax1.set_ylabel('Spike probability')
+        ax2.hist(pos_spike_times, bins=50)
+        ax2.set_ylabel('Binned Counts')
+        ax2.set_xlabel('Time')
+        fig.suptitle('Predicted Spike Waveforms' + '\n' +
+                     f'Count : {spike_dat.shape[0]}')
+        fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_spikes.png'),
+                    bbox_inches='tight')
+        plt.close(fig)
+
+        # Pull out noise info
+        noise_slices = slices_dejittered[clf_pred == 0]
+        noise_times = times_dejittered[clf_pred == 0]
+        noise_prob = clf_prob[clf_pred == 0]
+
+        # Cluster noise and plot waveforms + times on single plot
+        dat_thresh = 10000
+        zscore_noise_slices = zscore(noise_slices, axis=-1)
+        noise_train_set = zscore_noise_slices[np.random.choice(np.arange(noise_slices.shape[0]),
+                                                               int(np.min((noise_slices.shape[0], dat_thresh))))]
+        noise_pca_obj = PCA(n_components=1).fit(noise_train_set)
+        noise_pca = noise_pca_obj.transform(zscore_noise_slices)
+        # Don't need multiple restarts, this is just for visualization, not actual clustering
+        model = gmm(
+            n_components=5,
+            max_iter=num_iter,
+            n_init=1,
+            tol=thresh).fit(noise_train_set)
+
+        predictions = model.predict(zscore_noise_slices)
+
+        clust_num = len(np.unique(predictions))
+        fig, ax = plt.subplots(clust_num, 2, figsize=(20, 10), sharex='col')
+        ax[0, 0].set_title('Waveforms')
+        ax[0, 1].set_title('Spike Times')
+        plot_max = 1000  # Plot at most this many waveforms
+        # for num, this_ax in enumerate(wav_ax_list):
+        for num in range(clust_num):
+            this_dat = zscore_noise_slices[predictions == num]
+            inds = np.random.choice(
+                np.arange(this_dat.shape[0]),
+                int(np.min((
+                    this_dat.shape[0],
+                    plot_max
+                )))
+            )
+            this_dat = this_dat[inds]
+            ax[num, 0].plot(this_dat.T, color='k', alpha=0.01)
+            ax[num, 0].set_ylabel(f'Clust {num}')
+            this_times = noise_times[predictions == num]
+            this_pca = noise_pca[predictions == num]
+            #this_prob = noise_prob[predictions==num]
+            # ax[num,1].scatter(this_times, this_pca, label = str(num),
+            #        alpha = 0.1)
+            ax[num, 1].hist(this_times, bins=100)
+        fig.suptitle('Predicted Noise Waveforms' + '\n' +
+                     f'Count : {noise_slices.shape[0]}')
+        fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_noise.png'),
+                    bbox_inches='tight')
+        plt.close(fig)
+        # plt.show()
+
+        #throw_out_noise = True
+        if classifier_params['throw_out_noise']:
+            # Remaining data is now only spikes
+            slices_dejittered = slices_dejittered[clf_pred == 1]
+            times_dejittered = times_dejittered[clf_pred == 1]
+            clf_prob = clf_prob[clf_pred == 1]
+
+    ############################################################
 
     spike_order = np.argsort(times_dejittered)
     times_dejittered = times_dejittered[spike_order]
@@ -396,10 +485,10 @@ if __name__ == '__main__':
     #del spike_times
 
     # Scale the dejittered slices by the energy of the waveforms
-    scaled_slices, energy = scale_waveforms(slices_dejittered)
+    scaled_slices, energy = clust.scale_waveforms(slices_dejittered)
 
     # Run PCA on the scaled waveforms
-    pca_slices, explained_variance_ratio = implement_pca(scaled_slices)
+    pca_slices, explained_variance_ratio = clust.implement_pca(scaled_slices)
 
     # Save the pca_slices, energy and amplitudes to the
     # spike_waveforms folder for this electrode
@@ -475,9 +564,9 @@ if __name__ == '__main__':
         for cluster in range(i+2):
             cluster_points = np.where(predictions[:] == cluster)[0]
             this_cluster = remove_too_large_waveforms(
-                                    cluster_points,
-                                    amplitudes,
-                                    wf_amplitude_sd_cutoff)
+                cluster_points,
+                amplitudes,
+                wf_amplitude_sd_cutoff)
             predictions[cluster_points] = this_cluster
 
         # Make folder for results of i+2 clusters, and store results there
@@ -500,46 +589,48 @@ if __name__ == '__main__':
                 # Because in the previous version they were upsampled for clustering
 
                 # Create waveform datashader plot
-                fig,ax = gen_datashader_plot(
-                            slices_dejittered,
-                            cluster_points,
-                            x,
-                            threshold,
-                            electrode_num,
-                            sampling_rate,
-                            cluster,
-                        )
+                fig, ax = gen_datashader_plot(
+                    slices_dejittered,
+                    cluster_points,
+                    x,
+                    threshold,
+                    electrode_num,
+                    sampling_rate,
+                    cluster,
+                )
                 fig.savefig(os.path.join(
-                    clust_plot_dir,f'Cluster{cluster}_waveforms'))
+                    clust_plot_dir, f'Cluster{cluster}_waveforms'))
                 plt.close("all")
 
                 # Create ISI distribution plot
                 fig = gen_isi_hist(
-                            times_dejittered,
-                            cluster_points,
-                        )
+                    times_dejittered,
+                    cluster_points,
+                )
                 fig.savefig(os.path.join(
-                    clust_plot_dir,f'Cluster{cluster}_ISIs'))
+                    clust_plot_dir, f'Cluster{cluster}_ISIs'))
                 plt.close("all")
 
                 # Create features timeseries plot
                 # And plot histogram of spiketimes
                 this_standard_data = standard_data[cluster_points]
                 this_spiketimes = spike_times[cluster_points]
-                fig,ax = plt.subplots(this_standard_data.shape[1] + 1, 1,
-                        figsize = (7,9), sharex=True)
+                fig, ax = plt.subplots(this_standard_data.shape[1] + 1, 1,
+                                       figsize=(7, 9), sharex=True)
                 for this_label, this_dat, this_ax in \
                         zip(data_labels, this_standard_data.T, ax[:-1]):
-                    this_ax.scatter(this_spiketimes, this_dat, s=0.5, alpha = 0.5)
+                    this_ax.scatter(this_spiketimes, this_dat,
+                                    s=0.5, alpha=0.5)
                     this_ax.set_ylabel(this_label)
-                ax[-1].hist(this_spiketimes, bins = 50)
+                ax[-1].hist(this_spiketimes, bins=50)
                 ax[-1].set_ylabel('Spiketime' + '\n' + 'Histogram')
                 fig.savefig(os.path.join(
-                    clust_plot_dir,f'Cluster{cluster}_features'))
+                    clust_plot_dir, f'Cluster{cluster}_features'))
                 plt.close(fig)
 
             else:
-                file_path = os.path.join(clust_plot_dir,f'no_spikes_Cluster{cluster}')
+                file_path = os.path.join(
+                    clust_plot_dir, f'no_spikes_Cluster{cluster}')
                 with open(file_path, 'w') as file_connect:
                     file_connect.write('')
 
