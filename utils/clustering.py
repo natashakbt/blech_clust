@@ -15,10 +15,11 @@ def get_filtered_electrode(data, freq = [300.0, 3000.0], sampling_rate = 30000.0
         return filt_el
 
 def extract_waveforms_abu(filt_el, spike_snapshot = [0.5, 1.0], 
-                                    sampling_rate = 30000.0):
+                                    sampling_rate = 30000.0,
+                                    threshold_mult = 5.0):
 
         m = np.mean(filt_el)
-        th = 5.0*np.median(np.abs(filt_el)/0.6745)
+        th = threshold_mult*np.median(np.abs(filt_el)/0.6745)
 
         negative = np.where(filt_el <= m-th)[0] 
         positive = np.where(filt_el >= m+th)[0] 
