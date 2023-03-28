@@ -383,6 +383,8 @@ if __name__ == '__main__':
     # Load full pipeline and perform prediction on slices_dejittered
 
     if classifier_params['use_classifier']:
+        base_plot_dir = f'./Plots/{electrode_num:02}'
+
         feature_pipeline = load(feature_pipeline_path)
         pred_pipeline = load(pred_pipeline_path)
 
@@ -414,28 +416,30 @@ if __name__ == '__main__':
         noise_times = times_dejittered[clf_pred == 0]
         noise_prob = clf_prob[clf_pred == 0]
 
+        noise_transformed = feature_pipeline.transform(noise_slices)
+        zscore_noise_slices = zscore(noise_slices, axis=-1)
+
         # Cluster noise and plot waveforms + times on single plot
         dat_thresh = 10000
-        zscore_noise_slices = zscore(noise_slices, axis=-1)
-        noise_train_set = zscore_noise_slices[np.random.choice(np.arange(noise_slices.shape[0]),
-                                                               int(np.min((noise_slices.shape[0], dat_thresh))))]
-        noise_pca_obj = PCA(n_components=1).fit(noise_train_set)
-        noise_pca = noise_pca_obj.transform(zscore_noise_slices)
+        noise_train_set_inds = np.random.choice(np.arange(noise_slices.shape[0]),
+                   int(np.min((noise_slices.shape[0], dat_thresh))))
+
+        noise_transformed_train = noise_transformed[noise_train_set_inds]
+
         # Don't need multiple restarts, this is just for visualization, not actual clustering
         model = gmm(
             n_components=5,
             max_iter=num_iter,
             n_init=1,
-            tol=thresh).fit(noise_train_set)
+            tol=thresh).fit(noise_transformed_train)
 
-        predictions = model.predict(zscore_noise_slices)
+        predictions = model.predict(noise_transformed)
 
         clust_num = len(np.unique(predictions))
         fig, ax = plt.subplots(clust_num, 2, figsize=(20, 10), sharex='col')
         ax[0, 0].set_title('Waveforms')
         ax[0, 1].set_title('Spike Times')
         plot_max = 1000  # Plot at most this many waveforms
-        # for num, this_ax in enumerate(wav_ax_list):
         for num in range(clust_num):
             this_dat = zscore_noise_slices[predictions == num]
             inds = np.random.choice(
@@ -449,11 +453,8 @@ if __name__ == '__main__':
             ax[num, 0].plot(this_dat.T, color='k', alpha=0.01)
             ax[num, 0].set_ylabel(f'Clust {num}')
             this_times = noise_times[predictions == num]
-            this_pca = noise_pca[predictions == num]
-            #this_prob = noise_prob[predictions==num]
-            # ax[num,1].scatter(this_times, this_pca, label = str(num),
-            #        alpha = 0.1)
             ax[num, 1].hist(this_times, bins=100)
+
         fig.suptitle('Predicted Noise Waveforms' + '\n' +
                      f'Count : {noise_slices.shape[0]}')
         fig.savefig(os.path.join(base_plot_dir, f'{electrode_num}_pred_noise.png'),
@@ -525,7 +526,7 @@ if __name__ == '__main__':
     data = np.zeros((len(pca_slices), n_pc + 2))
     data[:, 2:] = pca_slices[:, :n_pc]
     data[:, 0] = energy[:]/np.max(energy)
-    data[:, 1] = np.abs(amplitudes)/np.max(np.abs(amplitudes))
+    data[:, 1] = amplitudes/np.max(np.abs(amplitudes))
 
     data_labels = [*[f'pc{x}' for x in range(n_pc)],
                    'energy',
