@@ -26,8 +26,6 @@ class imp_metadata():
         self.dir_name = self.get_dir_name(args)
         self.get_file_list()
         self.get_hdf5_name()
-        self.get_params_path()
-        self.get_info_path()
         self.load_params()
         self.load_info()
 
@@ -58,11 +56,10 @@ class imp_metadata():
             print('No PARAMS file found')
 
     def load_params(self,):
+        self.get_params_path()
         if 'params_file_path' in dir(self):
             with open(self.params_file_path, 'r') as params_file_connect:
                 self.params_dict = json.load(params_file_connect)
-        else:
-            print("can't load params file...it doens't exist")
 
     def get_info_path(self,):
         file_list = glob.glob(os.path.join(self.dir_name,'**.info'))
@@ -72,8 +69,7 @@ class imp_metadata():
             print('No INFO file found')
 
     def load_info(self,):
+        self.get_info_path()
         if 'info_file_path' in dir(self):
             with open(self.info_file_path, 'r') as info_file_connect:
                 self.info_dict = json.load(info_file_connect)
-        else:
-            print("can't load info file...it doens't exist")
