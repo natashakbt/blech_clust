@@ -24,7 +24,6 @@ def return_transformers():
     model_dir = f'{home_dir}/Desktop/neuRecommend/model'
     sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
     import feature_engineering_pipeline as fep
-    zscore_custom = fep.zscore_custom
 
     # Run download model script to make sure latest model is being used
     process = subprocess.Popen(
@@ -36,11 +35,13 @@ def return_transformers():
         raise Exception("Couldn't download model")
 
     feature_pipeline_path = f'{model_dir}/feature_engineering_pipeline.dump'
-    umap_model_path = f'{model_dir}/umap_model'
+    umap_model_paths = glob(f'{model_dir}/umap_model*')
+    model_basenames = [os.path.basename(x) for x in umap_model_paths]
+    #umap_model_path = f'{model_dir}/umap_model'
 
-    umap_model = load_ParametricUMAP(umap_model_path)
+    umap_models = [load_ParametricUMAP(x) for x in umap_model_paths]
     feature_transformer = load(feature_pipeline_path)
-    return feature_transformer, umap_model, zscore_custom
+    return feature_transformer, umap_models, model_basenames
 
 
 def return_raw_data(this_row):
@@ -63,32 +64,52 @@ def gen_cluster_output_dir(this_row, dir_name):
     return cluster_output_dir
 
 
-def create_cluster_plot(umap_waveforms, clustering_results, cluster_output_dir):
+def create_cluster_plot(umap_waveforms, ax, clustering_results, cluster_output_dir):
     """
     Creates a plot of the UMAP embedding of the spike waveforms colored by
     cluster assignment. This plot is saved to the cluster_output_dir.
     """
     umap_dims = umap_waveforms.shape[1]
-    dim_combos = list(combinations(range(umap_dims), 2))
-    fig, ax = plt.subplots(umap_dims, 2, sharex=True, sharey=True,
-                           figsize=(8, 10))
-    for i in range(umap_dims):
-        scatter = ax[i, 0].scatter(umap_waveforms[:, dim_combos[i][0]],
-                                   umap_waveforms[:, dim_combos[i][1]],
-                                   c=clustering_results, s=5, cmap='tab10',
-                                   alpha=0.5)
-        legend = ax[i, 0].legend(*scatter.legend_elements(),
-                                 bbox_to_anchor=(0, 1.1))
-        ax[i, 0].add_artist(legend)
-        ax[i, 0].set_xlabel('UMAP Dim {}'.format(dim_combos[i][0]))
-        ax[i, 0].set_ylabel('UMAP Dim {}'.format(dim_combos[i][1]))
-        ax[i, 1].hexbin(umap_waveforms[:, dim_combos[i][0]],
-                        umap_waveforms[:, dim_combos[i][1]],
-                        bins='log', cmap='Greys')
-        ax[i, 1].set_xlabel('UMAP Dim {}'.format(dim_combos[i][0]))
-        ax[i, 1].set_ylabel('UMAP Dim {}'.format(dim_combos[i][1]))
+    #dim_combos = list(combinations(range(umap_dims), 2))
+    assert len(ax) == 2
+    #fig, ax = plt.subplots(len(dim_combos), 2, sharex=True, sharey=True,
+    #                       figsize=(8, 10))
+    #for i in range(len(dim_combos)):
+    scatter = ax[0].scatter(umap_waveforms[:, 0],
+                            umap_waveforms[:, 1],
+                               c=clustering_results, s=5, cmap='tab10',
+                               alpha=0.5)
+    legend = ax[0].legend(*scatter.legend_elements(),
+                             bbox_to_anchor=(0, 1.1))
+    ax[0].add_artist(legend)
+    ax[0].set_xlabel('UMAP Dim {}'.format(0))
+    ax[0].set_ylabel('UMAP Dim {}'.format(1))
+    ax[1].hexbin(umap_waveforms[:, 0],
+                 umap_waveforms[:, 1],
+                 bins='log', cmap='Greys')
+    ax[1].set_xlabel('UMAP Dim {}'.format(0))
+    ax[1].set_ylabel('UMAP Dim {}'.format(1))
+    #fig.suptitle('UMAP Clusters')
+    ## plt.show()
+    #fig.savefig(os.path.join(cluster_output_dir, 'UMAP_clusters.png'))
+    #plt.close(fig)
+
+def plot_clusters_over_polarities(umap_waveforms, 
+                                  clustering_results, 
+                                  cluster_output_dir,
+                                  umap_model_names):
+    fig, ax = plt.subplots(len(umap_waveforms), 2, figsize=(10, 5))
+    # Label each row with the polarity
+    for i in range(len(umap_waveforms)):
+        ax[0,i].set_title(umap_model_names[i])
+    for i in range(len(umap_waveforms)):
+        ax[:,i] = create_cluster_plot(
+                umap_waveforms[i], 
+                ax[:,i], 
+                polar_clustering_results[i],
+                cluster_output_dir)
     fig.suptitle('UMAP Clusters')
-    # plt.show()
+    ## plt.show()
     fig.savefig(os.path.join(cluster_output_dir, 'UMAP_clusters.png'))
     plt.close(fig)
 
@@ -123,21 +144,6 @@ def create_umap_time_plot(umap_waveforms, spike_times,
                 'UMAP_cluster_timeseries.png'))
     plt.close(fig)
 
-
-def run_pipeline(this_row, dir_name):
-    print(f'Processing : Electrode {this_row.electrode_nums:02d}, '
-          f'{this_row.cluster_nums} clusters')
-    feature_transformer, umap_model, zscore_custom = return_transformers()
-    spike_waveforms, spike_times, clustering_results = return_raw_data(
-        this_row)
-    umap_waveforms = process_umap(
-        umap_model, spike_waveforms, feature_transformer)
-    cluster_output_dir = gen_cluster_output_dir(this_row, dir_name)
-    create_cluster_plot(umap_waveforms, clustering_results, cluster_output_dir)
-    create_umap_time_plot(umap_waveforms, spike_times,
-                          clustering_results, cluster_output_dir)
-
-
 def return_path_frame(dir_name):
     # Iterate over all electrodes in data_dir
     waveform_files = glob(os.path.join(
@@ -170,6 +176,52 @@ def return_path_frame(dir_name):
         index=cluster_electrode_int
     )
     return path_frame
+
+def split_data_by_polarity(X_raw, fep, zero_ind, *args):
+    """
+    Splits the spike waveforms into positive and negative polarities.
+    """
+    # Split data by polarity
+    #polarity = np.sign(fep.AmpFeature().transform(X_raw)).flatten()
+    polarity = np.sign(X_raw[:, zero_ind]).flatten()
+    unique_polarity = [int(x) for x in np.unique(polarity)]
+    polar_data = [X_raw[polarity == this_polarity] for this_polarity in unique_polarity]
+    polar_y = [[y[polarity == this_polarity] \
+            for this_polarity in unique_polarity] for y in args]
+    return polar_data, polar_y, polarity, unique_polarity
+
+def run_pipeline(this_row, dir_name, fep, zero_ind):
+    print(f'Processing : Electrode {this_row.electrode_nums:02d}, '
+          f'{this_row.cluster_nums} clusters')
+    feature_transformer, umap_models, umap_model_names = return_transformers()
+    model_polarities = [int(x.split('_')[-1]) for x in umap_model_names]
+    spike_waveforms, spike_times, clustering_results = return_raw_data(
+        this_row)
+    (
+        polar_waveforms, 
+        (polar_spike_times, polar_clustering_results), 
+        data_polarities,
+        unique_data_polarities
+        )= \
+        split_data_by_polarity(
+                spike_waveforms, 
+                fep, 
+                zero_ind,
+                spike_times, 
+                clustering_results)
+    # Make sure polarities match before moving forward
+    assert np.all(unique_data_polarities == model_polarities)
+    # Loop over data and models
+    cluster_output_dir = gen_cluster_output_dir(this_row, dir_name)
+    umap_waveforms = [process_umap(this_model, this_waveforms, feature_transformer) \
+            for this_model, this_waveforms in zip(umap_models, polar_waveforms)] 
+    plot_clusters_over_polarities(umap_waveforms, clustering_results,
+                                  cluster_output_dir, umap_model_names)
+    #create_umap_time_plot(umap_waveforms, spike_times,
+    #                      clustering_results, cluster_output_dir)
+
+
+
 
 
 if __name__ == '__main__':
@@ -213,10 +265,22 @@ if __name__ == '__main__':
     model_dir = f'{home_dir}/Desktop/neuRecommend/model'
     sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
     from umap.parametric_umap import load_ParametricUMAP
+    import feature_engineering_pipeline as fep
     from feature_engineering_pipeline import *
     # Run parallel pipeline manually as it needs imports from
     # feature_engineering_pipeline in __main__
+     
+
+
     this_row = path_frame.iloc[int(sys.argv[1])]
-    run_pipeline(this_row, dir_name)
+
+    snippet_pre = params_dict['spike_snapshot_before']
+    sampling_rate_ms = params_dict['sampling_rate']/1000
+    snippet_pre_inds = int(snippet_pre*sampling_rate_ms) 
+
+    run_pipeline(this_row, dir_name, fep, snippet_pre_inds)
     # Parallel(n_jobs=2)(delayed(run_pipeline)(this_row[1], dir_name) \
     #        for this_row in tqdm(path_frame.iterrows()))
+
+# Don't assume that the amplitude is the largest value
+# We are already getting aligned spikes, just use the value at the origin
