@@ -23,7 +23,6 @@ def return_transformers():
     home_dir = os.environ.get("HOME")
     model_dir = f'{home_dir}/Desktop/neuRecommend/model'
     sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
-    import feature_engineering_pipeline as fep
 
     # Run download model script to make sure latest model is being used
     process = subprocess.Popen(
@@ -177,12 +176,11 @@ def return_path_frame(dir_name):
     )
     return path_frame
 
-def split_data_by_polarity(X_raw, fep, zero_ind, *args):
+def split_data_by_polarity(X_raw, zero_ind, *args):
     """
     Splits the spike waveforms into positive and negative polarities.
     """
     # Split data by polarity
-    #polarity = np.sign(fep.AmpFeature().transform(X_raw)).flatten()
     polarity = np.sign(X_raw[:, zero_ind]).flatten()
     unique_polarity = [int(x) for x in np.unique(polarity)]
     polar_data = [X_raw[polarity == this_polarity] for this_polarity in unique_polarity]
@@ -190,7 +188,7 @@ def split_data_by_polarity(X_raw, fep, zero_ind, *args):
             for this_polarity in unique_polarity] for y in args]
     return polar_data, polar_y, polarity, unique_polarity
 
-def run_pipeline(this_row, dir_name, fep, zero_ind):
+def run_pipeline(this_row, dir_name, zero_ind):
     print(f'Processing : Electrode {this_row.electrode_nums:02d}, '
           f'{this_row.cluster_nums} clusters')
     feature_transformer, umap_models, umap_model_names = return_transformers()
@@ -205,7 +203,6 @@ def run_pipeline(this_row, dir_name, fep, zero_ind):
         )= \
         split_data_by_polarity(
                 spike_waveforms, 
-                fep, 
                 zero_ind,
                 spike_times, 
                 clustering_results)
@@ -265,7 +262,6 @@ if __name__ == '__main__':
     model_dir = f'{home_dir}/Desktop/neuRecommend/model'
     sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
     from umap.parametric_umap import load_ParametricUMAP
-    import feature_engineering_pipeline as fep
     from feature_engineering_pipeline import *
     # Run parallel pipeline manually as it needs imports from
     # feature_engineering_pipeline in __main__
@@ -278,7 +274,7 @@ if __name__ == '__main__':
     sampling_rate_ms = params_dict['sampling_rate']/1000
     snippet_pre_inds = int(snippet_pre*sampling_rate_ms) 
 
-    run_pipeline(this_row, dir_name, fep, snippet_pre_inds)
+    run_pipeline(this_row, dir_name, snippet_pre_inds)
     # Parallel(n_jobs=2)(delayed(run_pipeline)(this_row[1], dir_name) \
     #        for this_row in tqdm(path_frame.iterrows()))
 
