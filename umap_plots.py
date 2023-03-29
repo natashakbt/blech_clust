@@ -105,7 +105,7 @@ def plot_clusters_over_polarities(umap_waveforms,
         ax[:,i] = create_cluster_plot(
                 umap_waveforms[i], 
                 ax[:,i], 
-                polar_clustering_results[i],
+                clustering_results[i],
                 cluster_output_dir)
     fig.suptitle('UMAP Clusters')
     ## plt.show()
@@ -212,7 +212,7 @@ def run_pipeline(this_row, dir_name, zero_ind):
     cluster_output_dir = gen_cluster_output_dir(this_row, dir_name)
     umap_waveforms = [process_umap(this_model, this_waveforms, feature_transformer) \
             for this_model, this_waveforms in zip(umap_models, polar_waveforms)] 
-    plot_clusters_over_polarities(umap_waveforms, clustering_results,
+    plot_clusters_over_polarities(umap_waveforms, polar_clustering_results,
                                   cluster_output_dir, umap_model_names)
     #create_umap_time_plot(umap_waveforms, spike_times,
     #                      clustering_results, cluster_output_dir)
@@ -268,15 +268,13 @@ if __name__ == '__main__':
      
 
 
-    this_row = path_frame.iloc[int(sys.argv[1])]
+    if len(sys.argv) > 1:
+        this_row = path_frame.iloc[int(sys.argv[1])]
 
-    snippet_pre = params_dict['spike_snapshot_before']
-    sampling_rate_ms = params_dict['sampling_rate']/1000
-    snippet_pre_inds = int(snippet_pre*sampling_rate_ms) 
+        snippet_pre = params_dict['spike_snapshot_before']
+        sampling_rate_ms = params_dict['sampling_rate']/1000
+        snippet_pre_inds = int(snippet_pre*sampling_rate_ms) 
 
-    run_pipeline(this_row, dir_name, snippet_pre_inds)
-    # Parallel(n_jobs=2)(delayed(run_pipeline)(this_row[1], dir_name) \
-    #        for this_row in tqdm(path_frame.iterrows()))
-
-# Don't assume that the amplitude is the largest value
-# We are already getting aligned spikes, just use the value at the origin
+        run_pipeline(this_row, dir_name, snippet_pre_inds)
+        # Parallel(n_jobs=2)(delayed(run_pipeline)(this_row[1], dir_name) \
+        #        for this_row in tqdm(path_frame.iterrows()))
