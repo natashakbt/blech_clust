@@ -149,12 +149,13 @@ if __name__ == '__main__':
                 spike_set.slices_dejittered,
                 spike_set.times_dejittered,
                 )
+        classifier_handler.gen_plots()
 
-        # throw_out_noise = True
-        if classifier_params['throw_out_noise']:
-            # Remaining data is now only spikes
-            slices_dejittered, times_dejittered, clf_prob = \
-                classifier_handler.return_only_spikes()
+    # throw_out_noise = True
+    if classifier_params['throw_out_noise']:
+        # Remaining data is now only spikes
+        slices_dejittered, times_dejittered, clf_prob = \
+            classifier_handler.return_only_spikes()
 
     ############################################################
 
@@ -167,6 +168,7 @@ if __name__ == '__main__':
     spike_set.create_pca_plot()
     spike_set.write_out_spike_data()
 
+    # Extract standardized data
     standard_data = spike_set.feature_data
 
     # Set a threshold on how many datapoints are used to FIT the gmm
