@@ -19,6 +19,15 @@ bash install_gnu_parallel.sh                        # Install GNU Parallel
 pip install -r pip_requirements_base.txt            # Install pip requirements (not covered by conda)
 ```
 
+blech_clust relies on [neuRecommend](https://github.com/abuzarmahmood/neuRecommend) to automatically classify
+neurons. Please clone neuRecommend to your desktop, and download the models used by it...
+```
+cd ~/Desktop
+git clone https://github.com/abuzarmahmood/neuRecommend.git
+cd neuRecommend
+bash src/utils/download_models.sh
+```
+
 ### Convenience scripts
 - blech_clust_pre.sh : Runs steps 2-5  
 - blech_clust_post.sh : Runs steps 7-14   
