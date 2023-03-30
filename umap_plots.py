@@ -11,7 +11,7 @@ import pandas as pd
 import re
 from glob import glob
 from utils.blech_utils import imp_metadata
-import subprocess
+#import subprocess
 from itertools import combinations
 from joblib import load, delayed, Parallel, cpu_count
 
@@ -25,10 +25,10 @@ def return_transformers():
     sys.path.append(f'{home_dir}/Desktop/neuRecommend/src/create_pipeline')
 
     # Run download model script to make sure latest model is being used
-    process = subprocess.Popen(
-        f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
-    # Forces process to complete before proceeding
-    stdout, stderr = process.communicate()
+    #process = subprocess.Popen(
+    #    f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
+    ## Forces process to complete before proceeding
+    #stdout, stderr = process.communicate()
     # If model_dir still doesn't exist, then throw an error
     if not os.path.exists(model_dir):
         raise Exception("Couldn't download model")
@@ -163,17 +163,21 @@ def return_path_frame(dir_name):
     waveform_files = sorted(waveform_files*len(np.unique(cluster_nums)))
     spiketime_files = sorted(spiketime_files*len(np.unique(cluster_nums)))
 
+    keys = ['waveform_files', 'spiketime_files', 'cluster_files',
+            'cluster_electrodes', 'cluster_nums', 'cluster_electrode_int']
+    values = [waveform_files, spiketime_files, cluster_files,
+              cluster_electrodes, cluster_nums, cluster_electrode_int]
+    value_lens = [len(x) for x in values]
+    if not all([x == value_lens[0] for x in value_lens]):
+        raise ValueError('All values must be the same length' + '\n' +\
+                str(dict(zip(keys, value_lens))))
+
     path_frame = pd.DataFrame(
         dict(
-            waveform_files=waveform_files,
-            spiketime_files=spiketime_files,
-            cluster_files=cluster_files,
-            cluster_electrodes=cluster_electrodes,
-            cluster_nums=cluster_num_ints,
-            electrode_nums=cluster_electrode_int
+            dict(zip(keys, values)),
         ),
-        index=cluster_electrode_int
     )
+
     return path_frame
 
 def split_data_by_polarity(X_raw, zero_ind, *args):
@@ -265,9 +269,11 @@ if __name__ == '__main__':
     from feature_engineering_pipeline import *
     # Run parallel pipeline manually as it needs imports from
     # feature_engineering_pipeline in __main__
+    process = subprocess.Popen(
+        f'python {runner_path}', shell=True)
+    # Forces process to complete before proceeding
+    stdout, stderr = process.communicate()
      
-
-
     if len(sys.argv) > 1:
         this_row = path_frame.iloc[int(sys.argv[1])]
 
