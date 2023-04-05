@@ -3,14 +3,12 @@ import tables
 import numpy as np
 import easygui
 import ast
-import sys
 import re
 import pylab as plt
 import matplotlib.image as mpimg
 from sklearn.mixture import GaussianMixture
 import argparse
 import pandas as pd
-import ast
 
 # Import 3rd party code
 from utils import blech_waveforms_datashader
@@ -189,11 +187,11 @@ while True:
             fig, ax = plt.subplots(len(clusters), 2)
             for cluster_num, cluster in enumerate(clusters):
                 isi_plot = mpimg.imread(
-                        './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
+                        './Plots/{:02}/clusters{}/'\
                                         'Cluster{}_ISIs.png'\
                                         .format(electrode_num, num_clusters, cluster)) 
                 waveform_plot =  mpimg.imread(
-                        './Plots/{:02}/{}_clusters_waveforms_ISIs/'\
+                        './Plots/{:02}/clusters{}/'\
                                         'Cluster{}_waveforms.png'\
                                         .format(electrode_num, num_clusters, cluster)) 
                 if len(clusters) < 2:
