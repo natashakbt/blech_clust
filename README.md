@@ -20,12 +20,15 @@ pip install -r pip_requirements_base.txt            # Install pip requirements (
 ```
 
 blech_clust relies on [neuRecommend](https://github.com/abuzarmahmood/neuRecommend) to automatically classify
-neurons. Please clone neuRecommend to your desktop, and download the models used by it...
+neurons. Please clone neuRecommend to your desktop, download the models used by it, and install requirements 
+in your blech_clust environment...
 ```
 cd ~/Desktop
 git clone https://github.com/abuzarmahmood/neuRecommend.git
 cd neuRecommend
 bash src/utils/download_models.sh
+conda activate blech_clust  
+pip install -r requirements.txt
 ```
 
 ### Convenience scripts
