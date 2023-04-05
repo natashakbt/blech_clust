@@ -8,7 +8,7 @@ import glob
 import pandas as pd
 from tqdm import tqdm
 from utils.clustering import get_filtered_electrode
-from blech_process import calc_recording_cutoff
+from utils.blech_process_utils import return_cutoff_values
 from utils.blech_utils import (
         entry_checker,
         imp_metadata,
@@ -230,7 +230,7 @@ if __name__ == '__main__':
             # Delete raw electrode recording from memory
             del raw_el
 
-            this_out = calc_recording_cutoff(
+            this_out = return_cutoff_values(
                             filt_el,
                             params_dict['sampling_rate'],
                             params_dict['voltage_cutoff'],

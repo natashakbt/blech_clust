@@ -1,26 +1,13 @@
 # Import stuff!
 import numpy as np
 import tables
-import easygui
 import sys
 import os
-import json
-import glob
-import itertools
 import pandas as pd
-from tqdm import tqdm
 # Necessary blech_clust modules
 sys.path.append('..')
-from utils.clustering import get_filtered_electrode
-from utils.blech_utils import (
-        imp_metadata,
-        )
-from blech_process import calc_recording_cutoff
-
-from blech_make_arrays import (
-        get_dig_in_data,
-        create_laser_params_for_digin
-        )
+from utils.blech_utils import imp_metadata
+from blech_make_arrays import get_dig_in_data,
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
@@ -123,7 +110,6 @@ for x in fin_unique_tuples:
     print(x)
 
 #============================================================
-#============================================================
 # Create an ancillary_analysis group in the hdf5 file, 
 # and write these arrays to that group
 if '/ancillary_analysis' in hf5:
@@ -132,9 +118,6 @@ hf5.create_group('/', 'ancillary_analysis')
 
 # First pull out the unique laser(duration,lag) combinations - 
 # these are the same irrespective of the unit and time
-#unique_lasers = np.vstack({tuple(row) for row in laser[0, 0, :, :]})
-#unique_lasers = unique_lasers[unique_lasers[:, 0].argsort(), :]
-#unique_lasers = unique_lasers[unique_lasers[:, 1].argsort(), :]
 unique_lasers = np.array(list(fin_unique_tuples))
 
 # Now get the sets of trials with these unique duration and lag combinations
@@ -149,11 +132,6 @@ trials = np.stack(
             ]
         )
 
-#trials = []
-#for i in range(len(unique_lasers)):
-#    this_trials = [j for j in range(laser.shape[2]) if np.array_equal(laser[0, 0, j, :], unique_lasers[i, :])]
-#    trials.append(this_trials)
-#trials = np.array(trials)
 
 # Save the trials and unique laser combos to the hdf5 file as well
 hf5.create_array('/ancillary_analysis', 'trials', trials)
