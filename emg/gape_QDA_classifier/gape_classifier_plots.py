@@ -28,6 +28,7 @@ taste_names = info_dict['taste_params']['tastes']
 
 stim_t = params_dict['spike_array_durations'][0]
 psth_durs = params_dict['psth_params']['durations']
+psth_durs[0] *= -1
 psth_inds = [int(x + stim_t) for x in psth_durs]
 
 unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
@@ -50,6 +51,9 @@ for this_ind in inds:
             kern,
             mode = 'same')
 
+# Convert from ms-1 to s-1
+smooth_mean_gapes *= 1000
+
 plot_dir = 'emg_output/gape_classifier_plots'
 fin_plot_dir = os.path.join(data_dir, plot_dir)
 if not os.path.exists(fin_plot_dir):
@@ -59,12 +63,18 @@ fig,ax = plt.subplots(*mean_gapes.shape[:2],
                       sharex=True, sharey=True)
 t = np.arange(*psth_durs)
 ax = np.atleast_2d(ax)
+if ax.shape != mean_gapes.shape[:2]:
+    ax = ax.T
+assert ax.shape == mean_gapes.shape[:2], f"Axes shape : {ax.shape}" +\
+        f" not equal to data shape {mean_gapes.shape[:2]}"
 inds = list(np.ndindex(ax.shape))
 for this_ind in inds:
     this_dat = smooth_mean_gapes[this_ind]
     for this_name, this_taste in zip(taste_names, this_dat): 
         ax[this_ind].plot(t, this_taste, label = this_name)
-    ax[this_ind].set_ylabel(emg_channel_basenames[this_ind[0]])
+    ax[this_ind].set_ylabel(
+            emg_channel_basenames[this_ind[0]] + '\n' +\
+                    'Rate of Gapes (Hz)')
     ax[this_ind].set_title(f'Laser : {unique_lasers[this_ind[1]]}')
 ax[inds[-1]].legend()
 fig.suptitle(f'Mean Smooth Gapes (smoothing = {kern_len}ms)')
