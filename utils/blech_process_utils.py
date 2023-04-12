@@ -15,6 +15,7 @@ import tables
 import os
 import shutil
 import matplotlib
+import pandas as pd
 matplotlib.use('Agg')
 
 ############################################################
@@ -355,6 +356,16 @@ class classifier_handler():
         self.plot_dir=os.path.join(
             data_dir,
             f'Plots/{electrode_num:02}')
+        self.get_waveform_classifier_params()
+
+    def get_waveform_classifier_params(self):
+        _, self.blech_clust_dir, _ = get_dir_names()
+        params_file_path = os.path.join(
+                self.blech_clust_dir,
+                'params',
+                'waveform_classifier_params.json')
+        with open(params_file_path, 'r') as this_file:
+            self.classifier_params =json.load(this_file)
 
     def load_pipelines(self):
         """
@@ -396,6 +407,35 @@ class classifier_handler():
         self.clf_pred=clf_pred
         self.pos_spike_dict=pos_spike_dict
         self.neg_spike_dict=neg_spike_dict
+
+    def write_out_recommendations(self):
+        """
+        If number of predicted spikes > classifier_params['min_suggestion_count']
+        Write out electrode number, count, mean prediction probability, and 5,95th percentiles
+        """
+        waveform_thresh = self.classifier_params['min_suggestion_count']
+        out_file_path = self.data_dir + '/waveform_classifier_recommendations.csv'
+
+        percentile_5=np.round(np.percentile(self.pos_spike_dict['prob'], 5),3)
+        percentile_95=np.round(np.percentile(self.pos_spike_dict['prob'], 95),3)
+        mean_prob = np.round(np.mean(self.pos_spike_dict['prob']),3)
+        count = len(self.pos_spike_dict['waveforms'])
+        columns=['electrode', 'count', 'mean_prob', 'percentile_5', 'percentile_95']
+        data = [self.electrode_num, count, mean_prob, percentile_5, percentile_95]
+        new_df = pd.DataFrame(dict(zip(columns, data)), index = [self.electrode_num])
+        if not os.path.exists(out_file_path):
+            new_df.to_csv(out_file_path)
+        else:
+            # Load pandas dataframe
+            df = pd.read_csv(out_file_path, index_col=0)
+            if self.electrode_num in df.index.values:
+                # If electrode number already in df, replace
+                df.loc[self.electrode_num, columns] = data
+            else:
+                # Append new data to df
+                df = df.append(new_df)
+            # Write out updated frame
+            df.to_csv(out_file_path)
 
     def gen_plots(self):
         fig=plt.figure(figsize=(5, 10))

@@ -130,7 +130,7 @@ spike_set.dejitter_spikes()
 classifier_params = json.load(
     open(os.path.join(
         blech_clust_dir,
-        'params/waveform_classifier_params.yaml'), 'r'))
+        'params/waveform_classifier_params.json'), 'r'))
 
 if classifier_params['use_classifier']:
     classifier_handler = bpu.classifier_handler(
@@ -143,6 +143,7 @@ if classifier_params['use_classifier']:
             spike_set.times_dejittered,
             )
     classifier_handler.gen_plots()
+    classifier_handler.write_out_recommendations()
 
     # throw_out_noise = True
     if classifier_params['throw_out_noise']:
