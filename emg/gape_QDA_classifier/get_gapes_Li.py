@@ -29,6 +29,7 @@ params_dict = metadata_handler.params_dict
 pre_stim, post_stim = params_dict['spike_array_durations']
 
 psth_durs = params_dict['psth_params']['durations']
+psth_durs[0] *= -1
 psth_inds = [int(x + pre_stim) for x in psth_durs]
 
 ############################################################
