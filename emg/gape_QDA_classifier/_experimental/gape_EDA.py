@@ -20,6 +20,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 import itertools
+from sklearn.mixture import GaussianMixture
 
 from umap import UMAP
 
@@ -386,10 +387,14 @@ wanted_gapes_Li = [gapes_Li[this_ind] for this_ind in trial_inds]
 wanted_gapes_loc = [np.where(this_gape)[0] for this_gape in wanted_gapes_Li]
 
 all_locs = []
+gape_starts = []
+non_gape_starts = []
 all_gape_features = []
 all_non_gape_features = []
 for trial_num in range(len(trial_inds)):
     this_starts, this_ends = list(zip(*segment_dat_list[trial_num][-1]))
+    this_starts = np.array(this_starts)
+    this_ends = np.array(this_ends)
     gape_segment_inds = find_segment(wanted_gapes_loc[trial_num], this_starts, this_ends) 
     #print(gape_segment_inds)
     not_nan_inds = np.where(~np.isnan(gape_segment_inds))[0]
@@ -399,12 +404,16 @@ for trial_num in range(len(trial_inds)):
     gape_segment_features = segment_dat_list[trial_num][0][gape_segment_inds]
     non_gape_inds = [i for i in range(len(this_starts)) if i not in gape_segment_inds]
     non_gape_features = segment_dat_list[trial_num][0][non_gape_inds]
+    gape_starts.append(this_starts[gape_segment_inds])
+    non_gape_starts.append(this_starts[non_gape_inds])
     all_non_gape_features.append(non_gape_features)
     all_locs.append(temp_wanted_gapes)
     all_gape_features.append(gape_segment_features)
 all_locs = np.concatenate(all_locs) 
 all_gape_features = np.concatenate(all_gape_features)
 all_non_gape_features = np.concatenate(all_non_gape_features)
+gape_starts = np.concatenate(gape_starts)
+non_gape_starts = np.concatenate(non_gape_starts)
 
 print(all_locs.shape)
 print(all_gape_features.shape)
@@ -509,5 +518,85 @@ plt.show()
 
 plt.scatter(X_nca[:, 0], X_nca[:, 1], c=y, 
             cmap='rainbow', alpha = 0.5)
+plt.show()
+
+############################################################
+## Include time as a feature 
+############################################################
+X_raw = np.concatenate((all_gape_features, all_non_gape_features))
+all_times = np.concatenate((gape_starts, non_gape_starts))
+X_raw = np.concatenate((X_raw, all_times[:, np.newaxis]), axis=1)
+feature_names = np.concatenate((feature_names, ['Time']))
+X = StandardScaler().fit_transform(X_raw)
+y = np.concatenate((np.ones(all_gape_features.shape[0]),
+                    np.zeros(all_non_gape_features.shape[0])))
+
+# Plot X as matrix
+plt.imshow(X, aspect='auto', interpolation='none')
+plt.show()
+
+# Run Classifier
+clf = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
+clf.fit(X, y)
+explainer = shap.TreeExplainer(clf)
+shap_values = explainer.shap_values(X)
+shap.summary_plot(shap_values, X, plot_type="bar",
+                  feature_names=feature_names)
+# Cross-validation accuracy
+scores = cross_val_score(clf, X, y, cv=5)
+print('Accuracy: {:.2f} +/- {:.2f}'.format(
+    np.mean(scores), np.std(scores)))
+
+# Cross-validate using svm with rbf kernel
+clf = SVC(kernel='rbf', C=1)
+scores = cross_val_score(clf, X, y, cv=5)
+print('Accuracy: {:.2f} +/- {:.2f}'.format(
+    np.mean(scores), np.std(scores)))
+
+# Create umap plot
+reducer = UMAP()
+embedding = reducer.fit_transform(X)
+plt.scatter(embedding[:, 0], embedding[:, 1], c=y, cmap='rainbow')
+plt.show()
+
+# Create NCA plot
+nca = NeighborhoodComponentsAnalysis(n_components=3, random_state=42)
+X_nca = nca.fit_transform(X, y)
+
+# Create 3D plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(X_nca[:, 0], X_nca[:, 1], X_nca[:, 2], c=y, cmap='rainbow')
+plt.show()
+
+#plt.scatter(X_nca[:, 0], X_nca[:, 1], c=y, 
+#            cmap='rainbow', alpha = 0.5)
+#plt.show()
+
+############################################################
+## Cluster X and check if gapes are clustered together 
+############################################################
+# Uses GMM to cluster X
+gmm = GaussianMixture(n_components=8, random_state=42)
+gmm.fit(X)
+y_pred = gmm.predict(X)
+y_pred_prob = gmm.predict_proba(X)
+
+# Plot mean gape probability for each cluster
+cluster_ind = np.argmax(y_pred_prob, axis=1)
+cluster_pred = [np.mean(y_pred_prob[cluster_ind == i, 0]) for i in range(8)]
+cluster_counts = [np.sum(cluster_ind == i) for i in range(8)]
+
+# Sort X by cluster
+cluster_ind_sorted = np.argsort(cluster_ind)
+X_sorted = X[cluster_ind_sorted, :]
+y_sorted = y[cluster_ind_sorted]
+clust_num_sorted = cluster_ind[cluster_ind_sorted]
+
+# Plot X  and y
+fig, ax = plt.subplots(1,3, figsize=(5, 10), sharey=True)
+ax[0].imshow(X_sorted, aspect='auto', interpolation='none')
+ax[1].plot(y_sorted, np.arange(len(X)), '-x')
+ax[2].plot(clust_num_sorted, np.arange(len(X)), '-x')
 plt.show()
 
