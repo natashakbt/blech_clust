@@ -116,6 +116,20 @@ def extract_features(segment_dat, segment_starts, segment_ends):
     ]
     return feature_array, feature_names, segment_dat, segment_starts, segment_ends
 
+def find_segment(gape_locs, segment_starts, segment_ends):
+    segment_bounds = list(zip(segment_starts, segment_ends))
+    all_segment_inds = []
+    for this_gape in gape_locs:
+        this_segment_inds = []
+        for i, bounds in enumerate(segment_bounds):
+            if bounds[0] < this_gape < bounds[1]:
+                this_segment_inds.append(i)
+        if len(this_segment_inds) ==0:
+            this_segment_inds.append(np.nan)
+        all_segment_inds.append(this_segment_inds)
+    return np.array(all_segment_inds).flatten()
+
+
 ############################################################
 # Load Data
 ############################################################
@@ -371,28 +385,9 @@ trial_inds = [inds[i] for i in trial_inds_inds]
 wanted_gapes_Li = [gapes_Li[this_ind] for this_ind in trial_inds]
 wanted_gapes_loc = [np.where(this_gape)[0] for this_gape in wanted_gapes_Li]
 
-def find_segment(gape_locs, segment_starts, segment_ends):
-    segment_bounds = list(zip(segment_starts, segment_ends))
-    all_segment_inds = []
-    for this_gape in gape_locs:
-        this_segment_inds = []
-        for i, bounds in enumerate(segment_bounds):
-            if bounds[0] < this_gape < bounds[1]:
-                this_segment_inds.append(i)
-        if len(this_segment_inds) ==0:
-            this_segment_inds.append(np.nan)
-        all_segment_inds.append(this_segment_inds)
-    #temp_inds = [[i for i, bounds in enumerate(segment_bounds)
-    #        if bounds[0] < this_gape < bounds[1]] \
-    #                for this_gape in gape_locs]
-    #if len(temp_inds) > 1:
-    #    temp_inds = [x for y in temp_inds for x in y]
-    #if len(temp_inds)==0:
-    #    temp_inds.append(-1)
-    return np.array(all_segment_inds).flatten()
-
 all_locs = []
-all_features = []
+all_gape_features = []
+all_non_gape_features = []
 for trial_num in range(len(trial_inds)):
     this_starts, this_ends = list(zip(*segment_dat_list[trial_num][-1]))
     gape_segment_inds = find_segment(wanted_gapes_loc[trial_num], this_starts, this_ends) 
@@ -402,15 +397,20 @@ for trial_num in range(len(trial_inds)):
     gape_segment_inds = np.vectorize(int)(gape_segment_inds)
     temp_wanted_gapes = wanted_gapes_loc[trial_num][not_nan_inds]
     gape_segment_features = segment_dat_list[trial_num][0][gape_segment_inds]
+    non_gape_inds = [i for i in range(len(this_starts)) if i not in gape_segment_inds]
+    non_gape_features = segment_dat_list[trial_num][0][non_gape_inds]
+    all_non_gape_features.append(non_gape_features)
     all_locs.append(temp_wanted_gapes)
-    all_features.append(gape_segment_features)
+    all_gape_features.append(gape_segment_features)
 all_locs = np.concatenate(all_locs) 
-all_features = np.concatenate(all_features)
+all_gape_features = np.concatenate(all_gape_features)
+all_non_gape_features = np.concatenate(all_non_gape_features)
 
 print(all_locs.shape)
-print(all_features.shape)
+print(all_gape_features.shape)
 
-X = all_features.copy()
+X_raw = all_gape_features.copy()
+X = StandardScaler().fit_transform(X_raw)
 y = np.digitize(all_locs, gape_dividers)
 
 # Create scatter plots of the NCA data for each pair of groups
@@ -442,87 +442,72 @@ plt.show()
 
 ############################################################
 # Run XGBoost with SHAP analysis to see which features are most important 
+# for differentiating early vs late gapes
 ############################################################
-clf = XGBClassifier()
+clf = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
 clf.fit(X, y)
 explainer = shap.TreeExplainer(clf)
 shap_values = explainer.shap_values(X)
 shap.summary_plot(shap_values, X, plot_type="bar",
                   feature_names=feature_names)
+# Cross-validation accuracy
+scores = cross_val_score(clf, X, y, cv=5)
+print('Accuracy: {:.2f} +/- {:.2f}'.format(
+    np.mean(scores), np.std(scores)))
+
+# Cross-validate using svm with rbf kernel
+clf = SVC(kernel='rbf', C=1)
+scores = cross_val_score(clf, X, y, cv=5)
+print('Accuracy: {:.2f} +/- {:.2f}'.format(
+    np.mean(scores), np.std(scores)))
 
 ############################################################
-# 
+## Compare gapes with non-gapes
 ############################################################
+X_raw = np.concatenate((all_gape_features, all_non_gape_features))
+X = StandardScaler().fit_transform(X_raw)
+y = np.concatenate((np.ones(all_gape_features.shape[0]),
+                    np.zeros(all_non_gape_features.shape[0])))
 
-# Plot after Neighbourhood Components Analysis
-nca = NeighborhoodComponentsAnalysis(n_components=2, random_state=42) 
-X_nca = nca.fit_transform(X, y)
-scatter = plt.scatter(X_nca[:, 0], X_nca[:, 1], c=y, cmap='rainbow')
-plt.legend(handles=scatter.legend_elements()[0], labels=['Early', 'Middle', 'Late'])
+# Plot X as matrix
+plt.imshow(X, aspect='auto', interpolation='none')
 plt.show()
 
-# Use classifier to see if we can separate classes of gapes, with cross-validation
-clf = SVC(kernel='rbf', C=1) 
-#clf = MLPClassifier(hidden_layer_sizes=(50,50,50), max_iter=1000)
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
-scores = cross_val_score(clf, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
-print('Accuracy: %.3f (%.3f)' % (np.mean(scores), np.std(scores)))
+# Run Classifier
+clf = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
+clf.fit(X, y)
+explainer = shap.TreeExplainer(clf)
+shap_values = explainer.shap_values(X)
+shap.summary_plot(shap_values, X, plot_type="bar",
+                  feature_names=feature_names)
+# Cross-validation accuracy
+scores = cross_val_score(clf, X, y, cv=5)
+print('Accuracy: {:.2f} +/- {:.2f}'.format(
+    np.mean(scores), np.std(scores)))
 
-# Create UMAP plots
+# Cross-validate using svm with rbf kernel
+clf = SVC(kernel='rbf', C=1)
+scores = cross_val_score(clf, X, y, cv=5)
+print('Accuracy: {:.2f} +/- {:.2f}'.format(
+    np.mean(scores), np.std(scores)))
+
+# Create umap plot
 reducer = UMAP()
 embedding = reducer.fit_transform(X)
-scatter = plt.scatter(embedding[:, 0], embedding[:, 1], c=y, cmap='rainbow')
-plt.legend(handles=scatter.legend_elements()[0], labels=['Early', 'Middle', 'Late'])
+plt.scatter(embedding[:, 0], embedding[:, 1], c=y, cmap='rainbow')
 plt.show()
 
+# Create NCA plot
+nca = NeighborhoodComponentsAnalysis(n_components=3, random_state=42)
+X_nca = nca.fit_transform(X, y)
 
-############################################################
-############################################################
-
-plt.plot(this_trial_dat)
-plt.plot(gapes_Li[this_ind]*100)
+# Create 3D plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(X_nca[:, 0], X_nca[:, 1], X_nca[:, 2], c=y, cmap='rainbow')
 plt.show()
 
-# Pull out features for segments marked as gapes
-gape_inds = np.where(gapes_Li[this_ind])[0]
-segment_bounds = list(zip(segment_starts, segment_ends))
-wanted_segment_inds = [[i for i, bounds in enumerate(segment_bounds)
-                       if bounds[0] < this_gape < bounds[1]] \
-                               for this_gape in gape_inds]
-wanted_segment_inds = np.array(wanted_segment_inds).flatten()
-
-# Plot to confirm we have the right segments
-fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
-ax[0].plot(this_trial_dat)
-ax[0].plot(gapes_Li[this_ind]*100)
-for this_seg_ind in wanted_segment_inds:
-    ax[1].plot(np.arange(segment_starts[this_seg_ind], segment_ends[this_seg_ind]),
-                         segment_dat[this_seg_ind])
+plt.scatter(X_nca[:, 0], X_nca[:, 1], c=y, 
+            cmap='rainbow', alpha = 0.5)
 plt.show()
 
-# Create new feature array sorted by gapes and non-gapes
-non_gape_inds=  np.array([i for i in range(len(feature_names)) if i not in wanted_segment_inds])
-sorted_feature_inds = np.concatenate((wanted_segment_inds, non_gape_inds))
-
-plt.matshow(scaled_feature_array[sorted_feature_inds], origin='lower')
-plt.axhline(len(wanted_segment_inds)-0.5, color='red', linestyle='--')
-plt.show()
-
-X = scaled_feature_array
-y = np.zeros(len(X)) 
-y[wanted_segment_inds] = 1
-
-# Are these separable?
-
-nca = NeighborhoodComponentsAnalysis(n_components=2, random_state=42)
-nca.fit(X, y)
-X_nca = nca.transform(X)
-
-plt.scatter(X_nca[:, 0], X_nca[:, 1], c=y)
-plt.show()
-
-
-clf = SVC(kernel='linear', C=1.0)
-clf.fit(X, y)
-score = clf.score(X, y)
-print(score)
