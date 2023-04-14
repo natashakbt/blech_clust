@@ -600,3 +600,7 @@ ax[1].plot(y_sorted, np.arange(len(X)), '-x')
 ax[2].plot(clust_num_sorted, np.arange(len(X)), '-x')
 plt.show()
 
+############################################################
+## Use supervised clustering to cluster waveforms
+## more predictive of quinine during the palatability epoch
+############################################################
