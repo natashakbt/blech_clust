@@ -1,6 +1,6 @@
 
 import utils.clustering as clust
-#import subprocess
+# import subprocess
 from joblib import load
 from sklearn.mixture import GaussianMixture as gmm
 from sklearn.preprocessing import StandardScaler as scaler
@@ -9,7 +9,7 @@ from utils import blech_waveforms_datashader
 from scipy.stats import zscore
 import pylab as plt
 import json
-#import sys
+# import sys
 import numpy as np
 import tables
 import os
@@ -183,7 +183,7 @@ class cluster_handler():
                     spike_waves = all_waveforms[spike_inds]
                     spike_times = all_times[spike_inds]
                     spike_ax.plot(spike_waves.T, color='k', alpha=0.1)
-                    #spike_ax.set_title(f'Count : {np.sum(spike_bool)}')
+                    # spike_ax.set_title(f'Count : {np.sum(spike_bool)}')
                     spike_ax.text(1, 0.5,
                                   f'Count : {np.sum(spike_bool)}' + '\n' +
                                   f'Mean prob : {spike_prob.mean():.3f}',
@@ -203,7 +203,7 @@ class cluster_handler():
                     noise_waves = all_waveforms[noise_inds]
                     noise_times = all_times[noise_inds]
                     noise_ax.plot(noise_waves.T, color='k', alpha=0.1)
-                    #noise_ax.set_title(f'Count : {np.sum(noise_bool)}')
+                    # noise_ax.set_title(f'Count : {np.sum(noise_bool)}')
                     noise_ax.text(1, 0.5,
                                   f'Count : {np.sum(noise_bool)}' + '\n' +
                                   f'Mean prob : {noise_prob.mean():.3f}',
@@ -324,10 +324,11 @@ class classifier_handler():
         home_dir = os.environ.get("HOME")
         model_dir = f'{home_dir}/Desktop/neuRecommend/model'
         # Run download model script to make sure latest model is being used
-        # process=subprocess.Popen(
-        #    f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
-        # Forces process to complete before proceeding
-        #stdout, stderr=process.communicate()
+        if not os.path.exists(model_dir):
+             process = subprocess.Popen(
+                f'python {home_dir}/Desktop/blech_clust/utils/download_wav_classifier.py', shell=True)
+            # Forces process to complete before proceeding
+            stdout, stderr = process.communicate()
         # If model_dir still doesn't exist, then throw an error
         if not os.path.exists(model_dir):
             raise Exception("Couldn't download model")
