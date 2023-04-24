@@ -3,14 +3,11 @@ import numpy as np
 import tables
 import sys
 import os
-import re
-import glob
 import pandas as pd
 from tqdm import tqdm
 from utils.clustering import get_filtered_electrode
 from utils.blech_process_utils import return_cutoff_values
 from utils.blech_utils import (
-        entry_checker,
         imp_metadata,
         )
 
@@ -229,7 +226,7 @@ if __name__ == '__main__':
 
             # Cut data to have integer number of seconds
             sampling_rate = params_dict['sampling_rate']
-            filt_el = filt_el[:int(sampling_rate)*int(len(file_el)/sampling_rate)]
+            filt_el = filt_el[:int(sampling_rate)*int(len(filt_el)/sampling_rate)]
 
             # Delete raw electrode recording from memory
             del raw_el
@@ -244,7 +241,7 @@ if __name__ == '__main__':
                             params_dict['max_mean_breach_rate_persec']
                             ) 
             # First output of recording cutoff is processed filtered electrode 
-            cutoff_data.append(this_out[1:])
+            cutoff_data.append(this_out)
 
 
         elec_cutoff_frame = pd.DataFrame(
