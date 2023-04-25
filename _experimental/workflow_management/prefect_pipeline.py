@@ -16,12 +16,17 @@ data_subdir = '_experimental/workflow_management/test_data_handling/test_data/KM
 data_dir = os.path.join(blech_clust_dir, data_subdir)
 
 
-def raise_error_if_error(stderr):
-    if stderr:
+#def raise_error_if_error(process,stderr,stdout):
+#    if stderr:
+#        decode_err = stderr.decode('utf-8')
+#        #if 'Error' in decode_err or 'Traceback' in decode_err:
+#        if 'Traceback' in decode_err:
+#            raise Exception(decode_err)
+def raise_error_if_error(process, stderr, stdout):
+    print(stdout.decode('utf-8'))
+    if process.returncode:
         decode_err = stderr.decode('utf-8')
-        #if 'Error' in decode_err or 'Traceback' in decode_err:
-        if 'Traceback' in decode_err:
-            raise Exception(stderr.decode('utf-8'))
+        raise Exception(decode_err)
 
 # Define tasks
 
@@ -34,7 +39,7 @@ def run_clean_slate(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def run_blech_clust(data_dir):
@@ -42,7 +47,7 @@ def run_blech_clust(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def make_arrays(data_dir):
@@ -50,7 +55,7 @@ def make_arrays(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 ############################################################
 ## Spike Only 
@@ -62,7 +67,7 @@ def run_CAR(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def run_jetstream_bash(data_dir):
@@ -70,7 +75,7 @@ def run_jetstream_bash(data_dir):
     process = Popen(["bash", script_name],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def select_clusters(data_dir):
@@ -78,7 +83,7 @@ def select_clusters(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def post_process(data_dir):
@@ -90,7 +95,7 @@ def post_process(data_dir):
     process = Popen(["python", script_name, plot_flag, dir_flag, file_flag],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def units_similarity(data_dir):
@@ -98,7 +103,7 @@ def units_similarity(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def units_plot(data_dir):
@@ -106,7 +111,7 @@ def units_plot(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 
 @task
@@ -115,7 +120,7 @@ def make_psth(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def pal_iden_setup(data_dir):
@@ -123,7 +128,7 @@ def pal_iden_setup(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 
 @task
@@ -132,18 +137,26 @@ def overlay_psth(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 ############################################################
 ## EMG Only
 ############################################################
+@task
+def cut_emg_trials(data_dir):
+    script_name = '_experimental/workflow_management/cut_emg_trials.py'
+    process = Popen(["python", script_name, data_dir],
+                               stdout = PIPE, stderr = PIPE)
+    stdout, stderr = process.communicate()
+    raise_error_if_error(process,stderr,stdout)
+
 @task
 def emg_filter(data_dir):
     script_name = 'emg_filter.py'
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def emg_local_BSA(data_dir):
@@ -151,7 +164,7 @@ def emg_local_BSA(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def emg_jetstream_parallel(data_dir):
@@ -161,7 +174,7 @@ def emg_jetstream_parallel(data_dir):
     full_str = ' '.join([conda_init, script_name])
     process = Popen(full_str, shell = True, stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def get_laser_info(data_dir):
@@ -169,7 +182,7 @@ def get_laser_info(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def local_BSA_post(data_dir):
@@ -177,7 +190,7 @@ def local_BSA_post(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def BSA_segmentation(data_dir):
@@ -185,7 +198,7 @@ def BSA_segmentation(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
 @task
 def BSA_segmentation_plot(data_dir):
@@ -193,8 +206,23 @@ def BSA_segmentation_plot(data_dir):
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
-    raise_error_if_error(stderr)
+    raise_error_if_error(process,stderr,stdout)
 
+@task
+def run_gapes_Li(data_dir):
+    script_name = 'get_gapes_Li.py'
+    process = Popen(["python", script_name, data_dir],
+                               stdout = PIPE, stderr = PIPE)
+    stdout, stderr = process.communicate()
+    raise_error_if_error(process,stderr,stdout)
+
+@task
+def run_QDA_gapes_plot(data_dir):
+    script_name = 'gape_classifier_plots.py'
+    process = Popen(["python", script_name, data_dir],
+                               stdout = PIPE, stderr = PIPE)
+    stdout, stderr = process.communicate()
+    raise_error_if_error(process,stderr,stdout)
 
 ############################################################
 ## Define Flows
@@ -202,6 +230,7 @@ def BSA_segmentation_plot(data_dir):
 
 @flow
 def run_spike_test():
+    os.chdir(blech_clust_dir)
     run_clean_slate(data_dir)
     run_blech_clust(data_dir)
     run_CAR(data_dir)
@@ -216,22 +245,36 @@ def run_spike_test():
     overlay_psth(data_dir)
 
 @flow
-def run_emg_test():
+def run_emg_main_test():
+    os.chdir(blech_clust_dir)
     run_clean_slate(data_dir)
     run_blech_clust(data_dir)
     make_arrays(data_dir)
+    cut_emg_trials(data_dir)
+    # TODO: Chop number of trials down to preserve time
     os.chdir(os.path.join(blech_clust_dir, 'emg'))
     emg_filter(data_dir)
+    get_laser_info(data_dir)
+
+@flow
+def run_emg_BSA_test():
+    run_emg_main_test()
     emg_local_BSA(data_dir)
     emg_jetstream_parallel(data_dir)
-    get_laser_info(data_dir)
     local_BSA_post(data_dir)
     BSA_segmentation(data_dir)
     BSA_segmentation_plot(data_dir)
 
+@flow
+def run_EMG_QDA_test():
+    run_emg_main_test()
+    os.chdir(os.path.join(blech_clust_dir, 'emg', 'gape_QDA_classifier'))
+    run_gapes_Li(data_dir)
+    run_QDA_gapes_plot(data_dir)
+
 ############################################################
 ## Run Flows
 ############################################################
-os.chdir(blech_clust_dir)
 run_spike_test()
-run_emg_test()
+run_emg_BSA_test()
+run_EMG_QDA_test()
