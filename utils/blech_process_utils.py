@@ -665,12 +665,13 @@ class spike_handler():
         """
         Extract waveforms from filtered electrode
         """
-        slices, spike_times, polarity, mean_val, threshold = clust.extract_waveforms_abu(self.filt_el,
-                                                                                         spike_snapshot=[self.params_dict['spike_snapshot_before'],
-                                                                                                         self.params_dict['spike_snapshot_after']],
-                                                                                         sampling_rate=self.params_dict[
-                                                                                             'sampling_rate'],
-                                                                                         threshold_mult=self.params_dict['waveform_threshold'])
+        slices, spike_times, polarity, mean_val, threshold = \
+                clust.extract_waveforms_abu(
+                        self.filt_el,
+                        spike_snapshot=[self.params_dict['spike_snapshot_before'],
+                                     self.params_dict['spike_snapshot_after']],
+                        sampling_rate=self.params_dict['sampling_rate'],
+                        threshold_mult=self.params_dict['waveform_threshold'])
 
         self.slices = slices
         self.spike_times = spike_times
@@ -736,11 +737,16 @@ class spike_handler():
 
     def extract_features(self,
                          feature_transformer,
-                         feature_names):
+                         feature_names,
+                         fitted_transformer = True):
 
         self.feature_names = feature_names
-        self.spike_features = feature_transformer.transform(
-            self.slices_dejittered)
+        if fitted_transformer:
+            self.spike_features = feature_transformer.transform(
+                self.slices_dejittered)
+        else:
+            self.spike_features = feature_transformer.fit_transform(
+                self.slices_dejittered)
 
     def write_out_spike_data(self):
         """
