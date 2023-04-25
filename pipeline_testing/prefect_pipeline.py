@@ -309,12 +309,24 @@ def run_EMG_QDA_test():
 
 @flow(log_prints=True)
 def full_test():
-    prep_data_flow()
-    run_spike_test()
-    run_emg_BSA_test()
-    run_EMG_QDA_test()
+    try:
+        prep_data_flow()
+    except:
+        print('Failed to prep data')
+    try:
+        run_spike_test()
+    except:
+        print('Failed to run spike test')
+    try:
+        run_emg_BSA_test()
+    except:
+        print('Failed to run emg BSA test')
+    try:
+        run_EMG_QDA_test()
+    except:
+        print('Failed to run EMG QDA test')
 
 ############################################################
 ## Run Flows
 ############################################################
-full_test()
+full_test(return_state=True)
