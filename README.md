@@ -12,7 +12,7 @@ website at https://sites.google.com/a/brandeis.edu/katzlab/
 ```
 cd <path_to_blech_clust>/requirements               # Move into blech_clust folder with requirements files
 conda clean --all                                   # Removes unused packages and caches
-conda create --name blech_clust python=3.8       # Create "blech_clust" environment with conda requirements
+conda create --name blech_clust python=3.8.13       # Create "blech_clust" environment with conda requirements
 conda activate blech_clust                          # Activate blech_clust environment
 bash conda_requirements_base.sh                     # Install main packages using conda/mamba
 bash install_gnu_parallel.sh                        # Install GNU Parallel
