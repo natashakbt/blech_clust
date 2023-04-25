@@ -6,7 +6,7 @@ import os
 from subprocess import PIPE, Popen
 from prefect import flow, task
 from glob import glob
-from json import json
+import json
 
 def raise_error_if_error(process, stderr, stdout):
     print(stdout.decode('utf-8'))
@@ -23,12 +23,43 @@ desktop_dir = os.path.join(home_dir, "Desktop")
 blech_clust_dir = os.path.join(desktop_dir, "blech_clust") 
 
 # Read emg_env path
-with open(os.path.join(blech_clust_dir, 'params', 'emg_env.json')) as f:
+with open(os.path.join(blech_clust_dir, 'params', 'env_params.json')) as f:
     env_params = json.load(f)
-emg_env_path = env_params['emg_env_path']
+emg_env_path = env_params['emg_env']
 
-data_subdir = '_experimental/workflow_management/test_data_handling/test_data/KM45_5tastes_210620_113227_new'
+data_subdir = 'pipeline_testing/test_data_handling/test_data/KM45_5tastes_210620_113227_new'
 data_dir = os.path.join(blech_clust_dir, data_subdir)
+
+############################################################
+## Data Prep Scripts 
+############################################################
+def check_data_present():
+    full_data_path = os.path.join(blech_clust_dir, data_subdir)
+    if os.path.isdir(full_data_path):
+        return True
+    else:
+        return False
+
+@task(log_prints=True)
+def download_test_data():
+    if check_data_present():
+        print('Data already present')
+        return
+    else:
+        print('Downloading data')
+        script_name = './pipeline_testing/test_data_handling/download_test_data.sh'
+        process = Popen(["bash", script_name],
+                                   stdout = PIPE, stderr = PIPE)
+        stdout, stderr = process.communicate()
+        raise_error_if_error(process,stderr,stdout)
+
+@task(log_prints=True)
+def prep_data_info():
+    script_name = './pipeline_testing/test_data_handling/prep_data_info.py' 
+    cmd_str = 'python ' + script_name + ' ' + '-emg_spike' + ' ' + data_dir
+    process = Popen(cmd_str, shell=True, stdout = PIPE, stderr = PIPE)
+    stdout, stderr = process.communicate()
+    raise_error_if_error(process,stderr,stdout)
 
 ############################################################
 ## Common Scripts
@@ -79,7 +110,7 @@ def run_jetstream_bash(data_dir):
 
 @task(log_prints=True)
 def select_clusters(data_dir):
-    script_name = '_experimental/workflow_management/select_some_waveforms.py'
+    script_name = 'pipeline_testing/select_some_waveforms.py'
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
@@ -144,7 +175,7 @@ def overlay_psth(data_dir):
 ############################################################
 @task(log_prints=True)
 def cut_emg_trials(data_dir):
-    script_name = '_experimental/workflow_management/cut_emg_trials.py'
+    script_name = 'pipeline_testing/cut_emg_trials.py'
     process = Popen(["python", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
@@ -226,6 +257,11 @@ def run_QDA_gapes_plot(data_dir):
 ############################################################
 ## Define Flows
 ############################################################
+@flow(log_prints=True)
+def prep_data_flow():
+    os.chdir(blech_clust_dir)
+    download_test_data()
+    prep_data_info()
 
 @flow(log_prints=True)
 def run_spike_test():
@@ -271,9 +307,14 @@ def run_EMG_QDA_test():
     run_gapes_Li(data_dir)
     run_QDA_gapes_plot(data_dir)
 
+@flow(log_prints=True)
+def full_test():
+    prep_data_flow()
+    run_spike_test()
+    run_emg_BSA_test()
+    run_EMG_QDA_test()
+
 ############################################################
 ## Run Flows
 ############################################################
-run_spike_test()
-run_emg_BSA_test()
-run_EMG_QDA_test()
+full_test()
