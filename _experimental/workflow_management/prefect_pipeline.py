@@ -6,29 +6,29 @@ import os
 from subprocess import PIPE, Popen
 from prefect import flow, task
 from glob import glob
+from json import json
 
-# Define paths
-home_dir = os.path.expanduser("~")
-desktop_dir = os.path.join(home_dir, "Desktop")
-blech_clust_dir = os.path.join(desktop_dir, "blech_clust") 
-
-data_subdir = '_experimental/workflow_management/test_data_handling/test_data/KM45_5tastes_210620_113227_new'
-data_dir = os.path.join(blech_clust_dir, data_subdir)
-
-
-#def raise_error_if_error(process,stderr,stdout):
-#    if stderr:
-#        decode_err = stderr.decode('utf-8')
-#        #if 'Error' in decode_err or 'Traceback' in decode_err:
-#        if 'Traceback' in decode_err:
-#            raise Exception(decode_err)
 def raise_error_if_error(process, stderr, stdout):
     print(stdout.decode('utf-8'))
     if process.returncode:
         decode_err = stderr.decode('utf-8')
         raise Exception(decode_err)
 
-# Define tasks
+############################################################
+## Define paths 
+############################################################
+# Define paths
+home_dir = os.path.expanduser("~")
+desktop_dir = os.path.join(home_dir, "Desktop")
+blech_clust_dir = os.path.join(desktop_dir, "blech_clust") 
+
+# Read emg_env path
+with open(os.path.join(blech_clust_dir, 'params', 'emg_env.json')) as f:
+    env_params = json.load(f)
+emg_env_path = env_params['emg_env_path']
+
+data_subdir = '_experimental/workflow_management/test_data_handling/test_data/KM45_5tastes_210620_113227_new'
+data_dir = os.path.join(blech_clust_dir, data_subdir)
 
 ############################################################
 ## Common Scripts
@@ -168,7 +168,6 @@ def emg_local_BSA(data_dir):
 
 @task(log_prints=True)
 def emg_jetstream_parallel(data_dir):
-    emg_env_path = '/home/abuzarmahmood/anaconda3/envs/emg_env'
     conda_init = 'conda run -p ' + emg_env_path
     script_name = 'bash blech_emg_jetstream_parallel.sh'
     full_str = ' '.join([conda_init, script_name])
