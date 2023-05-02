@@ -16,7 +16,7 @@ from utils.blech_process_utils import path_handler
 
 # Get blech_clust path
 path_handler = path_handler()
-blech_clust_path = path_handler.blech_clust_path
+blech_clust_dir = path_handler.blech_clust_dir
 
 ############################################################
 
@@ -167,9 +167,9 @@ elif file_type == ['one file per signal type']:
         hdf5_name, electrode_layout_frame, electrodes_list, num_recorded_samples, emg_channels)
 
 # Write out template params file to directory if not present
-print(blech_clust_path)
+print(blech_clust_dir)
 params_template_path = os.path.join(
-    blech_clust_path,
+    blech_clust_dir,
     'params/sorting_params_template.json')
 params_template = json.load(open(params_template_path, 'r'))
 # Info on taste digins and laser should be in exp_info file
@@ -198,8 +198,8 @@ not_emg_bool = not_none_bool.loc[
 bash_electrode_list = not_emg_bool.electrode_ind.values
 job_count = np.min((len(bash_electrode_list), int(num_cpu-2)))
 runner_path = os.path.join(
-    blech_clust_path, 'blech_clust_jetstream_parallel1.sh')
-f = open(os.path.join(blech_clust_path, 'blech_clust_jetstream_parallel.sh'), 'w')
+    blech_clust_dir, 'blech_clust_jetstream_parallel1.sh')
+f = open(os.path.join(blech_clust_dir, 'blech_clust_jetstream_parallel.sh'), 'w')
 print(f"parallel -k -j {job_count} --noswap --load 100% --progress " +
       "--memfree 4G --retry-failed " +
       f"--joblog {dir_name}/results.log " +
@@ -209,14 +209,14 @@ print(f"parallel -k -j {job_count} --noswap --load 100% --progress " +
 f.close()
 
 # Then produce the file that runs blech_process.py
-f = open(os.path.join(blech_clust_path, 'blech_clust_jetstream_parallel1.sh'), 'w')
+f = open(os.path.join(blech_clust_dir, 'blech_clust_jetstream_parallel1.sh'), 'w')
 print("export OMP_NUM_THREADS=1", file=f)
-blech_process_path = os.path.join(blech_clust_path, 'blech_process.py')
+blech_process_path = os.path.join(blech_clust_dir, 'blech_process.py')
 print(f"python {blech_process_path} $1", file=f)
 f.close()
 
 # Dump the directory name where blech_process has to cd
-f = open(os.path.join(blech_clust_path, 'blech.dir'), 'w')
+f = open(os.path.join(blech_clust_dir, 'blech.dir'), 'w')
 print(dir_name, file=f)
 f.close()
 
