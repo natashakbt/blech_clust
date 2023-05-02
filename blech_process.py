@@ -51,7 +51,7 @@ from utils.blech_utils import imp_metadata
 ############################################################
 
 # Read blech.dir, and cd to that directory
-path_handler = bpu.path_hander()
+path_handler = bpu.path_handler()
 blech_clust_dir = path_handler.blech_clust_dir
 data_dir_name = path_handler.data_dir
 

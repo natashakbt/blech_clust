@@ -10,12 +10,13 @@ import glob
 import numpy as np
 import re
 import pandas as pd
-from ..utils.blech_process_utils import path_handler
-from ..utils.blech_utils import imp_metadata
 
 # Use post-process sheet template to write out a new sheet for this dataset
-path_handler = path_handler()
-blech_clust_dir = path_handler.blech_clust_path
+script_path = os.path.dirname(os.path.realpath(__file__))
+blech_clust_dir = os.path.dirname(script_path)
+sys.path.append(blech_clust_dir)
+from utils.blech_utils import imp_metadata
+
 csv_path = os.path.join(
         blech_clust_dir, 
         'example_meta_files',

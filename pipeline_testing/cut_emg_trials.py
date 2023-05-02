@@ -2,12 +2,10 @@
 import numpy as np
 import sys
 import os
-from ..utils.blech_process_utils import path_handler
-############################################################
-# Figure out paths
-path_handler = path_handler()
-blech_clust_dir = path_handler.blech_clust_dir
-############################################################
+
+# Use post-process sheet template to write out a new sheet for this dataset
+script_path = os.path.dirname(os.path.realpath(__file__))
+blech_clust_dir = os.path.dirname(script_path)
 sys.path.append(blech_clust_dir)
 from utils.blech_utils import imp_metadata
 
