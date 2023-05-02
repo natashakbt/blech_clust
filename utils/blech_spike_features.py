@@ -6,17 +6,15 @@ from scipy.stats import zscore
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.decomposition import PCA
+from utils.blech_process_utils import path_handler
 
-def get_dir_names():
-    home_dir = os.getenv('HOME')
-    blech_clust_dir = os.path.join(home_dir, 'Desktop', 'blech_clust')
-    blech_dir_path = os.path.join(blech_clust_dir, 'blech.dir')
-    with open(blech_dir_path, 'r') as f:
-        lines = f.readlines()
-    dir_name = lines[0][:-1]
-    return home_dir, blech_clust_dir, dir_name
+############################################################
+# Figure out paths
+path_handler = path_handler()
+blech_clust_dir = path_handler.blech_clust_dir
+data_dir_name = path_handler.data_dir
+############################################################
 
-home_dir, blech_clust_dir, data_dir_name = get_dir_names()
 sys.path.append(blech_clust_dir)
 from utils.blech_utils import imp_metadata
 metadata_handler = imp_metadata([[], data_dir_name])
@@ -24,10 +22,6 @@ metadata_handler = imp_metadata([[], data_dir_name])
 params_dict = metadata_handler.params_dict
 sampling_rate = params_dict['sampling_rate']
 zero_ind = int(params_dict['spike_snapshot_before']*sampling_rate/1000)
-
-#with open('./params/data_params.json', 'r') as path_file:
-#    data_params = json.load(path_file)
-#zero_ind = data_params['zero_ind']
 
 class EnergyFeature(BaseEstimator, TransformerMixin):
     def __init__(self):

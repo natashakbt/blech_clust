@@ -22,15 +22,18 @@ matplotlib.use('Agg')
 ############################################################
 
 
-def get_dir_names():
-    home_dir = os.getenv('HOME')
-    blech_clust_dir = os.path.join(home_dir, 'Desktop', 'blech_clust')
-    blech_dir_path = os.path.join(blech_clust_dir, 'blech.dir')
-    with open(blech_dir_path, 'r') as f:
-        lines = f.readlines()
-    dir_name = lines[0][:-1]
-    return home_dir, blech_clust_dir, dir_name
+class path_handler():
 
+    def __init__(self):
+        self.home_dir = os.getenv('HOME')
+        file_path = os.path.abspath(__file__)
+        blech_clust_dir =  ('/').join(file_path.split('/')[:-2])
+        blech_dir_path = os.path.join(blech_clust_dir, 'blech.dir')
+        with open(blech_dir_path, 'r') as f:
+            lines = f.readlines()
+        dir_name = lines[0][:-1]
+        self.blech_clust_dir = blech_clust_dir
+        self.data_dir = dir_name
 
 class cluster_handler():
     """
