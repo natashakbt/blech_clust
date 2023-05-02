@@ -19,8 +19,8 @@ def raise_error_if_error(process, stderr, stdout):
 ############################################################
 # Define paths
 # TODO: Replace with call to blech_process_utils.path_handler
-script_path = os.path.dirname(os.path.realpath(__file__))
-blech_clust_dir = os.path.dirname(script_path)
+script_path = os.path.realpath(__file__)
+blech_clust_dir = os.path.dirname(os.path.dirname(script_path))
 
 # Read emg_env path
 with open(os.path.join(blech_clust_dir, 'params', 'env_params.json')) as f:

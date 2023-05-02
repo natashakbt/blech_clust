@@ -12,8 +12,8 @@ import re
 import pandas as pd
 
 # Use post-process sheet template to write out a new sheet for this dataset
-script_path = os.path.dirname(os.path.realpath(__file__))
-blech_clust_dir = os.path.dirname(script_path)
+script_path = os.path.realpath(__file__)
+blech_clust_dir = os.path.dirname(os.path.dirname(script_path))
 sys.path.append(blech_clust_dir)
 from utils.blech_utils import imp_metadata
 

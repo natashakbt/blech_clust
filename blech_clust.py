@@ -15,8 +15,8 @@ from utils.blech_utils import entry_checker, imp_metadata
 from utils.blech_process_utils import path_handler
 
 # Get blech_clust path
-path_handler = path_handler()
-blech_clust_dir = path_handler.blech_clust_dir
+script_path = os.path.realpath(__file__)
+blech_clust_dir = os.path.dirname(script_path)
 
 ############################################################
 
