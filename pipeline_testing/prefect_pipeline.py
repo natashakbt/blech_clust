@@ -7,6 +7,15 @@ from subprocess import PIPE, Popen
 from prefect import flow, task
 from glob import glob
 import json
+import argparse
+
+############################################################
+parser = argparse.ArgumentParser(description='Run tests, default = Run all tests')
+parser.add_argument('-e', action = 'store_true',
+                    help = 'Run EMG test only')
+parser.add_argument('-s', action = 'store_true',
+                    help = 'Run spike sorting test only')
+args = parser.parse_args()
 
 def raise_error_if_error(process, stderr, stdout):
     print(stdout.decode('utf-8'))
@@ -64,6 +73,14 @@ def prep_data_info():
 ############################################################
 ## Common Scripts
 ############################################################
+@task(log_prints=True)
+def reset_blech_clust():
+    script_name = './pipeline_testing/reset_blech_clust.py'
+    process = Popen(["python", script_name],
+                               stdout = PIPE, stderr = PIPE)
+    stdout, stderr = process.communicate()
+    raise_error_if_error(process,stderr,stdout)
+
 @task(log_prints=True)
 def run_clean_slate(data_dir):
     script_name = 'blech_clean_slate.py'
@@ -266,6 +283,7 @@ def prep_data_flow():
 @flow(log_prints=True)
 def run_spike_test():
     os.chdir(blech_clust_dir)
+    reset_blech_clust()
     run_clean_slate(data_dir)
     run_blech_clust(data_dir)
     run_CAR(data_dir)
@@ -282,6 +300,7 @@ def run_spike_test():
 @flow(log_prints=True)
 def run_emg_main_test():
     os.chdir(blech_clust_dir)
+    reset_blech_clust()
     run_clean_slate(data_dir)
     run_blech_clust(data_dir)
     make_arrays(data_dir)
@@ -308,6 +327,32 @@ def run_EMG_QDA_test():
     run_QDA_gapes_plot(data_dir)
 
 @flow(log_prints=True)
+def spike_only_test():
+    try:
+        prep_data_flow()
+    except:
+        print('Failed to prep data')
+    try:
+        run_spike_test()
+    except:
+        print('Failed to run spike test')
+
+@flow(log_prints=True)
+def emg_only_test():
+    try:
+        prep_data_flow()
+    except:
+        print('Failed to prep data')
+    try:
+        run_emg_BSA_test()
+    except:
+        print('Failed to run emg BSA test')
+    try:
+        run_EMG_QDA_test()
+    except:
+        print('Failed to run EMG QDA test')
+
+@flow(log_prints=True)
 def full_test():
     try:
         prep_data_flow()
@@ -329,4 +374,13 @@ def full_test():
 ############################################################
 ## Run Flows
 ############################################################
-full_test(return_state=True)
+# If no individual tests are required, run both
+if not args.e and not args.s:
+    print('Running spike and emg tests')
+    full_test(return_state=True)
+elif args.e:
+    print('Running emg tests only')
+    emg_only_test(return_state=True)
+elif args.s:
+    print('Running spike-sorting tests only')
+    spike_only_test(return_state=True)
