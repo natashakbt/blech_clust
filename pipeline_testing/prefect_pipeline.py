@@ -18,6 +18,7 @@ def raise_error_if_error(process, stderr, stdout):
 ## Define paths 
 ############################################################
 # Define paths
+# TODO: Replace with call to blech_process_utils.path_handler
 home_dir = os.path.expanduser("~")
 desktop_dir = os.path.join(home_dir, "Desktop")
 blech_clust_dir = os.path.join(desktop_dir, "blech_clust") 
