@@ -138,7 +138,8 @@ def find_segment(gape_locs, segment_starts, segment_ends):
 
 # Ask for the directory where the hdf5 file sits, and change to that directory
 # Get name of directory with the data files
-data_dir = '/media/fastdata/KM45/KM45_5tastes_210620_113227_new'
+#data_dir = '/media/fastdata/KM45/KM45_5tastes_210620_113227_new'
+data_dir = '/home/abuzarmahmood/Desktop/blech_clust/pipeline_testing/test_data_handling/test_data/KM45_5tastes_210620_113227_new'
 metadata_handler = imp_metadata([[], data_dir])
 data_dir = metadata_handler.dir_name
 os.chdir(data_dir)
@@ -250,6 +251,15 @@ for this_ind in inds:
 
     segment_starts, segment_ends, segment_dat = extract_movements(
         this_trial_dat, size=200)
+
+    ## Plot the segments
+    #fig, ax = plt.subplots(2,1, sharex=True)
+    #for this_start, this_end, this_dat in zip(segment_starts, segment_ends, segment_dat):
+    #    ax[0].fill_between(np.arange(this_start, this_end), 0, this_dat, alpha = 0.7)
+    #    ax[0].plot(np.arange(this_start, this_end), this_dat)
+    #ax[1].plot(this_trial_dat)
+    #plt.show()
+
     (feature_array,
      feature_names,
      segment_dat,
