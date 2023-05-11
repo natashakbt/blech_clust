@@ -12,22 +12,21 @@ import re
 import pandas as pd
 
 # Use post-process sheet template to write out a new sheet for this dataset
-home_dir = os.getenv('HOME')
-blech_clust_path = os.path.join(home_dir, 'Desktop','blech_clust')
+script_path = os.path.realpath(__file__)
+blech_clust_dir = os.path.dirname(os.path.dirname(script_path))
+sys.path.append(blech_clust_dir)
+from utils.blech_utils import imp_metadata
+
 csv_path = os.path.join(
-        blech_clust_path, 
+        blech_clust_dir, 
         'example_meta_files',
         'GC_PC_taste_odor_spont_210919_175343.csv')
 sorting_table = pd.read_csv(csv_path, keep_default_na = False)
 sorting_table.drop(list(range(0, len(sorting_table))), inplace = True)
 
 # Get name of directory with the data files
-if len(sys.argv) > 1:
-    dir_name = os.path.abspath(sys.argv[1])
-    if dir_name[-1] != '/':
-        dir_name += '/'
-else:
-    dir_name = easygui.diropenbox(msg = 'Please select data directory')
+metadata_handler = imp_metadata(sys.argv)
+dir_name = metadata_handler.dir_name
 
 basename = os.path.basename(dir_name[:-1])
 

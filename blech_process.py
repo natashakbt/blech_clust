@@ -51,7 +51,10 @@ from utils.blech_utils import imp_metadata
 ############################################################
 
 # Read blech.dir, and cd to that directory
-home_dir, blech_clust_dir, data_dir_name = bpu.get_dir_names()
+path_handler = bpu.path_handler()
+blech_clust_dir = path_handler.blech_clust_dir
+data_dir_name = path_handler.data_dir
+
 
 metadata_handler = imp_metadata([[], data_dir_name])
 os.chdir(metadata_handler.dir_name)

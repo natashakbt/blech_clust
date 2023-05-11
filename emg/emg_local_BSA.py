@@ -4,7 +4,6 @@
 
 # Import stuff
 import numpy as np
-import easygui
 import os
 import multiprocessing
 import sys
@@ -13,6 +12,7 @@ from glob import glob
 
 sys.path.append('..')
 from utils.blech_utils import imp_metadata
+from utils.blech_process_utils import path_handler
 
 # Get name of directory with the data files
 metadata_handler = imp_metadata(sys.argv)
@@ -44,8 +44,9 @@ for num, dir_name in enumerate(dir_list):
     sig_trials = np.load('./sig_trials.npy')
 
     # Grab Brandeis unet username
-    home_dir = os.getenv('HOME')
-    blech_emg_dir = os.path.join(home_dir,'Desktop','blech_clust','emg')
+    this_path_handler = path_handler()
+    blech_clust_dir = this_path_handler.blech_clust_dir
+    blech_emg_dir = os.path.join(blech_clust_dir ,'emg')
 
     # Dump shell file(s) for running GNU parallel job on the 
     # user's blech_clust folder on the desktop

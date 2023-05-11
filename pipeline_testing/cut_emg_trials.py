@@ -2,10 +2,11 @@
 import numpy as np
 import sys
 import os
-home_dir = os.getenv('HOME')
-blech_clust_path = os.path.join(home_dir, 'Desktop','blech_clust')
-sys.path.append(blech_clust_path)
-#print(f'CWD for cut_emg_trials {os.getcwd()}')
+
+# Use post-process sheet template to write out a new sheet for this dataset
+script_path = os.path.realpath(__file__)
+blech_clust_dir = os.path.dirname(os.path.dirname(script_path)) 
+sys.path.append(blech_clust_dir)
 from utils.blech_utils import imp_metadata
 
 metadata_handler = imp_metadata(sys.argv)
