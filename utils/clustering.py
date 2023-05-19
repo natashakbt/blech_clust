@@ -71,8 +71,8 @@ def extract_waveforms_hannah(filt_el, spike_snapshot = [0.5, 1.0],
 			filt_el_clip = np.array(filt_el)[max(s_t,0):min(s_t+sec_samples,len_filt_el)]
 			m_clip = np.mean(filt_el_clip)
 			th_clip = threshold_mult*np.std(filt_el_clip)
-			neg_clip = np.where(m_clip-(5*th_clip) <= filt_el_clip <= m_clip-th_clip)[0]
-			pos_clip = np.where(m_clip+(5*th_clip) >= filt_el_clip >= m_clip+th_clip)[0]
+			neg_clip = np.where(filt_el_clip <= m_clip-th_clip)[0]
+			pos_clip = np.where(filt_el_clip >= m_clip+th_clip)[0]
 			negative.extend(list(neg_clip+s_t))
 			positive.extend(list(pos_clip+s_t))
 	
