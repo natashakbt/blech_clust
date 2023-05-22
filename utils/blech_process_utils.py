@@ -772,10 +772,10 @@ class spike_handler():
         times_dejittered = self.times_dejittered
         pca_inds = [i for i, x in enumerate(self.feature_names) if 'pca' in x]
         pca_slices = self.spike_features[:, pca_inds]
-        energy = self.spike_features[:, np.where(
-            self.feature_names == 'energy')[0]]
-        amplitude = self.spike_features[:,
-                                        np.where(self.feature_names == 'amplitude')[0]]
+        energy_inds = [i for i, x in enumerate(self.feature_names) if 'energy' in x]
+        energy = self.spike_features[:, energy_inds]
+        amp_inds = [i for i, x in enumerate(self.feature_names) if 'amplitude' in x]
+        amplitude = self.spike_features[:,amp_inds]
 
         waveform_dir = f'{self.dir_name}/spike_waveforms/electrode{self.electrode_num:02}'
         spiketime_dir = f'{self.dir_name}/spike_times/electrode{self.electrode_num:02}'
