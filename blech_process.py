@@ -154,10 +154,13 @@ if classifier_params['use_classifier'] and \
         # Remaining data is now only spikes
         slices_dejittered, times_dejittered, clf_prob = \
             classifier_handler.pos_spike_dict.values()
+        spike_set.slices_dejittered = slices_dejittered
+        spike_set.times_dejittered = times_dejittered
+        classifier_handler.clf_prob = clf_prob
+        classifier_handler.clf_pred = clf_prob > classifier_handler.clf_threshold
 
 ############################################################
 
-spike_set.extract_amplitudes()
 if classifier_params['use_neuRecommend']:
     spike_set.extract_features(
             classifier_handler.feature_pipeline,
