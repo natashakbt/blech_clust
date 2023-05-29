@@ -197,6 +197,7 @@ else:
             zip(np.arange(len(dig_in_list)), dig_in_list))
         dig_in_print_str = "Dig-ins : \n" + \
             ",\n".join([str(x) for x in indexed_digin_list])
+        dig_in_present_bool = len(dig_in_list) > 0
 
     elif file_type == ['one file per signal type']:
         d_inputs = np.fromfile(
@@ -215,66 +216,77 @@ else:
             start_ind = np.where(d_diff == n_i + 1)[0]
             dig_in_trials.append(int(len(start_ind)))
         dig_in_print_str = "A total of " + str(num_dig_ins)
+        dig_in_present_bool = num_dig_ins > 0
 
     # Ask for user input of which line index the dig in came from
-    print(dig_in_print_str + "\n were found. Please provide the indices.")
-    taste_dig_in_str, continue_bool = entry_checker(
-        msg=' Taste dig_ins used (IN ORDER, anything separated)  :: ',
-        check_func=count_check,
-        fail_response='Please enter integers only')
-    if continue_bool:
-        nums = re.findall('[0-9]+', taste_dig_in_str)
-        taste_digins = [int(x) for x in nums]
-        taste_digin_filenames = [dig_in_list[i] for i in taste_digins]
-        print('Selected taste digins: \n' + "\n".join(taste_digin_filenames))
+    if dig_in_present_bool:
+        print(dig_in_print_str + "\n were found. Please provide the indices.")
+        taste_dig_in_str, continue_bool = entry_checker(
+            msg=' Taste dig_ins used (IN ORDER, anything separated)  :: ',
+            check_func=count_check,
+            fail_response='Please enter integers only')
+        if continue_bool:
+            nums = re.findall('[0-9]+', taste_dig_in_str)
+            taste_digins = [int(x) for x in nums]
+            taste_digin_filenames = [dig_in_list[i] for i in taste_digins]
+            print('Selected taste digins: \n' + "\n".join(taste_digin_filenames))
+        else:
+            exit()
+
+        def float_check(x):
+            global taste_digins
+            return len(x.split(',')) == len(taste_digins)
+
+        def taste_check(x):
+            global taste_digins
+            return len(re.findall('[A-Za-z]+', x)) == len(taste_digins)
+
+        taste_str, continue_bool = entry_checker(
+            msg=' Tastes names used (IN ORDER, anything separated)  :: ',
+            check_func=taste_check,
+            fail_response='Please enter as many tastes as digins')
+        if continue_bool:
+            tastes = re.findall('[A-Za-z]+', taste_str)
+        else:
+            exit()
+
+        conc_str, continue_bool = entry_checker(
+            msg='Corresponding concs used (in M, IN ORDER, COMMA separated)  :: ',
+            check_func=float_check,
+            fail_response='Please enter as many concentrations as digins')
+        if continue_bool:
+            concs = [float(x) for x in conc_str.split(",")]
+        else:
+            exit()
+
+        # Ask user for palatability rankings
+        def pal_check(x):
+            global taste_digins
+            nums = re.findall('[1-9]+', x)
+            return sum([x.isdigit() for x in nums]) == len(nums) and \
+                sum([1 <= int(x) <= len(taste_digins)
+                    for x in nums]) == len(taste_digins)
+
+        taste_fin = str(list(zip(taste_digins, list(zip(tastes, concs)))))
+        palatability_str, continue_bool = \
+            entry_checker(
+                msg=f' {taste_fin} \n Enter palatability rankings used '
+                '(anything separated), higher number = more palatable  :: ',
+                check_func=pal_check,
+                fail_response='Please enter numbers 1<=x<len(tastes)')
+        if continue_bool:
+            nums = re.findall('[1-9]+', palatability_str)
+            pal_ranks = [int(x) for x in nums]
+        else:
+            exit()
     else:
-        exit()
+        print('No dig-ins found. Please check your data.')
+        taste_digins = []
+        taste_digin_filenames = []
+        tastes = []
+        concs = []
+        pal_ranks = []
 
-    def float_check(x):
-        global taste_digins
-        return len(x.split(',')) == len(taste_digins)
-
-    def taste_check(x):
-        global taste_digins
-        return len(re.findall('[A-Za-z]+', x)) == len(taste_digins)
-    taste_str, continue_bool = entry_checker(
-        msg=' Tastes names used (IN ORDER, anything separated)  :: ',
-        check_func=taste_check,
-        fail_response='Please enter as many tastes as digins')
-    if continue_bool:
-        tastes = re.findall('[A-Za-z]+', taste_str)
-    else:
-        exit()
-
-    conc_str, continue_bool = entry_checker(
-        msg='Corresponding concs used (in M, IN ORDER, COMMA separated)  :: ',
-        check_func=float_check,
-        fail_response='Please enter as many concentrations as digins')
-    if continue_bool:
-        concs = [float(x) for x in conc_str.split(",")]
-    else:
-        exit()
-
-    # Ask user for palatability rankings
-    def pal_check(x):
-        global taste_digins
-        nums = re.findall('[1-9]+', x)
-        return sum([x.isdigit() for x in nums]) == len(nums) and \
-            sum([1 <= int(x) <= len(taste_digins)
-                for x in nums]) == len(taste_digins)
-
-    taste_fin = str(list(zip(taste_digins, list(zip(tastes, concs)))))
-    palatability_str, continue_bool = \
-        entry_checker(
-            msg=f' {taste_fin} \n Enter palatability rankings used '
-            '(anything separated), higher number = more palatable  :: ',
-            check_func=pal_check,
-            fail_response='Please enter numbers 1<=x<len(tastes)')
-    if continue_bool:
-        nums = re.findall('[1-9]+', palatability_str)
-        pal_ranks = [int(x) for x in nums]
-    else:
-        exit()
 
     ########################################
     # Ask for laser info
