@@ -100,7 +100,8 @@ class cluster_handler():
             cluster_points = np.where(self.labels[:] == cluster)[0]
             this_cluster = remove_too_large_waveforms(
                 cluster_points,
-                self.spike_set.amplitudes,
+                #self.spike_set.amplitudes,
+                self.spike_set.return_feature('amplitude'),
                 self.labels,
                 wf_amplitude_sd_cutoff)
             self.labels[cluster_points] = this_cluster
@@ -390,7 +391,8 @@ class classifier_handler():
                     'blech_clust/README.md#setup for instructions")
 
     def get_waveform_classifier_params(self):
-        _, self.blech_clust_dir, _ = get_dir_names()
+        this_path_handler = path_handler()
+        self.blech_clust_dir = this_path_handler.blech_clust_dir
         params_file_path = os.path.join(
             self.blech_clust_dir,
             'params',
@@ -711,38 +713,6 @@ class spike_handler():
         del self.slices
         del self.spike_times
 
-    def extract_amplitudes(self):
-        """
-        Extract amplitudes from dejittered spikes
-        """
-        zero_ind = self.params_dict['spike_snapshot_before'] *\
-            self.params_dict['sampling_rate']/1000
-        zero_ind = int(zero_ind)
-        self.amplitudes = self.slices_dejittered[:, zero_ind]
-
-    # def pca_slices(self):
-    #    """
-    #    PCA on dejittered spikes
-    #    """
-    #    # Scale the dejittered slices by the energy of the waveforms
-    #    scaled_slices, energy = clust.scale_waveforms(self.slices_dejittered)
-
-    #    # Run PCA on the scaled waveforms
-    #    pca_slices, explained_variance_ratio = clust.implement_pca(
-    #        scaled_slices)
-
-    # def create_pca_plot(self):
-    #    # Create file for saving plots, and plot explained variance ratios of the PCA
-    #    fig= plt.figure()
-    #    x= np.arange(len(explained_variance_ratio))
-    #    plt.plot(x, explained_variance_ratio, 'x')
-    #    plt.title('Variance ratios explained by PCs')
-    #    plt.xlabel('PC #')
-    #    plt.ylabel('Explained variance ratio')
-    #    fig.savefig(f'./Plots/{self.electrode_num:02}/pca_variance.png',
-    #                bbox_inches='tight')
-    #    plt.close("all")
-
     def extract_features(self,
                          feature_transformer,
                          feature_names,
@@ -755,6 +725,12 @@ class spike_handler():
         else:
             self.spike_features = feature_transformer.fit_transform(
                 self.slices_dejittered)
+
+    def return_feature(self, wanted_feature):
+        wanted_inds = [i for i, x in enumerate(self.feature_names) \
+                if wanted_feature in x]
+        wanted_data = self.spike_features[:, wanted_inds]
+        return wanted_data
 
     def write_out_spike_data(self):
         """
@@ -770,12 +746,15 @@ class spike_handler():
 
         slices_dejittered = self.slices_dejittered
         times_dejittered = self.times_dejittered
-        pca_inds = [i for i, x in enumerate(self.feature_names) if 'pca' in x]
-        pca_slices = self.spike_features[:, pca_inds]
-        energy_inds = [i for i, x in enumerate(self.feature_names) if 'energy' in x]
-        energy = self.spike_features[:, energy_inds]
-        amp_inds = [i for i, x in enumerate(self.feature_names) if 'amplitude' in x]
-        amplitude = self.spike_features[:,amp_inds]
+        #pca_inds = [i for i, x in enumerate(self.feature_names) if 'pca' in x]
+        #pca_slices = self.spike_features[:, pca_inds]
+        #energy_inds = [i for i, x in enumerate(self.feature_names) if 'energy' in x]
+        #energy = self.spike_features[:, energy_inds]
+        #amp_inds = [i for i, x in enumerate(self.feature_names) if 'amplitude' in x]
+        #amplitude = self.spike_features[:,amp_inds]
+        pca_slices = self.return_feature('pca')
+        energy = self.return_feature('energy')
+        amplitude = self.return_feature('amplitude')
 
         waveform_dir = f'{self.dir_name}/spike_waveforms/electrode{self.electrode_num:02}'
         spiketime_dir = f'{self.dir_name}/spike_times/electrode{self.electrode_num:02}'
