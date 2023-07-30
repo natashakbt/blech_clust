@@ -85,15 +85,6 @@ for group in range(num_groups):
 
 print("Common average reference for {:d} groups calculated".format(num_groups))
 
-def save_to_file(electrode_name, data):
-    out_dir = os.path.join(dir_name, 'CAR_new')
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    name_str = f"{electrode_name:02}"
-    out_file = os.path.join(out_dir, name_str + '.npy')
-    np.save(out_file, data)
-    print(f"Saved to {out_file}")
-
 # Now run through the raw electrode data and
 # subtract the common average reference from each of them
 print('Performing background subtraction')
@@ -104,15 +95,12 @@ for group_num, group_name in tqdm(enumerate(all_car_group_names)):
         # voltage data of the electrode
         referenced_data = get_electrode_by_name(raw_electrodes, electrode_num)[:] - \
             common_average_reference[group_num]
-        # Save the data to a file
-        save_to_file(electrode_num, referenced_data)
-
-        ## First remove the node with this electrode's data
-        #hf5.remove_node(f"/raw/electrode{electrode_num:02}")
-        ## Now make a new array replacing the node removed above with the referenced data
-        #hf5.create_array(
-        #    "/raw", f"electrode{electrode_num:02}", referenced_data)
-        #hf5.flush()
+        # First remove the node with this electrode's data
+        hf5.remove_node(f"/raw/electrode{electrode_num:02}")
+        # Now make a new array replacing the node removed above with the referenced data
+        hf5.create_array(
+            "/raw", f"electrode{electrode_num:02}", referenced_data)
+        hf5.flush()
         del referenced_data
 
 hf5.close()
