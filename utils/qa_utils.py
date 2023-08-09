@@ -57,7 +57,7 @@ def intra_corr(X):
 		corr_mat[j,i] = np.nan 
 	return corr_mat
 
-def gen_corr_output(corr_mat, plot_dir, thresholds = [0.9,0.93,0.97]):
+def gen_corr_output(corr_mat, plot_dir, threshold = 0.9):
 	"""
 	Generate a plot of the raw, and thresholded correlation matrices
 
@@ -68,9 +68,7 @@ def gen_corr_output(corr_mat, plot_dir, thresholds = [0.9,0.93,0.97]):
 		fig: matplotlib figure
 	"""
 	thresh_corr = corr_mat.copy()
-	thresh_corr[thresh_corr < thresholds[0]] = np.nan
-	for this_thresh in thresholds:
-		thresh_corr[corr_mat >= this_thresh] = this_thresh
+	thresh_corr[thresh_corr < threshold] = np.nan
 
 	save_path = os.path.join(plot_dir, 'raw_channel_corr_plot.png')
 	fig, ax = plt.subplots(1,2, figsize = (10,5))
@@ -83,19 +81,9 @@ def gen_corr_output(corr_mat, plot_dir, thresholds = [0.9,0.93,0.97]):
 	ax[1].set_title('Thresholded Correlation Matrix')
 	ax[1].set_xlabel('Channel')
 	ax[1].set_ylabel('Channel')
-	# Generate discrete colorbar given thresholds
-	norm = plt.Normalize(thresholds[0], thresholds[-1])
-	ticks = [thresholds[0]] + thresholds[1:-1] + [thresholds[-1]]
-	cmap = plt.cm.jet
-	bounds = np.linspace(thresholds[0], thresholds[-1], len(ticks))
-	cmaplist = [cmap(i) for i in range(cmap.N)]
-	for i in range(len(bounds)-1):
-		cmaplist[i] = (1,1,1,1)
-	cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
 	ax[1].imshow(thresh_corr, 
-			  interpolation = 'nearest', cmap = cmap, norm = norm)
-	cbar = fig.colorbar(im, ax = ax[1], ticks = ticks)
-	cbar.ax.set_yticklabels(['> %.2f'%x for x in ticks])
+			  interpolation = 'nearest')
+	cbar = fig.colorbar(im, ax = ax[1])
 	fig.tight_layout()
 	fig.savefig(save_path)
 	plt.close(fig)

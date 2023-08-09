@@ -191,14 +191,14 @@ else:
 print()
 print('Calculating correlation matrix for quality check')
 qa_down_rate = all_params_dict["qa_params"]["downsample_rate"]
-qa_thresholds = all_params_dict["qa_params"]["bridged_channel_thresholds"]
+qa_threshold = all_params_dict["qa_params"]["bridged_channel_threshold"]
 down_dat_stack, chan_names = qa.get_all_channels(
         hdf5_name, 
         downsample_rate = qa_down_rate,)
 corr_mat = qa.intra_corr(down_dat_stack)
 qa.gen_corr_output(corr_mat, 
                    dir_name, 
-                   qa_thresholds,)
+                   qa_threshold,)
 ##############################
 
 # Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
