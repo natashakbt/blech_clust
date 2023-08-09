@@ -13,6 +13,14 @@
     "bandpass_upper_cutoff": 3000,
     "spike_snapshot_before": 1,
     "spike_snapshot_after": 1.5,
+    "qa_params": {
+        "downsample_rate": 100,
+        "bridged_channel_thresholds" : [
+            0.9,
+            0.93,
+            0.97
+        ]
+    },
     "psth_params": {
         "durations": [
             500,
