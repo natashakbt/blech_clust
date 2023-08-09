@@ -33,8 +33,12 @@ def get_all_channels(hf5_path, downsample_rate = 100):
 			all_chans.append(chan[:][::downsample_rate])
 			chan_names.append(chan._v_name)
 	hf5.close()
-	chan_names = [x.split('electrode')[-1] for x in chan_names]
-	return np.stack(all_chans), np.array(chan_names)
+	chan_names = [int(x.split('electrode')[-1]) for x in chan_names]
+	# Sort everything by channel number
+	sort_order = np.argsort(chan_names)
+	chan_names = np.array(chan_names)[sort_order]
+	all_chans = np.stack(all_chans)[sort_order]
+	return all_chans, np.array(chan_names)
 
 def intra_corr(X):
 	"""
