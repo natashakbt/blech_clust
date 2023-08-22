@@ -27,8 +27,8 @@ num_tastes = emg_data.shape[1]
 
 # Load the unique laser duration/lag combos and the trials 
 # that correspond to them from the ancillary analysis node
-trials = hf5.root.ancillary_analysis.trials[:]
-unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
+trials = hf5.root.ancillary_analysis.trials[:] # laser conditions x trials
+unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:] # laser conditions x details
 
 # Iterate over channels
 output_list = glob.glob(os.path.join(dir_name,'emg_output/*'))
@@ -50,25 +50,15 @@ final_sig_trials_list = []
 final_emg_BSA_list = []
 
 for num, this_dir in enumerate(channels_discovered):
-    #os.chdir(this_dir)
     this_basename = channels_discovered[num]
-
-    # Now run through the tastes, and stack up the BSA results 
-    # for the EMG responses by trials
-    #emg_BSA_results = hf5.root.emg_BSA_results.taste0_p[:, :, :]
-    #for i in range(num_tastes - 1):
-    #	exec("emg_BSA_results = np.vstack((emg_BSA_results[:], hf5.root.emg_BSA_results.taste" + str(i+1) + "_p[:, :, :]))")
     emg_BSA_results = [x[:] for x in \
             hf5.get_node('/emg_BSA_results',this_basename)._f_iter_nodes()\
             if 'taste' in x.name]
     emg_BSA_results = np.vstack(emg_BSA_results)
 
     ## Find the frequency with the maximum EMG power at each time point on each trial
-    #max_freq = np.argmax(emg_BSA_results[:, :, :], axis = 2)
     ## Gapes are anything upto 4.6 Hz
-    #gapes = np.array(max_freq <= 7, dtype = int)
     ## LTPs are from 5.95 Hz to 8.65 Hz
-    #ltps = np.array((max_freq >= 10)*(max_freq <= 16), dtype = int)
     #Alternatively, gapes from 3.65-5.95 Hz (6-11). LTPs from 5.95 to 8.65 Hz (11-17) 
     gapes = np.sum(emg_BSA_results[:, :, 6:11], axis = 2)/\
             np.sum(emg_BSA_results, axis = 2)
@@ -81,44 +71,38 @@ for num, this_dir in enumerate(channels_discovered):
     # TODO: Needs to refer to sig_trials within a channel
     sig_trials = np.load(f'emg_output/{this_basename}/sig_trials.npy').flatten()
 
-    # TODO: These arrays need to be able to handle uneven trials
-    # One way to do that would be to use the max number of deliveries
-    # for the trial dimension
-
     # Now arrange these arrays by 
     # SHAPE : laser condition X taste X trial X time
-    final_emg_BSA_results = np.empty((len(trials), 
+    final_emg_BSA_results = np.zeros((len(trials), 
                                         num_tastes, 
                                         int(num_trials/len(trials)),  
                                         emg_BSA_results.shape[1], 
                                         emg_BSA_results.shape[2]), 
                                     dtype = float) 
-    final_gapes = np.empty((len(trials), 
+    final_gapes = np.zeros((len(trials), 
                             num_tastes, 
                             int(num_trials/len(trials)),  
                             gapes.shape[1]), 
                         dtype = float)
-    final_ltps = np.empty((len(trials), 
+    final_ltps = np.zeros((len(trials), 
                             num_tastes, 
                             int(num_trials/len(trials)), 
                             ltps.shape[1]), 
                         dtype = float)
-    final_sig_trials = np.empty((len(trials), 
+    final_sig_trials = np.zeros((len(trials), 
                                 num_tastes, 
                                 int(num_trials/len(trials))), 
                             dtype = float)
 
     # Fill up these arrays
-    for i in range(len(trials)):
-        for j in range(num_tastes):
-            final_emg_BSA_results[i, j, :, :, :] = \
-                    emg_BSA_results[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)], :, :]
-            final_gapes[i, j, :,  :] = \
-                    gapes[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)], :]
-            final_ltps[i, j, :, :] = \
-                    ltps[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)], :]
-            final_sig_trials[i, j, :] = \
-                    sig_trials[trials[i][np.where((trials[i] >= num_trials*j)*(trials[i] < num_trials*(j+1)) == True)]]
+    for cond_num, this_trial_vec in enumerate(trials):
+        for trial_ind, trial_num in enumerate(this_trial_vec): 
+            taste_ind = trial_num // num_trials
+            mod_trial_ind = trial_num % num_trials
+            final_emg_BSA_results[cond_num, taste_ind, mod_trial_ind] = emg_BSA_results[trial_num] 
+            final_gapes[cond_num, taste_ind, mod_trial_ind] = gapes[trial_num] 
+            final_ltps[cond_num, taste_ind, mod_trial_ind] = ltps[trial_num] 
+            final_sig_trials[cond_num, taste_ind, mod_trial_ind] = sig_trials[trial_num] 
 
     final_gapes_list.append(final_gapes)
     final_ltps_list.append(final_ltps)

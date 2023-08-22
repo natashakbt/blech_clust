@@ -154,16 +154,6 @@ if not os.path.exists(plot_dir):
     os.makedirs(plot_dir)
 
 time_limits = [int(x) for x in params_dict['psth_params']['durations']]
-# TODO: Fix PSTH start time to be negative if pre-stim
-# Due to idiosyncracy in convention, the pre-stim time needs to be reversed
-time_limits[0]*=-1
-
-## Ask the user for the time limits to plot the results upto
-#time_limits = easygui.multenterbox(
-#    msg = 'Enter the time limits to be used in the plots', 
-#    fields = ['Pre stim (ms)', 'Post stim (ms)'])
-#for i in range(len(time_limits)):
-#    time_limits[i] = int(time_limits[i])
 
 # Get an array of x values to plot the average probability of 
 # gaping or licking across time
