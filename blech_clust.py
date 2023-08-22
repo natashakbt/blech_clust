@@ -11,6 +11,7 @@ import shutil
 
 # Necessary blech_clust modules
 from utils import read_file
+from utils import qa_utils as qa
 from utils.blech_utils import entry_checker, imp_metadata
 from utils.blech_process_utils import path_handler
 
@@ -109,7 +110,8 @@ dig_in_list = sorted(dig_in_list)
 info_file = np.fromfile(dir_name + '/info.rhd', dtype=np.dtype('float32'))
 sampling_rate = int(info_file[2])
 
-# Read the time.dat file for use in separating out the one file per signal type data
+# Read the time.dat file for use in separating out 
+# the one file per signal type data
 num_recorded_samples = len(np.fromfile(
     dir_name + '/' + 'time.dat', dtype=np.dtype('float32')))
 total_recording_time = num_recorded_samples/sampling_rate  # In seconds
@@ -186,6 +188,21 @@ if not os.path.exists(params_out_path):
         json.dump(all_params_dict, params_file, indent=4)
 else:
     print("Params file already present...not writing a new one")
+
+##############################
+# Test correlation between channels for quality check
+print()
+print('Calculating correlation matrix for quality check')
+qa_down_rate = all_params_dict["qa_params"]["downsample_rate"]
+qa_threshold = all_params_dict["qa_params"]["bridged_channel_threshold"]
+down_dat_stack, chan_names = qa.get_all_channels(
+        hdf5_name, 
+        downsample_rate = qa_down_rate,)
+corr_mat = qa.intra_corr(down_dat_stack)
+qa.gen_corr_output(corr_mat, 
+                   dir_name, 
+                   qa_threshold,)
+##############################
 
 # Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
 # First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
