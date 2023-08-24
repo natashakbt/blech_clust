@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from imageio import imread
 import shutil
+import os
 
 # A function that accepts a numpy array of waveforms and creates a datashader image from them
 def waveforms_datashader(waveforms, x_values, 
@@ -37,6 +38,8 @@ def waveforms_datashader(waveforms, x_values,
             'y': new_waveforms.flatten()})
 
         # Datashader function for exporting the temporary image with the waveforms
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
         export = partial(export_image, background = "white", export_path=dir_name)
 
         # Produce a datashader canvas

@@ -204,6 +204,19 @@ qa.gen_corr_output(corr_mat,
                    qa_threshold,)
 ##############################
 
+# Write single runner file to data directory
+script_save_path = os.path.join(dir_name, 'temp')
+if not os.path.exists(script_save_path):
+    os.mkdir(script_save_path)
+
+with open(os.path.join(script_save_path, 'blech_process_single.sh'), 'w') as f:
+    f.write('#!/bin/bash \n')
+    f.write(f'BLECH_DIR={blech_clust_dir} \n')
+    f.write(f'DATA_DIR={dir_name} \n')
+    f.write('ELECTRODE_NUM=$1 \n')
+    f.write('python $BLECH_DIR/blech_process.py $DATA_DIR $ELECTRODE_NUM \n')
+
+
 # Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
 # First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
 num_cpu = multiprocessing.cpu_count()
@@ -216,14 +229,20 @@ not_emg_bool = not_none_bool.loc[
     ~not_none_bool.CAR_group.str.contains('emg')
 ]
 bash_electrode_list = not_emg_bool.electrode_ind.values
-job_count = np.min((len(bash_electrode_list), int(num_cpu-2)))
-runner_path = os.path.join(
-    blech_clust_dir, 'blech_clust_jetstream_parallel1.sh')
-f = open(os.path.join(blech_clust_dir, 'blech_clust_jetstream_parallel.sh'), 'w')
+job_count = np.min(
+        (
+            len(bash_electrode_list), 
+            int(num_cpu-2), 
+            all_params_dict["max_parallel_cpu"]
+            )
+        )
+f = open(os.path.join(script_save_path, 'blech_process_parallel.sh'), 'w')
+f.write('#!/bin/bash \n')
+f.write(f'DIR={dir_name} \n')
 print(f"parallel -k -j {job_count} --noswap --load 100% --progress " +
       "--memfree 4G --ungroup --retry-failed " +
-      f"--joblog {dir_name}/results.log " +
-      f"bash {runner_path} " +\
+      f"--joblog $DIR/results.log " +
+      "bash $DIR/temp/blech_process_single.sh " +\
       f"::: {' '.join([str(x) for x in bash_electrode_list])}",
       file=f)
 f.close()
@@ -233,11 +252,6 @@ f = open(os.path.join(blech_clust_dir, 'blech_clust_jetstream_parallel1.sh'), 'w
 print("export OMP_NUM_THREADS=1", file=f)
 blech_process_path = os.path.join(blech_clust_dir, 'blech_process.py')
 print(f"python {blech_process_path} $1", file=f)
-f.close()
-
-# Dump the directory name where blech_process has to cd
-f = open(os.path.join(blech_clust_dir, 'blech.dir'), 'w')
-print(dir_name, file=f)
 f.close()
 
 print('blech_clust.py complete \n')
