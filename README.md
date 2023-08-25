@@ -32,7 +32,7 @@ pip install -r pip_requirements_base.txt            # Install pip requirements (
     - Setup directories and define clustering parameters  
 3. python blech_common_avg_reference.py  
     - Perform common average referencing to remove large artifacts  
-4. bash blech_clust_jetstream_parallel.sh  
+4. bash blech_run_process.sh 
     - Embarrasingly parallel spike extraction and clustering  
 5. bash bash_umap_spike_scatter.sh  
     - UMAP embedding of spikes for visualization of clusters, and generate spike-time rasters  
