@@ -162,15 +162,19 @@ if classifier_params['use_classifier'] and \
 ############################################################
 
 if classifier_params['use_neuRecommend']:
+    print('Using neuRecommend features')
     spike_set.extract_features(
             classifier_handler.feature_pipeline,
             classifier_handler.feature_names,
             fitted_transformer=True,
             )
 else:
+    print('Using blech_spike_features')
     import utils.blech_spike_features as bsf
+    bsf_feature_pipeline = bsf.return_feature_pipeline(data_dir_name)
+    # Set fitted_transformer to False so transformer is fit to new data
     spike_set.extract_features(
-            bsf.feature_pipeline,
+            bsf_feature_pipeline,
             bsf.feature_names,
             fitted_transformer=False,
             )
