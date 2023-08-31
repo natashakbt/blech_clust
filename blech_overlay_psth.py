@@ -45,7 +45,7 @@ params = [params_dict['psth_params']['window_size'],
 chosen_units = np.arange(trains_dig_in[0].spike_array.shape[1])
 
 # Extract neural response data from hdf5 file
-response = hf5.root.ancillary_analysis.scaled_neural_response[:]
+response = hf5.root.ancillary_analysis.unscaled_neural_response[:]
 num_units = len(chosen_units)
 num_tastes = len(trains_dig_in)
 x = np.arange(0, 6751, params[1]) - 2000
