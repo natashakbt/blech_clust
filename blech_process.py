@@ -50,16 +50,15 @@ from utils.blech_utils import imp_metadata
 # Load Data
 ############################################################
 
-# Read blech.dir, and cd to that directory
 path_handler = bpu.path_handler()
 blech_clust_dir = path_handler.blech_clust_dir
-data_dir_name = path_handler.data_dir
+data_dir_name = sys.argv[1]
 
 
 metadata_handler = imp_metadata([[], data_dir_name])
 os.chdir(metadata_handler.dir_name)
 
-electrode_num = int(sys.argv[1])
+electrode_num = int(sys.argv[2])
 print(f'Processing electrode {electrode_num}')
 params_dict = metadata_handler.params_dict
 
@@ -163,15 +162,19 @@ if classifier_params['use_classifier'] and \
 ############################################################
 
 if classifier_params['use_neuRecommend']:
+    print('Using neuRecommend features')
     spike_set.extract_features(
             classifier_handler.feature_pipeline,
             classifier_handler.feature_names,
             fitted_transformer=True,
             )
 else:
+    print('Using blech_spike_features')
     import utils.blech_spike_features as bsf
+    bsf_feature_pipeline = bsf.return_feature_pipeline(data_dir_name)
+    # Set fitted_transformer to False so transformer is fit to new data
     spike_set.extract_features(
-            bsf.feature_pipeline,
+            bsf_feature_pipeline,
             bsf.feature_names,
             fitted_transformer=False,
             )

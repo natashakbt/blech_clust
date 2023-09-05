@@ -28,12 +28,7 @@ class path_handler():
         self.home_dir = os.getenv('HOME')
         file_path = os.path.abspath(__file__)
         blech_clust_dir =  ('/').join(file_path.split('/')[:-2])
-        blech_dir_path = os.path.join(blech_clust_dir, 'blech.dir')
-        with open(blech_dir_path, 'r') as f:
-            lines = f.readlines()
-        dir_name = lines[0][:-1]
         self.blech_clust_dir = blech_clust_dir
-        self.data_dir = dir_name
 
 class cluster_handler():
     """
@@ -868,7 +863,7 @@ def gen_datashader_plot(
         x,
         downsample=False,
         threshold=threshold,
-        dir_name="Plots/" + "datashader_temp_el" + str(electrode_num))
+        dir_name="Plots/temp_plots/" + "datashader_temp_el" + str(electrode_num))
 
     ax.set_xlabel('Sample ({:d} samples per ms)'.
                   format(int(sampling_rate/1000)))

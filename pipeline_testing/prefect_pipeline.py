@@ -119,8 +119,8 @@ def run_CAR(data_dir):
 
 @task(log_prints=True)
 def run_jetstream_bash(data_dir):
-    script_name = 'blech_clust_jetstream_parallel.sh'
-    process = Popen(["bash", script_name],
+    script_name = 'blech_run_process.sh'
+    process = Popen(["bash", script_name, data_dir],
                                stdout = PIPE, stderr = PIPE)
     stdout, stderr = process.communicate()
     raise_error_if_error(process,stderr,stdout)
