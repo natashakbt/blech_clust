@@ -7,9 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from utils.clustering import get_filtered_electrode
 from utils.blech_process_utils import return_cutoff_values
-from utils.blech_utils import (
-        imp_metadata,
-        )
+from utils.blech_utils import imp_metadata
 
 def get_dig_in_data(hf5):
     dig_in_nodes = hf5.list_nodes('/digital_in')
@@ -81,7 +79,7 @@ def create_laser_params_for_digin(
 
     if len(laser_digin_inds):
         selected_laser_digin = laser_digin_inds[0]
-        print(f'Processing laser from {dig_in_basename[selected_laser_digin]}')
+        print(f'Processing: laser from {dig_in_basename[selected_laser_digin]}')
 
         # Else run through the lasers and check if the lasers 
         # went off within 5 secs of the stimulus delivery time
@@ -146,6 +144,7 @@ if __name__ == '__main__':
     # Get name of directory with the data files
     metadata_handler = imp_metadata(sys.argv)
     os.chdir(metadata_handler.dir_name)
+    print(f'Processing: {metadata_handler.dir_name}')
 
     # Open the hdf5 file
     hf5 = tables.open_file(metadata_handler.hdf5_name, 'r+')
@@ -361,11 +360,14 @@ if __name__ == '__main__':
                 print('== EMG ARRAY WILL HAVE EMPTY TRIALS ==')
 
             # Shape : channels x dig_ins x max_trials x duration 
-            emg_data = np.ndarray((
+            emg_data = np.empty((
                 len(emg_pathname), 
                 len(taste_starts_cutoff), 
                 np.max(trial_counts), 
                 durations[0]+durations[1]))
+
+            # All data that will not get filled should be nan
+            emg_data[:] = np.nan
 
             # And pull out emg data into this array
             for i in range(len(emg_pathname)):
