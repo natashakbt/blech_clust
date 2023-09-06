@@ -280,6 +280,7 @@ class cluster_handler():
                 fig = gen_isi_hist(
                     times_dejittered,
                     cluster_points,
+                    params_dict['sampling_rate'],
                 )
                 fig.savefig(os.path.join(
                     self.clust_plot_dir, f'Cluster{cluster}_ISIs'))
@@ -875,11 +876,12 @@ def gen_datashader_plot(
 def gen_isi_hist(
         times_dejittered,
         cluster_points,
+        sampling_rate,
 ):
     fig = plt.figure()
     cluster_times = times_dejittered[cluster_points]
     ISIs = np.ediff1d(np.sort(cluster_times))
-    ISIs = ISIs/30.0
+    ISIs = ISIs/(sampling_rate / 1000)
     max_ISI_val = 20
     bin_count = 100
     neg_pos_ISI = np.concatenate((-1*ISIs, ISIs), axis=-1)
