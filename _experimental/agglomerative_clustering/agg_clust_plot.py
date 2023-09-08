@@ -44,6 +44,36 @@ def plot_dendrogram(model, **kwargs):
     # Plot the corresponding dendrogram
     dendrogram(linkage_matrix, **kwargs)
 
+# Resort mapping so that children are always in order
+def sort_label_array(label_array):
+    """
+    Resort map_dict so that children are always in order
+    We will need a remapping at every level
+
+    Input:
+        label_array: levels x samples
+
+    Output:
+        label_array: levels x samples
+    """
+    n_levels = label_array.shape[0]
+    level_pairs = list(zip(np.arange(n_levels-1), np.arange(1,n_levels)))
+    for x,y in level_pairs:
+        parent_labels = np.unique(label_array[x])
+        child_labels = np.unique(label_array[y])
+        child_map = {}
+        highest_so_far = 0
+        for this_parent in parent_labels:
+            this_child = label_array[y][label_array[x] == this_parent]
+            this_child = np.unique(this_child)
+            wanted_labels = np.arange(highest_so_far, highest_so_far + len(this_child))
+            highest_so_far = np.max(wanted_labels) + 1 
+            for i in range(len(this_child)):
+                child_map[this_child[i]] = wanted_labels[i]
+        # Remap
+        for i in range(len(label_array[y])):
+            label_array[y][i] = child_map[label_array[y][i]]
+    return label_array
 ############################################################
 # Load data
 data_dir = '/media/bigdata/projects/neuRecommend/data/sorted/pos'
@@ -69,7 +99,7 @@ plt.show()
 # Cluster
 
 # Pull clusters for a range of cluster numbers
-clust_range = np.arange(2,8)
+clust_range = np.arange(2,6)
 ward = AgglomerativeClustering(
         distance_threshold =0, 
         n_clusters = None, 
@@ -84,10 +114,11 @@ clust_label_list = [
         ]
 
 cut_label_array = np.stack(clust_label_list)
+cut_label_array = sort_label_array(cut_label_array)
 
-plt.imshow(cut_label_array, aspect = 'auto')
-plt.colorbar()
-plt.show()
+#plt.imshow(cut_label_array, aspect = 'auto')
+#plt.colorbar()
+#plt.show()
 
 map_dict = {}
 for i in range(len(clust_range)-1):
@@ -96,10 +127,10 @@ for i in range(len(clust_range)-1):
             cut_label_array[i+1]
             )
 
-plot_n = 100
+plot_n = 1000
 slice_mid = data.shape[1]//2
 fig,ax = plt.subplots(len(clust_range), np.max(clust_range),
-                      figsize = (7,7),)
+                      figsize = (7,7), sharex = True, sharey = True)
 for row in range(len(clust_range)):
     #row = 5
     center = int(np.max(clust_range)//2)
@@ -130,4 +161,6 @@ for row in range(len(clust_range)):
 # Remove box round each subplot
 for ax0 in ax.flatten():
     ax0.axis('off')
-plt.show()
+fig.savefig(os.path.join('/home/abuzarmahmood/Desktop', 'agg_clust.png'), dpi = 300)
+plt.close(fig)
+#plt.show()
