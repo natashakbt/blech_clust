@@ -38,12 +38,6 @@ def calc_linkage(model):
     ).astype(float)
     return linkage_matrix
 
-def plot_dendrogram(model, **kwargs):
-    # Create linkage matrix and then plot the dendrogram
-    linkage_matrix = calc_linkage(model)
-    # Plot the corresponding dendrogram
-    dendrogram(linkage_matrix, **kwargs)
-
 # Resort mapping so that children are always in order
 def sort_label_array(label_array):
     """
@@ -101,7 +95,10 @@ def perform_agg_clustering(features, max_clusters = 8):
                 )
     return cut_label_array, map_dict, clust_range
 
-def plot_waveform_dendogram(data, cut_label_array, clust_range, plot_n = 1000):
+def plot_waveform_dendogram(data, cut_label_array, clust_range, plot_n = 1000,
+                            save_path = None):
+    if save_path is None:
+        raise ValueError('Please provide a save path')
     slice_mid = data.shape[1]//2
     fig,ax = plt.subplots(len(clust_range), np.max(clust_range),
                           figsize = (7,7), sharex = True, sharey = True)
@@ -134,8 +131,24 @@ def plot_waveform_dendogram(data, cut_label_array, clust_range, plot_n = 1000):
     # Remove box round each subplot
     for ax0 in ax.flatten():
         ax0.axis('off')
-    fig.savefig(os.path.join('/home/abuzarmahmood/Desktop', 'agg_clust.png'), dpi = 300)
+    fig.savefig(save_path, dpi = 300)
     plt.close(fig)
+
+def trim_data(data, n_max = 20000):
+    """
+    Agglomerative clustering doesn't like large datasets
+    If we have more than n_max samples, we will randomly sample n_max samples
+    
+    Input:
+        data: samples x features
+        n_max: maximum number of samples to use
+
+    Output:
+        data: samples x features
+    """
+    if len(data) > n_max:
+        data = data[np.random.choice(len(data), n_max, replace = False)]
+    return data
 
 ############################################################
 # Load data
@@ -144,7 +157,7 @@ data_files = sorted(glob(os.path.join(data_dir, '*.npy')))
 
 ind = np.arange(10)
 data = np.concatenate([np.load(data_files[x]) for x in ind])
-data = data[::10]
+data = trim_data(data)
 
 # Get features
 pca_obj = pca(n_components=2)
@@ -160,5 +173,6 @@ plt.show()
 
 ############################################################
 # Cluster
-cut_label_array, map_dict, clust_range = perform_agg_clustering(features, max_clusters = 8)
+save_path = os.path.join('/home/abuzarmahmood/Desktop', 'agg_clust.png')
+cut_label_array, map_dict, clust_range = perform_agg_clustering(features, max_clusters = 7)
 plot_waveform_dendogram(data, cut_label_array, clust_range, plot_n = 1000)
