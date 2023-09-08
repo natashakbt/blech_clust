@@ -277,7 +277,7 @@ class cluster_handler():
 
                 # Create ISI distribution plot
                 #############################
-                fig = gen_isi_hist(
+                fig, ax = gen_isi_hist(
                     times_dejittered,
                     cluster_points,
                     params_dict['sampling_rate'],
@@ -877,23 +877,28 @@ def gen_isi_hist(
         times_dejittered,
         cluster_points,
         sampling_rate,
+        ax = None,
 ):
-    fig = plt.figure()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
     cluster_times = times_dejittered[cluster_points]
     ISIs = np.ediff1d(np.sort(cluster_times))
     ISIs = ISIs/(sampling_rate / 1000)
     max_ISI_val = 20
     bin_count = 100
     neg_pos_ISI = np.concatenate((-1*ISIs, ISIs), axis=-1)
-    hist_obj = plt.hist(
+    hist_obj = ax.hist(
         neg_pos_ISI,
         bins=np.linspace(-max_ISI_val, max_ISI_val, bin_count))
-    plt.xlim([-max_ISI_val, max_ISI_val])
+    ax.set_xlim([-max_ISI_val, max_ISI_val])
     # Scale y-lims by all but the last value
     upper_lim = np.max(hist_obj[0][:-1])
     if upper_lim:
-        plt.ylim([0, upper_lim])
-    plt.title("2ms ISI violations = %.1f percent (%i/%i)"
+        ax.set_ylim([0, upper_lim])
+    ax.set_title("2ms ISI violations = %.1f percent (%i/%i)"
               % ((float(len(np.where(ISIs < 2.0)[0])) /
                   float(len(cluster_times)))*100.0,
                  len(np.where(ISIs < 2.0)[0]),
@@ -902,7 +907,9 @@ def gen_isi_hist(
               % ((float(len(np.where(ISIs < 1.0)[0])) /
                   float(len(cluster_times)))*100.0,
                  len(np.where(ISIs < 1.0)[0]), len(cluster_times)))
-    return fig
+    ax.set_xlabel('ISI (ms)')
+    ax.set_ylabel('Count')
+    return fig, ax
 
 
 def remove_too_large_waveforms(
