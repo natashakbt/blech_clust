@@ -17,11 +17,26 @@ from tqdm import tqdm
 from matplotlib.patches import ConnectionPatch
 
 def register_labels(x,y):
+    """
+    Register labels from one level to the next
+    Input:
+        x: labels at level n
+        y: labels at level n+1
+    Output:
+        map_dict: dictionary mapping labels from level n to level n+1
+    """
     unique_x = np.unique(x)
     x_cluster_y = [np.unique(y[x==i]) for i in unique_x]
     return dict(zip(unique_x, x_cluster_y))
 
 def calc_linkage(model):
+    """
+    Calculate linkage matrix from sklearn agglomerative clustering model
+    Input:
+        model: sklearn agglomerative clustering model
+    Output:
+        linkage_matrix: linkage matrix
+    """
     # create the counts of samples under each node
     counts = np.zeros(model.children_.shape[0])
     n_samples = len(model.labels_)
@@ -70,6 +85,16 @@ def sort_label_array(label_array):
     return label_array
 
 def perform_agg_clustering(features, max_clusters = 8):
+    """
+    Perform agglomerative clustering on features
+    Input:
+        features: samples x features
+        max_clusters: maximum number of clusters to consider
+    Output:
+        cut_label_array: levels x samples
+        map_dict: dictionary mapping labels from level n to level n+1
+        clust_range: range of clusters considered
+    """
     clust_range = np.arange(1, max_clusters+1)
     ward = AgglomerativeClustering(
             distance_threshold =0, 
@@ -175,4 +200,5 @@ plt.show()
 # Cluster
 save_path = os.path.join('/home/abuzarmahmood/Desktop', 'agg_clust.png')
 cut_label_array, map_dict, clust_range = perform_agg_clustering(features, max_clusters = 7)
-plot_waveform_dendogram(data, cut_label_array, clust_range, plot_n = 1000)
+plot_waveform_dendogram(data, cut_label_array, clust_range, plot_n = 1000,
+                        save_path = save_path)
