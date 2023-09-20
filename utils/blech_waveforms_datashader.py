@@ -12,7 +12,8 @@ import os
 
 # A function that accepts a numpy array of waveforms and creates a datashader image from them
 def waveforms_datashader(waveforms, x_values, 
-        downsample = True, threshold = None, dir_name = "datashader_temp"):
+        downsample = True, threshold = None, dir_name = "datashader_temp",
+                         ax = None):
 
     # Make a pandas dataframe with two columns, x and y, 
     # holding all the data. The individual waveforms are separated by a row of NaNs
@@ -57,7 +58,10 @@ def waveforms_datashader(waveforms, x_values,
         img = imread(dir_name + "/tempfile.png")
 
         # Figure sizes chosen so that the resolution is 100 dpi
-        fig,ax = plt.subplots(1, 1, figsize = (8,6), dpi = 200)
+        if ax is None:
+            fig,ax = plt.subplots(1, 1, figsize = (8,6), dpi = 200)
+        else:
+            fig = ax.get_figure()
         # Start plotting
         ax.imshow(img)
         # Set ticks/labels - 10 on each axis
