@@ -178,6 +178,7 @@ trials = hf5.root.ancillary_analysis.trials[:]
 laser_cond_num = len(trials)
 unique_lasers = hf5.root.ancillary_analysis.laser_combination_d_l[:]
 
+# Pull out a specific channel
 num = 0
 dir_name = dir_list[num]
 
