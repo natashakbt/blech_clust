@@ -4,6 +4,15 @@ import os
 import numpy as np
 import tqdm
 
+def check_digin_is_nonzero(dig_in_data):
+	"""
+	Check that digin is not empty (i.e. has some trials)
+	"""
+	if dig_in_data.sum() == 0:
+		return False	
+	else:
+		return True
+
 #todo: Separate functions for electrode, EMG, and dig-in channels
 def read_digins(hdf5_name, dig_in_int, dig_in_file_list): 
 	hf5 = tables.open_file(hdf5_name, 'r+')
@@ -15,9 +24,13 @@ def read_digins(hdf5_name, dig_in_int, dig_in_file_list):
 		print(f'Reading {dig_in_name}')
 		inputs = np.fromfile(dig_in_filename,
 					   dtype = np.dtype('uint16'))
-		dig_inputs = hf5.create_array(\
-				'/digital_in', dig_in_name, inputs)
-		hf5.flush()
+		if not check_digin_is_nonzero(inputs):
+			print(f'== No data in {dig_in_name}, not saving ==')
+			continue
+		else:
+			dig_inputs = hf5.create_array(\
+					'/digital_in', dig_in_name, inputs)
+			hf5.flush()
 	hf5.close()
 		
 #todo: Separate functions for electrode, EMG, and dig-in channels
