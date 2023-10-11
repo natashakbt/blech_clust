@@ -4,17 +4,8 @@ import os
 import numpy as np
 import tqdm
 
-def check_digin_is_nonzero(dig_in_data):
-	"""
-	Check that digin is not empty (i.e. has some trials)
-	"""
-	if dig_in_data.sum() == 0:
-		return False	
-	else:
-		return True
-
-#todo: Separate functions for electrode, EMG, and dig-in channels
 def read_digins(hdf5_name, dig_in_int, dig_in_file_list): 
+	atom = tables.IntAtom()
 	hf5 = tables.open_file(hdf5_name, 'r+')
 	# Read digital inputs, and append to the respective hdf5 arrays
 	print('Reading dig-ins')
@@ -24,16 +15,11 @@ def read_digins(hdf5_name, dig_in_int, dig_in_file_list):
 		print(f'Reading {dig_in_name}')
 		inputs = np.fromfile(dig_in_filename,
 					   dtype = np.dtype('uint16'))
-		if not check_digin_is_nonzero(inputs):
-			print(f'== No data in {dig_in_name}, not saving ==')
-			continue
-		else:
-			dig_inputs = hf5.create_array(\
-					'/digital_in', dig_in_name, inputs)
-			hf5.flush()
+		hf5_dig_array = hf5.create_earray('/digital_in', dig_in_name, atom, (0,))
+		hf5_dig_array.append(inputs)
+		hf5.flush()
 	hf5.close()
 		
-#todo: Separate functions for electrode, EMG, and dig-in channels
 def read_digins_single_file(hdf5_name, dig_in, dig_in_file_list): 
 	num_dig_ins = len(dig_in)
 	hf5 = tables.open_file(hdf5_name, 'r+')
@@ -59,6 +45,7 @@ def read_digins_single_file(hdf5_name, dig_in, dig_in_file_list):
 
 # TODO: Remove exec statements throughout file
 def read_emg_channels(hdf5_name, electrode_layout_frame):
+	atom = tables.IntAtom()
 	# Read EMG data from amplifier channels
 	hf5 = tables.open_file(hdf5_name, 'r+')
 	for num,row in tqdm.tqdm(electrode_layout_frame.iterrows()):
@@ -72,7 +59,8 @@ def read_emg_channels(hdf5_name, electrode_layout_frame):
 			data = np.fromfile(row.filename, dtype = np.dtype('int16'))
 			# Label raw_emg with electrode_ind so it's more easily identifiable
 			array_name = f'emg{channel_ind:02}'
-			el = hf5.create_array('/raw_emg', array_name, data) 
+			hf5_el_array = hf5.create_earray('/raw_emg', array_name, atom, (0,))
+			hf5_el_array.append(data)
 			hf5.flush()
 	hf5.close()
 
@@ -84,6 +72,7 @@ def read_electrode_channels(hdf5_name, electrode_layout_frame):
 	# Note: That channels inds may not be contiguous if there are
 	# EMG channels in the middle
 	"""
+	atom = tables.IntAtom()
 	# Read EMG data from amplifier channels
 	hf5 = tables.open_file(hdf5_name, 'r+')
 	for num,row in tqdm.tqdm(electrode_layout_frame.iterrows()):
@@ -96,7 +85,8 @@ def read_electrode_channels(hdf5_name, electrode_layout_frame):
 			data = np.fromfile(row.filename, dtype = np.dtype('int16'))
 			# Label raw_emg with electrode_ind so it's more easily identifiable
 			array_name = f'electrode{channel_ind:02}'
-			el = hf5.create_array('/raw', array_name, data) 
+			hf5_el_array = hf5.create_earray('/raw', array_name, atom, (0,))
+			hf5_el_array.append(data)
 			hf5.flush()
 	hf5.close()
 	
