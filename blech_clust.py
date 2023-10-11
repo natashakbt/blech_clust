@@ -98,13 +98,13 @@ print('Created dirs in data folder')
 # Get lists of amplifier and digital input files
 if file_type == ['one file per signal type']:
     electrodes_list = ['amplifier.dat']
-    dig_in_list = ['digitalin.dat']
+    dig_in_file_list = ['digitalin.dat']
 elif file_type == ['one file per channel']:
     electrodes_list = [name for name in file_list if name.startswith('amp-')]
-    dig_in_list = [name for name in file_list if name.startswith('board-DI')]
+    dig_in_file_list = [name for name in file_list if name.startswith('board-DI')]
 
 electrodes_list = sorted(electrodes_list)
-dig_in_list = sorted(dig_in_list)
+dig_in_file_list = sorted(dig_in_file_list)
 
 # Use info file for port list calculation
 info_file = np.fromfile(dir_name + '/info.rhd', dtype=np.dtype('float32'))
@@ -117,7 +117,7 @@ num_recorded_samples = len(np.fromfile(
 total_recording_time = num_recorded_samples/sampling_rate  # In seconds
 
 check_str = f'Amplifier files: {electrodes_list} \nSampling rate: {sampling_rate} Hz'\
-    f'\nDigital input files: {dig_in_list} \n ---------- \n \n'
+    f'\nDigital input files: {dig_in_file_list} \n ---------- \n \n'
 print(check_str)
 
 ports = info_dict['ports']
@@ -128,16 +128,16 @@ if file_type == ['one file per channel']:
     # Read dig-in data
     # Pull out the digital input channels used,
     # and convert them to integers
-    dig_in = [x.split('-')[-1].split('.')[0] for x in dig_in_list]
-    dig_in = sorted([int(x) for x in dig_in])
+    dig_in_int = [x.split('-')[-1].split('.')[0] for x in dig_in_file_list]
+    dig_in_int = sorted([int(x) for x in dig_in_int])
 
 elif file_type == ['one file per signal type']:
 
     print("\tOne file per SIGNAL Detected")
-    dig_in = np.arange(info_dict['dig_ins']['count'])
+    dig_in_int = np.arange(info_dict['dig_ins']['count'])
 
 check_str = f'ports used: {ports} \n sampling rate: {sampling_rate} Hz'\
-            f'\n digital inputs on intan board: {dig_in}'
+            f'\n digital inputs on intan board: {dig_in_int}'
 
 print(check_str)
 
@@ -161,12 +161,12 @@ electrode_layout_frame = pd.read_csv(layout_path)
 
 # Read data files, and append to electrode arrays
 if file_type == ['one file per channel']:
-    read_file.read_digins(hdf5_name, dig_in, dig_in_list)
+    read_file.read_digins(hdf5_name, dig_in_int, dig_in_file_list)
     read_file.read_electrode_channels(hdf5_name, electrode_layout_frame)
     if len(emg_channels) > 0:
         read_file.read_emg_channels(hdf5_name, electrode_layout_frame)
 elif file_type == ['one file per signal type']:
-    read_file.read_digins_single_file(hdf5_name, dig_in, dig_in_list)
+    read_file.read_digins_single_file(hdf5_name, dig_in_int, dig_in_file_list)
     # This next line takes care of both electrodes and emgs
     read_file.read_electrode_emg_channels_single_file(
         hdf5_name, electrode_layout_frame, electrodes_list, num_recorded_samples, emg_channels)
