@@ -156,7 +156,7 @@ time_limits = [int(x) for x in params_dict['psth_params']['durations']]
 x = np.arange(gapes.shape[-1]) - pre_stim
 
 # Get the indices of x that need to be plotted based on the chosen time limits
-plot_indices = np.where((x >= time_limits[0])*(x <= time_limits[1]))[0]
+plot_indices = np.where((x >= -time_limits[0])*(x <= time_limits[1]))[0]
 
 tastes = info_dict['taste_params']['tastes']
 
