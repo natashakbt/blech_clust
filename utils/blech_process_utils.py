@@ -471,7 +471,7 @@ class classifier_handler():
                     df.loc[self.electrode_num, columns] = data
                 else:
                     # Append new data to df
-                    df = df.append(new_df)
+                    df = pd.concat([df, new_df]) 
                 # Write out updated frame
                 df.sort_index(inplace=True)
                 df[round_cols] = df[round_cols].round(3)
@@ -488,9 +488,17 @@ class classifier_handler():
         ax1 = fig.add_subplot(gs[1, 0])
         ax2 = fig.add_subplot(gs[2, 0], sharex=ax1)
         hist_ax = fig.add_subplot(gs[1, 1], sharey=ax1)
-        x = np.arange(self.pos_spike_dict['waveforms'].shape[1])
-        ax0.plot(x, self.pos_spike_dict['waveforms']
+        waveform_data = self.pos_spike_dict['waveforms']
+        x = np.arange(waveform_data.shape[1])
+        # Adjust ylims to 8-SD of amplitudes to avoid domination
+        # by outliers
+        slice_mid = waveform_data.shape[1]//2
+        amp_sd = np.std(waveform_data[:,slice_mid])
+        amp_mean = np.mean(waveform_data[:,slice_mid])
+        amp_lims = [amp_mean - 8*amp_sd, amp_mean + 8*amp_sd]
+        ax0.plot(x, waveform_data
                  [::10].T, c='k', alpha=0.05)
+        ax0.set_ylim(amp_lims)
         ax1.scatter(self.pos_spike_dict['spiketimes'],
                     self.pos_spike_dict['prob'], s=1)
         ax1.set_ylim([0, 1.1])
@@ -1083,6 +1091,12 @@ def plot_waveform_dendogram(data,
     if save_path is None:
         raise ValueError('Please provide a save path')
     slice_mid = data.shape[1]//2
+    # Adjust ylims to 8-SD of amplitudes to avoid domination
+    # by outliers
+    amp_sd = np.std(data[:,slice_mid])
+    amp_mean = np.mean(data[:,slice_mid])
+    amp_lims = [amp_mean - 8*amp_sd, amp_mean + 8*amp_sd]
+    # Plot dendogram
     fig,ax = plt.subplots(len(clust_range), np.max(clust_range)+1,
                           figsize = (7,7), sharex = True, sharey = True)
     for row in range(len(clust_range)):
@@ -1099,8 +1113,11 @@ def plot_waveform_dendogram(data,
             this_dat = data[labels==x] 
             if len(this_dat) > plot_n:
                 plot_dat = this_dat[np.random.choice(len(this_dat), plot_n)]
+            else:
+                plot_dat = this_dat
             ax[row, ax_inds[x]].plot(plot_dat.T,
                 color = 'k', alpha = 0.01)
+            ax[row, ax_inds[x]].set_ylim(amp_lims)
         if row > 0: 
             this_map = map_dict[row-1]
             for key,val in this_map.items():
