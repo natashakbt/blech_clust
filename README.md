@@ -32,10 +32,6 @@ website at https://sites.google.com/a/brandeis.edu/katzlab/
 9. `python blech_make_psth.py`  
     - Plots PSTHs and rasters for all selected units  
 10. `python blech_palatability_identity_setup.py`  
-11. `python blech_palatability_identity_plot.py`  
-    - Perform ancillary analyses on spike trains by calculating:  
-        - Repsonsive and discriminatory neurons (ANOVA and LDA)  
-        - Palatability correlation coefficient  
 12. `python blech_overlay_psth.py`  
     - Plot overlayed PSTHs for units with respective waveforms  
 
