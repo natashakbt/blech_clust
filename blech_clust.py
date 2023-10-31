@@ -19,6 +19,14 @@ from utils.blech_process_utils import path_handler
 script_path = os.path.realpath(__file__)
 blech_clust_dir = os.path.dirname(script_path)
 
+# Check that template file is present
+params_template_path = os.path.join(
+    blech_clust_dir,
+    'params/sorting_params_template.json')
+if not os.path.exists(params_template_path):
+    print('=== Sorting Params Template file not found. ===')
+    print('==> Please copy [[ blech_clust/params/_templates/sorting_params_template.json ]] to [[ blech_clust/params/sorting_params_template.json ]] and update as needed.')
+    exit()
 ############################################################
 
 metadata_handler = imp_metadata(sys.argv)
@@ -172,10 +180,6 @@ elif file_type == ['one file per signal type']:
         hdf5_name, electrode_layout_frame, electrodes_list, num_recorded_samples, emg_channels)
 
 # Write out template params file to directory if not present
-print(blech_clust_dir)
-params_template_path = os.path.join(
-    blech_clust_dir,
-    'params/sorting_params_template.json')
 params_template = json.load(open(params_template_path, 'r'))
 # Info on taste digins and laser should be in exp_info file
 all_params_dict = params_template.copy()
