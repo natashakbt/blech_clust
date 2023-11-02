@@ -211,13 +211,14 @@ if not os.path.exists(script_save_path):
 
 with open(os.path.join(script_save_path, 'blech_process_single.sh'), 'w') as f:
     f.write('#!/bin/bash \n')
+    f.write("export OMP_NUM_THREADS=1")
     f.write(f'BLECH_DIR={blech_clust_dir} \n')
     f.write(f'DATA_DIR={dir_name} \n')
     f.write('ELECTRODE_NUM=$1 \n')
     f.write('python $BLECH_DIR/blech_process.py $DATA_DIR $ELECTRODE_NUM \n')
 
-
-# Dump shell file(s) for running GNU parallel job on the user's blech_clust folder on the desktop
+# Dump shell file(s) for running GNU parallel job on the user's 
+# blech_clust folder on the desktop
 # First get number of CPUs - parallel be asked to run num_cpu-1 threads in parallel
 num_cpu = multiprocessing.cpu_count()
 
@@ -245,13 +246,6 @@ print(f"parallel -k -j {job_count} --noswap --load 100% --progress " +
       "bash $DIR/temp/blech_process_single.sh " +\
       f"::: {' '.join([str(x) for x in bash_electrode_list])}",
       file=f)
-f.close()
-
-# Then produce the file that runs blech_process.py
-f = open(os.path.join(blech_clust_dir, 'blech_clust_jetstream_parallel1.sh'), 'w')
-print("export OMP_NUM_THREADS=1", file=f)
-blech_process_path = os.path.join(blech_clust_dir, 'blech_process.py')
-print(f"python {blech_process_path} $1", file=f)
 f.close()
 
 print('blech_clust.py complete \n')
