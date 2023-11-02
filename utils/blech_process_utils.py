@@ -389,13 +389,27 @@ class classifier_handler():
             raise Exception("Couldn't download model, please refer to '\
                     'blech_clust/README.md#setup for instructions")
 
+    @staticmethod
+    def return_waveform_classifier_params_path(blech_clust_dir):
+        """
+        Inner function for get_waveform_classifier_params
+        so that it can also be called externally
+        """
+        params_file_path = os.path.join(
+            blech_clust_dir,
+            'params',
+            'waveform_classifier_params.json')
+        # If params file doesn't exist, stop execution
+        if not os.path.exists(params_file_path):
+            print('=== Waveform Classifier Params file not found. ===')
+            print('==> Please copy [[ blech_clust/params/_templates/waveform_classifier_params.json ]] to [[ blech_clust/params/waveform_classifier_params.json ]] and update as needed.')
+            exit()
+        return params_file_path
+
     def get_waveform_classifier_params(self):
         this_path_handler = path_handler()
         self.blech_clust_dir = this_path_handler.blech_clust_dir
-        params_file_path = os.path.join(
-            self.blech_clust_dir,
-            'params',
-            'waveform_classifier_params.json')
+        params_file_path = self.return_waveform_classifier_params_path(self.blech_clust_dir)
         with open(params_file_path, 'r') as this_file:
             self.classifier_params = json.load(this_file)
 

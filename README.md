@@ -18,6 +18,7 @@ bash conda_requirements_base.sh                     # Install main packages usin
 bash install_gnu_parallel.sh                        # Install GNU Parallel
 pip install -r pip_requirements_base.txt            # Install pip requirements (not covered by conda)
 ```
+- Parameter files will need to be setup according to [Setting up params](https://github.com/abuzarmahmood/blech_clust/wiki/Getting-Started#setting-up-params)
 
 ### Convenience scripts
 - blech_clust_pre.sh : Runs steps 2-5  

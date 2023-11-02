@@ -130,10 +130,9 @@ spike_set.dejitter_spikes()
 
 ############################################################
 # Load classifier if specificed
-classifier_params = json.load(
-    open(os.path.join(
-        blech_clust_dir,
-        'params/waveform_classifier_params.json'), 'r'))
+classifier_params_path = bpu.classifier_handler.return_waveform_classifier_params_path(blech_clust_dir)
+classifier_params = json.load(open(classifier_params_path, 'r'))
+
 
 if classifier_params['use_classifier'] and \
     classifier_params['use_neuRecommend']:
