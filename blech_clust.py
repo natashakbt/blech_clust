@@ -215,7 +215,6 @@ if not os.path.exists(script_save_path):
 
 with open(os.path.join(script_save_path, 'blech_process_single.sh'), 'w') as f:
     f.write('#!/bin/bash \n')
-    f.write("export OMP_NUM_THREADS=1")
     f.write(f'BLECH_DIR={blech_clust_dir} \n')
     f.write(f'DATA_DIR={dir_name} \n')
     f.write('ELECTRODE_NUM=$1 \n')
