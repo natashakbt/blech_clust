@@ -199,7 +199,7 @@ if __name__ == '__main__':
     if '/raw_emg' in hf5:
         raw_emg_electrodes = [x for x in hf5.get_node('/','raw_emg')]
     else:
-        raw_emg = []
+        raw_emg_electrodes = []
 
     all_electrodes = [raw_electrodes, raw_emg_electrodes] 
     all_electrodes = [x for y in all_electrodes for x in y]
